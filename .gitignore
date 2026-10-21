@@ -1,6 +1,7 @@
 .DS_Store
 Thumbs.db
 node_modules/
+coverage/
 .expo/
 IHC – Unidade 5 Sistemas de Design.pdf
 atividade-sistema-de-design.md

@@ -1,0 +1,22 @@
+{
+  "name": "pg-play-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "PG PLAY - Minigames para Pequenos Grupos (IHC + PDM)",
+  "scripts": {
+    "test": "jest",
+    "test:coverage": "jest --coverage"
+  },
+  "dependencies": {
+    "react": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "@types/react": "^18.3.12",
+    "jest": "^29.7.0",
+    "react-test-renderer": "^18.3.1",
+    "@types/react-test-renderer": "^18.3.0",
+    "ts-jest": "^29.2.5",
+    "typescript": "^5.6.3"
+  }
+}
