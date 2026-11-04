@@ -2,7 +2,19 @@
 
 Repositório oficial do trabalho final integrado das disciplinas de **Interação Humano-Computador (IHC)** e **Programação para Dispositivos Móveis (PDM)** — **IFPI Campus Piripiri**.
 
-O **PG PLAY** é um aplicativo móvel voltado para dinâmicas presenciais em Pequenos Grupos (PGs) de jovens e adultos, reunindo jogos rápidos como **Mímica Expressiva**, **Quiz Relâmpago** e **Jogo da Forca**.
+O **PG PLAY** é um aplicativo móvel voltado para dinâmicas presenciais em Pequenos Grupos (PGs) de jovens e adultos, reunindo jogos rápidos em **1 celular compartilhado** (**Mímica Expressiva**, **Quiz Relâmpago** e **Jogo da Forca**) e jogos em **Sala Multiplayer** (**Cidade Dorme** e **Adedonha Bíblica**).
+
+---
+
+## 📚 Documentação de Requisitos e Jogos (`docs/`)
+
+Toda a documentação de engenharia de requisitos, casos de uso e especificação detalhada das dinâmicas está organizada na pasta [`docs/`](docs/README.md):
+
+- 📄 **[Índice Geral da Documentação (`docs/README.md`)](docs/README.md)**
+- 📋 **[Especificação de Requisitos e Casos de Uso (`docs/requisitos/requisitos-e-casos-de-uso-pg-play.md`)](docs/requisitos/requisitos-e-casos-de-uso-pg-play.md)** — Requisitos Funcionais (`RF01–RF23`), Requisitos Não Funcionais (`RNF01–RNF11`), Casos de Uso (`UC01–UC08`) e Matriz de Rastreabilidade.
+- 🎮 **[Catálogo de Jogos (`docs/jogos/README.md`)](docs/jogos/README.md)**
+  - 🌙 **[Cidade Dorme (`docs/jogos/cidade-dorme.md`)](docs/jogos/cidade-dorme.md)** — Dedução social em Sala Multiplayer com Narrador por áudio clonado (voz masculina ou feminina) e alternância entre Tema Escuro (Noite) e Claro (Dia).
+  - ✍️📖 **[Adedonha Bíblica (`docs/jogos/adedonha-biblica.md`)](docs/jogos/adedonha-biblica.md)** — Disputa em Sala Multiplayer com Roleta Expressiva do Alfabeto (M3 Expressive), colunas criadas pelo Moderador e apuração assistida com botão *"Levantar Dúvida ✋"*.
 
 ---
 
