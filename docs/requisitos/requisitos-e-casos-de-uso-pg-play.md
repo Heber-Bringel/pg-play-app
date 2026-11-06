@@ -62,6 +62,14 @@ O **PG PLAY** é um aplicativo voltado para dinâmicas presenciais em Pequenos G
 | **RF13** | Sortear, ocultar e pontuar na Arena de Mímica | Na *Mímica Expressiva*, o sistema deve exibir a palavra secreta em destaque para o representante da equipe, permitir ocultá-la/revelá-la (*"Esconder do Grupo"*), pular a palavra ou registrar o acerto (*"Acertaram! (+20 pts)"*), somando pontos e avançando para o próximo desafio. | Alta | `design-system/README.md`, `05-padroes.md` |
 | **RF14** | Apresentar e validar questões no Quiz Relâmpago | No *Quiz Relâmpago*, o sistema deve apresentar o enunciado da pergunta e 4 alternativas identificadas de `A` a `D`. Ao selecionar uma opção, deve confirmar acerto ou erro, bloquear novos toques na mesma pergunta, revelar a alternativa correta (mesmo se a equipe errar) e atualizar a pontuação. | Alta | `alternativa-quiz.md`, `QuizOption.tsx` |
 | **RF15** | Processar tentativas de letras no Jogo da Forca | No *Jogo da Forca*, o sistema deve exibir a dica/tema, as lacunas da palavra secreta e um teclado próprio de `A` a `Z`. A cada letra tocada, deve desabilitar a tecla, revelar a letra nas lacunas em caso de acerto (*Hit*) ou riscar a tecla e descontar 1 tentativa da equipe em caso de erro (*Miss*). | Alta | `teclado-forca.md`, `LetterKey.tsx` |
+| **RF24** | Exibir passagem de turno antes de revelar conteúdo secreto | Antes de cada turno de *Mímica Expressiva*, *Quiz Relâmpago* e *Jogo da Forca*, o sistema deve exibir uma tela de passagem com a equipe da vez e o botão *"Estou Pronto!"*. O cronômetro, a palavra, a pergunta ou a palavra oculta só devem aparecer após esse toque, evitando que o grupo veja o conteúdo antes da hora. | Alta | [`mimica-expressiva.md`](../jogos/mimica-expressiva.md), [`quiz-relampago.md`](../jogos/quiz-relampago.md), [`jogo-da-forca.md`](../jogos/jogo-da-forca.md) |
+| **RF25** | Aplicar penalidade ao pular palavra na Mímica | Ao tocar em *"Pular (-5 pts)"* na *Mímica Expressiva*, o sistema deve descartar a palavra, descontar `5` pontos da equipe da vez (a pontuação nunca pode ficar negativa) e sortear outra palavra em até `300 ms`. Palavras puladas só voltam ao sorteio depois que as demais do banco forem usadas. | Média | [`mimica-expressiva.md`](../jogos/mimica-expressiva.md) |
+| **RF26** | Tratar tempo esgotado no Quiz Relâmpago | Quando o cronômetro da pergunta chegar a `00:00` sem resposta, o sistema deve bloquear as alternativas, revelar a correta, manter a pontuação da equipe (`0 pts`) e habilitar *"Próxima Pergunta"*. Cada acerto vale `+10 pts` (padrão). | Alta | [`quiz-relampago.md`](../jogos/quiz-relampago.md) |
+| **RF27** | Resolver a palavra e pontuar no Jogo da Forca | No *Jogo da Forca*, quando todas as letras forem reveladas, o sistema deve registrar a vitória e somar `+30 pts` mais `+2 pts` por tentativa não usada. Quando as tentativas chegarem a `0`, deve registrar a derrota, revelar a palavra e não pontuar. A comparação de letras deve ignorar acentos e cedilha (`A` revela `Á`, `Ã`, `Â`; `C` revela `Ç`). | Alta | [`jogo-da-forca.md`](../jogos/jogo-da-forca.md) |
+| **RF28** | Selecionar pacotes de conteúdo misto | Antes de iniciar *Mímica Expressiva*, *Quiz Relâmpago* ou *Jogo da Forca*, o sistema deve permitir selecionar um ou mais pacotes de conteúdo por chips (ex.: *Bíblico*, *Filmes e Séries*, *Animais*, *Conhecimentos Gerais*), combinando-os na mesma partida. Por padrão, todos os pacotes vêm selecionados e ao menos um deve permanecer ativo. | Média | [`docs/jogos/`](../jogos/README.md) |
+| **RF29** | Configurar parâmetros da partida | O sistema deve oferecer valores padrão e permitir ajustar os parâmetros de cada jogo: *Mímica* (tempo `45s`/`60s`/`90s`, rodadas `1` a `5`), *Quiz* (tempo `15s`/`20s`/`30s`, perguntas `5`/`10`/`15`) e *Forca* (tentativas `5`/`6`/`8`, palavras por equipe `1` a `5`). Iniciar com os padrões deve exigir apenas `1` toque. | Média | [`docs/jogos/`](../jogos/README.md) |
+| **RF30** | Evitar repetição de conteúdo na partida | O sistema não deve repetir palavra, pergunta ou palavra secreta dentro da mesma partida. Quando o banco selecionado se esgotar antes do fim das rodadas, deve acionar o card de conclusão (**RF12**). | Média | [`docs/jogos/`](../jogos/README.md) |
+| **RF31** | Encerrar partida e integrar pontos ao placar | Ao terminar o número configurado de rodadas, perguntas ou palavras, o sistema deve exibir o resumo da partida e enviar os pontos de cada equipe ao placar acumulado do PG (**RF16**, **RF17**), levando o Líder ao UC06 por meio de *"Ir para o Placar Final"*. | Alta | [`docs/jogos/`](../jogos/README.md) |
 
 ### 3.5. Placar e Ranking do PG
 
@@ -163,29 +171,60 @@ Fluxo de relacionamento entre os atores e os casos de uso do **PG PLAY**:
 
 #### UC03 — Jogar Rodada de Mímica Expressiva
 * **Ator Principal:** Jogador / Equipe da Vez
+* **Referência Detalhada:** [`docs/jogos/mimica-expressiva.md`](../jogos/mimica-expressiva.md)
 * **Objetivo:** Fazer a equipe adivinhar o maior número de palavras secretas por meio de gestos antes que o cronômetro zere.
+* **Pré-condições:** Ao menos `2` equipes cadastradas (UC01); jogo escolhido no Hub (UC02); pacotes de conteúdo e parâmetros definidos (**RF28**, **RF29**).
 * **Fluxo Principal:**
-    1. O sistema exibe a equipe da vez, inicia o *Cronômetro Expressivo* e apresenta a palavra secreta em tipografia *Display* (`30 dp`).
-    2. O representante visualiza a palavra e toca em *"Esconder do Grupo"* enquanto realiza a mímica.
-    3. Quando a equipe acerta, toca no botão Jumbo *"Acertaram! (+20 pts)"*, somando pontos e sorteando a próxima palavra.
+    1. O sistema exibe a tela de passagem de turno com a equipe da vez e o botão *"Estou Pronto!"* (**RF09**, **RF24**).
+    2. O representante toca em *"Estou Pronto!"*; o sistema inicia o *Cronômetro Expressivo* e apresenta a palavra secreta em tipografia *Display* (`30 dp`) (**RF10**, **RF13**).
+    3. O representante toca em *"Esconder do Grupo"* enquanto realiza a mímica (**RF13**).
+    4. Quando a equipe acerta, toca no botão Jumbo *"Acertaram! (+20 pts)"*, somando pontos e sorteando a próxima palavra (**RF13**).
+    5. Ao zerar o cronômetro, o sistema bloqueia as ações, exibe o resumo do turno e passa a vez à próxima equipe (volta ao passo 1).
+    6. Concluídas as rodadas configuradas, o sistema exibe o resumo da partida e envia os pontos ao placar (**RF31**).
+* **Fluxos Alternativos:**
+    * **FA01 — Pular palavra:** o representante toca em *"Pular (-5 pts)"*; o sistema desconta `5` pontos (sem ficar negativo) e sorteia outra palavra (**RF25**).
+    * **FA02 — Banco esgotado:** se todas as palavras forem usadas, o sistema exibe o card de conclusão com *"Ir para o Placar Final"* (**RF12**, **RF30**).
+    * **FA03 — Sair da partida:** o Líder toca em *"Sair"* e confirma; a partida é encerrada sem enviar pontos do turno em andamento (**RF11**).
+* **Pós-condições:** Pontos das equipes atualizados no placar acumulado do PG.
 
 ---
 
 #### UC04 — Jogar Rodada de Quiz Relâmpago
 * **Ator Principal:** Jogador / Equipe da Vez
+* **Referência Detalhada:** [`docs/jogos/quiz-relampago.md`](../jogos/quiz-relampago.md)
 * **Objetivo:** Responder corretamente às perguntas de múltipla escolha (`A` a `D`) dentro do tempo estipulado.
+* **Pré-condições:** Ao menos `2` equipes cadastradas (UC01); jogo escolhido no Hub (UC02); pacotes de perguntas e parâmetros definidos (**RF28**, **RF29**).
 * **Fluxo Principal:**
-    1. O sistema exibe a equipe da vez, o *Cronômetro Expressivo*, o enunciado da pergunta e 4 opções de *Alternativa de Quiz* (`A` a `D`).
-    2. O jogador toca na alternativa escolhida; o sistema confirma acerto (`color.success`, raio `16 dp`, `check-circle`) ou erro (`color.error`, raio `8 dp`, `close-circle`, revelando simultaneamente a correta) e atualiza o placar.
+    1. O sistema exibe a tela de passagem de turno com a equipe da vez e o botão *"Estou Pronto!"* (**RF09**, **RF24**).
+    2. Após o toque, o sistema exibe o *Cronômetro Expressivo*, o enunciado da pergunta e 4 opções de *Alternativa de Quiz* (`A` a `D`) (**RF10**, **RF14**).
+    3. O jogador toca na alternativa escolhida; o sistema bloqueia novos toques, confirma acerto (`color.success`, raio `16 dp`, `check-circle`, `+10 pts`) ou erro (`color.error`, raio `8 dp`, `close-circle`, revelando simultaneamente a correta) e atualiza a pontuação (**RF14**).
+    4. O jogador toca em *"Próxima Pergunta"*, passando a vez à equipe seguinte (volta ao passo 1).
+    5. Concluídas as perguntas configuradas, o sistema exibe o resumo da partida e envia os pontos ao placar (**RF31**).
+* **Fluxos Alternativos:**
+    * **FA01 — Tempo esgotado:** o cronômetro chega a `00:00` sem resposta; o sistema bloqueia as alternativas, revela a correta e mantém a pontuação (**RF26**).
+    * **FA02 — Banco esgotado:** se todas as perguntas forem usadas, o sistema exibe o card de conclusão com *"Ir para o Placar Final"* (**RF12**, **RF30**).
+    * **FA03 — Sair da partida:** o Líder toca em *"Sair"* e confirma (**RF11**).
+* **Pós-condições:** Pontos das equipes atualizados no placar acumulado do PG.
 
 ---
 
 #### UC05 — Jogar Rodada do Jogo da Forca
 * **Ator Principal:** Jogador / Equipe da Vez
+* **Referência Detalhada:** [`docs/jogos/jogo-da-forca.md`](../jogos/jogo-da-forca.md)
 * **Objetivo:** Descobrir a palavra secreta escolhendo letras de `A` a `Z` antes que acabem as tentativas da equipe.
+* **Pré-condições:** Ao menos `2` equipes cadastradas (UC01); jogo escolhido no Hub (UC02); pacotes de temas e parâmetros definidos (**RF28**, **RF29**).
 * **Fluxo Principal:**
-    1. O sistema exibe a dica/tema, as lacunas da palavra oculta e a grade do *Teclado da Forca* (`48 dp × 48 dp`).
-    2. A cada letra tocada, o sistema revela as ocorrências em verde circular (`9999 dp`) em caso de acerto (*Hit*) ou risca a tecla em vermelho descontando `1` tentativa em caso de erro (*Miss*).
+    1. O sistema exibe a tela de passagem de turno com a equipe da vez e o botão *"Estou Pronto!"* (**RF09**, **RF24**).
+    2. Após o toque, o sistema exibe a dica/tema, as lacunas da palavra oculta, o contador de tentativas restantes e a grade do *Teclado da Forca* (`48 dp × 48 dp`) (**RF15**).
+    3. A cada letra tocada, o sistema revela as ocorrências em verde circular (`9999 dp`) em caso de acerto (*Hit*) ou risca a tecla em vermelho descontando `1` tentativa em caso de erro (*Miss*) (**RF15**).
+    4. Ao revelar todas as letras, o sistema registra a vitória e soma `+30 pts` mais `+2 pts` por tentativa não usada (**RF27**).
+    5. O jogador toca em *"Próxima Palavra"*, passando a vez à equipe seguinte (volta ao passo 1).
+    6. Concluídas as palavras configuradas por equipe, o sistema exibe o resumo da partida e envia os pontos ao placar (**RF31**).
+* **Fluxos Alternativos:**
+    * **FA01 — Derrota:** as tentativas chegam a `0`; o sistema revela a palavra e não pontua (**RF27**).
+    * **FA02 — Banco esgotado:** se todas as palavras forem usadas, o sistema exibe o card de conclusão com *"Ir para o Placar Final"* (**RF12**, **RF30**).
+    * **FA03 — Sair da partida:** o Líder toca em *"Sair"* e confirma (**RF11**).
+* **Pós-condições:** Pontos das equipes atualizados no placar acumulado do PG.
 
 ---
 
@@ -231,9 +270,9 @@ Fluxo de relacionamento entre os atores e os casos de uso do **PG PLAY**:
 | :--- | :--- | :--- | :--- |
 | **UC01 — Configurar Equipes** | RF05, RF06, RF07, RF08 | RNF02, RNF03, RNF05, RNF07, RNF08 | `ExpressiveTextField`, `ExpressiveButton`, `GameCard` |
 | **UC02 — Buscar e Selecionar Minigame** | RF01, RF02, RF03, RF04 | RNF02, RNF04, RNF07, RNF10 | `ExpressiveTextField`, `GameCard`, `ExpressiveButton` |
-| **UC03 — Jogar Mímica Expressiva** | RF09, RF10, RF11, RF12, RF13 | RNF02, RNF04, RNF06, RNF07, RNF09 | `ExpressiveTimer`, `GameCard`, `ExpressiveButton` |
-| **UC04 — Jogar Quiz Relâmpago** | RF09, RF10, RF11, RF12, RF14 | RNF05, RNF06, RNF07, RNF08, RNF09 | `ExpressiveTimer`, `GameCard`, `QuizOption`, `ExpressiveButton` |
-| **UC05 — Jogar Jogo da Forca** | RF09, RF11, RF12, RF15 | RNF05, RNF06, RNF07, RNF08, RNF10 | `GameCard`, `LetterKey`, `ExpressiveButton` |
+| **UC03 — Jogar Mímica Expressiva** | RF09, RF10, RF11, RF12, RF13, RF24, RF25, RF28, RF29, RF30, RF31 | RNF02, RNF04, RNF06, RNF07, RNF09 | `ExpressiveTimer`, `GameCard`, `ExpressiveButton` |
+| **UC04 — Jogar Quiz Relâmpago** | RF09, RF10, RF11, RF12, RF14, RF24, RF26, RF28, RF29, RF30, RF31 | RNF05, RNF06, RNF07, RNF08, RNF09 | `ExpressiveTimer`, `GameCard`, `QuizOption`, `ExpressiveButton` |
+| **UC05 — Jogar Jogo da Forca** | RF09, RF11, RF12, RF15, RF24, RF27, RF28, RF29, RF30, RF31 | RNF05, RNF06, RNF07, RNF08, RNF10 | `GameCard`, `LetterKey`, `ExpressiveButton` |
 | **UC06 — Consultar e Gerenciar Placar** | RF16, RF17 | RNF04, RNF05, RNF07, RNF08, RNF10 | `GameCard`, `ExpressiveButton` |
 | **UC07 — Jogar Cidade Dorme** | RF18, RF19, RF20 | RNF03, RNF05, RNF06, RNF08, RNF11 | `GameCard`, `ExpressiveButton`, `ExpressiveTimer`, `QuizOption` |
 | **UC08 — Jogar Adedonha Bíblica** | RF21, RF22, RF23 | RNF03, RNF06, RNF07, RNF09, RNF10 | `LetterKey` / `AlphabetRoulette`, `ExpressiveTextField`, `ExpressiveTimer`, `ExpressiveButton`, `GameCard` |
