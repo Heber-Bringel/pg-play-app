@@ -21,6 +21,6 @@ Modalidades clássicas especificadas no documento de [Requisitos e Casos de Uso 
 
 | Jogo | Formato | Caso de Uso / Referência | Componentes Principais |
 | :--- | :---: | :--- | :--- |
-| 🎭 **Mímica Expressiva** | Equipes (1 celular) | `UC03` em [`requisitos-e-casos-de-uso-pg-play.md`](../requisitos/requisitos-e-casos-de-uso-pg-play.md) | `ExpressiveTimer`, `GameCard`, `ExpressiveButton` |
-| ⚡ **Quiz Relâmpago** | Equipes (1 celular) | `UC04` em [`requisitos-e-casos-de-uso-pg-play.md`](../requisitos/requisitos-e-casos-de-uso-pg-play.md) | `ExpressiveTimer`, `GameCard`, `QuizOption`, `ExpressiveButton` |
-| 🔤 **Jogo da Forca** | Cooperativo / Equipes | `UC05` em [`requisitos-e-casos-de-uso-pg-play.md`](../requisitos/requisitos-e-casos-de-uso-pg-play.md) | `GameCard`, `LetterKey`, `ExpressiveButton` |
+| 🎭 **Mímica Expressiva** | Equipes (1 celular) | [`mimica-expressiva.md`](mimica-expressiva.md) · `UC03` em [`requisitos-e-casos-de-uso-pg-play.md`](../requisitos/requisitos-e-casos-de-uso-pg-play.md) | `ExpressiveTimer`, `GameCard`, `ExpressiveButton` |
+| ⚡ **Quiz Relâmpago** | Equipes (1 celular) | [`quiz-relampago.md`](quiz-relampago.md) · `UC04` em [`requisitos-e-casos-de-uso-pg-play.md`](../requisitos/requisitos-e-casos-de-uso-pg-play.md) | `ExpressiveTimer`, `GameCard`, `QuizOption`, `ExpressiveButton` |
+| 🔤 **Jogo da Forca** | Cooperativo / Equipes | [`jogo-da-forca.md`](jogo-da-forca.md) · `UC05` em [`requisitos-e-casos-de-uso-pg-play.md`](../requisitos/requisitos-e-casos-de-uso-pg-play.md) | `GameCard`, `LetterKey`, `ExpressiveButton` |
