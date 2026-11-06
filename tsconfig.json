@@ -11,9 +11,8 @@
     "moduleResolution": "node",
     "baseUrl": ".",
     "paths": {
-      "react-native": ["src/__mocks__/react-native.tsx"],
-      "@expo/vector-icons": ["src/__mocks__/expo-vector-icons.tsx"]
+      "@/*": ["./src/*"]
     }
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "tests/**/*"]
 }

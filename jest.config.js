@@ -2,14 +2,17 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  roots: ['<rootDir>/src'],
+  roots: ['<rootDir>/src', '<rootDir>/tests'],
   moduleNameMapper: {
-    '^react-native$': '<rootDir>/src/__mocks__/react-native.tsx',
-    '^@expo/vector-icons$': '<rootDir>/src/__mocks__/expo-vector-icons.tsx',
+    '^@/(.*)$': '<rootDir>/src/$1',
   },
   collectCoverageFrom: [
-    'src/theme/**/*.ts',
-    'src/components/**/*.tsx',
+    'src/view/theme.ts',
+    'src/view/components/**/*.tsx',
+    'src/usecase/**/*.ts',
+    'src/viewmodel/**/*.ts',
+    'src/infra/**/*.ts',
+    'src/model/**/*.ts',
   ],
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html', 'json-summary'],

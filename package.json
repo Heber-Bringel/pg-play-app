@@ -4,8 +4,12 @@
   "private": true,
   "description": "PG PLAY - Minigames para Pequenos Grupos (IHC + PDM)",
   "scripts": {
-    "test": "jest",
-    "test:coverage": "jest --coverage"
+    "arquitetura": "node scripts/check-arquitetura.mjs",
+    "check": "node scripts/check-arquitetura.mjs && tsc --noEmit && jest --passWithNoTests",
+    "spec:new": "node .specify/scripts/create-new-feature.mjs",
+    "github:setup": "node scripts/setup-github-project.mjs",
+    "test": "jest --passWithNoTests",
+    "test:coverage": "jest --coverage --passWithNoTests"
   },
   "dependencies": {
     "react": "^18.3.1"
