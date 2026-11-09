@@ -1,6 +1,6 @@
 # 🤝 Guia de Contribuição — PG PLAY (Commits, Branches e Pull Requests)
 
-Este documento define o padrão oficial de **Commits Convencionais**, **Branches**, **Issues** e **Pull Requests** para o desenvolvimento do **PG PLAY** (trabalho final integrado de **IHC** e **PDM** — **IFPI Campus Piripiri**).
+Este documento define o padrão oficial de **Commits Convencionais**, **Branches**, **Issues** e **Pull Requests** para o desenvolvimento do **PG PLAY** (trabalho final integrado de **IHC**, **PDM** e **Engenharia de Software III** — **IFPI Campus Piripiri**).
 
 Todo código submetido ao repositório deve respeitar estritamente o **Harness MVVM Sofisticado** ([`AGENTS.md`](AGENTS.md)) e o sistema de design **PG Play Expressive** ([`design-system/README.md`](design-system/README.md)).
 
@@ -36,7 +36,7 @@ Seguimos a especificação [Conventional Commits v1.0.0](https://www.conventiona
 | `test` | Criação ou atualização de testes unitários em `tests/` | `test(usecase): cobrir casos de erro de duplicidade de equipe` |
 | `docs` | Atualização de documentação em `docs/`, `design-system/` ou `README.md` | `docs(harness): detalhar padrao de commits e pull requests` |
 | `chore` | Configurações de projeto, pacotes, scripts ou estrutura `.gitkeep` | `chore(harness): configurar estrutura inicial mvvm e linter` |
-| `ci` | Configuração de workflows do GitHub Actions ou hooks | `ci(github): adicionar validacao automatica do npm run check` |
+| `ci` | Configuração de workflows do GitHub Actions ou hooks | `ci(harness): adicionar validacao automatica do npm run check` |
 
 ### 1.2. Escopos Oficiais (`<escopo>`)
 
@@ -98,3 +98,19 @@ Adotamos o **GitHub Spec Kit** (`.specify/` e `specs/`) aliado ao **Harness MVVM
    ```
    *(Executa `node scripts/check-arquitetura.mjs && tsc --noEmit && jest --passWithNoTests`)*
 5. **Abra o Pull Request** preenchendo integralmente o template [`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md) e vinculando a Issue (`Closes #X`) e a pasta `specs/NNN-slug/`.
+
+---
+
+## 4. Vistoria do Histórico Git para Testes Automatizados (Engenharia de Software III)
+
+Na disciplina de **Engenharia de Software III**, o histórico de commits (`git log --oneline` e `git show`) é avaliado diretamente:
+
+1. **Proibido concentrar todos os testes em um único commit**: os testes devem ser commitados de forma incremental e separada por categoria ao longo do desenvolvimento.
+2. **Mínimo de 5 commits de testes (`test(...)`) distribuídos em categorias diferentes**:
+   - `test(view): adicionar testes de componentes do design system com rntl`
+   - `test(usecase): adicionar testes unitarios de regras de equipes e arenas`
+   - `test(viewmodel): adicionar testes dos hooks de viewmodel com renderhook`
+   - `test(view): adicionar testes de telas com mocks de viewmodel e servicos`
+   - `test(tests): adicionar testes de integracao real de formulario e estado`
+   - `test(tests): configurar cobertura minima de 80% e adicionar 3 fluxos e2e maestro`
+3. **Qualidade da Suíte**: nunca faça commit de arquivos de teste contendo `.only` ou `.skip` indevidos, nem commits vazios/repetidos. Consulte [`docs/qualidade-e-testes/estrategia-testes-e-iso25010.md`](docs/qualidade-e-testes/estrategia-testes-e-iso25010.md).

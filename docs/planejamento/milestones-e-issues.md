@@ -29,7 +29,8 @@ Este documento especifica o roteiro oficial de entregas (**Milestones**), **Labe
 | `camada:view` | `#BE185D` | Telas espelhadas (`src/view/`) e rotas finas (`src/app/`) |
 | `modo:1-celular` | `#15803D` | Jogos presenciais em 1 celular compartilhado (Passa-Celular) |
 | `modo:multiplayer` | `#B45309` | Jogos em Sala Multiplayer (1 celular por jogador via PIN/QR) |
-| `tests` | `#374151` | Testes unitários e de integração com Jest |
+| `tests` | `#374151` | Testes unitários, componentes RNTL, hooks e mocks com Jest |
+| `qualidade:es3` | `#0D9488` | Qualidade ISO/IEC 25010, Cobertura `>= 80%`, Integração e 3 Fluxos E2E (Eng. Software III) |
 
 ---
 
@@ -37,8 +38,8 @@ Este documento especifica o roteiro oficial de entregas (**Milestones**), **Labe
 
 | # | Milestone | Escopo Principal | Issues Vinculadas |
 | :-: | :--- | :--- | :--- |
-| **M1** | **`v0.1.0` — Fundação: Harness MVVM & Design System** | Os 5 Pilares do Harness, árvore de 7 pastas com `.gitkeep`, sincronização de `src/view/theme.ts` e dos 6 componentes do `PG Play Expressive`. | Issues **#1**, **#2** |
-| **M2** | **`v0.2.0` — Núcleo & Jogos em 1 Celular (`UC01–UC06`)** | Domínio base, `MemoryDataSources` + `AsyncStorage`, Hub de Jogos, Gestão de Equipes, Mímica Expressiva, Quiz Relâmpago, Jogo da Forca e Placar Geral. | Issues **#3**, **#4**, **#5**, **#6**, **#7**, **#8** |
+| **M1** | **`v0.1.0` — Fundação: Harness MVVM & Design System** | Os 5 Pilares do Harness, árvore de 7 pastas com `.gitkeep`, sincronização de `src/view/theme.ts`, dos 6 componentes do `PG Play Expressive` e testes de componentes com RNTL. | Issues **#1**, **#2** |
+| **M2** | **`v0.2.0` — Núcleo & Jogos em 1 Celular (`UC01–UC06`)** | Domínio base, `MemoryDataSources` + `AsyncStorage`, Hub de Jogos, Gestão de Equipes, Mímica Expressiva, Quiz Relâmpago, Jogo da Forca, Placar Geral e testes unitários/hooks/mocks/integração. | Issues **#3**, **#4**, **#5**, **#6**, **#7**, **#8**, **#11** |
 | **M3** | **`v1.0.0` — Jogos em Sala Multiplayer (`UC07–UC08`)** | Serviço de salas multiplayer (**Supabase** Realtime/RLS + `Memory*`), Cidade Dorme com Narrador por áudio clonado (`expo-av` Noite/Dia) e Adedonha Bíblica com Roleta Expressiva e botão *"Levantar Dúvida ✋"*. | Issues **#9**, **#10** |
 
 ---
@@ -59,7 +60,7 @@ Este documento especifica o roteiro oficial de entregas (**Milestones**), **Labe
   5. Estrutura das 7 pastas em `src/` (`app`, `view`, `viewmodel`, `usecase`, `model`, `infra`, `di`) com `.gitkeep`.
 - **Critérios de Aceite:**
   - `npm run arquitetura` executando com 0 violações.
-  - Templates de PR e Issues configurados em `.github/`.
+  - Templates de PR, Issues e workflow `.github/workflows/ci.yml` configurados em `.github/`.
 
 ---
 
@@ -193,3 +194,19 @@ Este documento especifica o roteiro oficial de entregas (**Milestones**), **Labe
   - `src/infra/services/memoryMultiplayerRoomService.ts` e `src/infra/services/supabaseMultiplayerRoomService.ts`
   - `src/viewmodel/useAdedonhaViewModel.ts`
   - `src/view/adedonha.tsx` ↔ `src/app/adedonha.tsx`
+
+---
+
+#### Issue #11 — `[ES3] Implementar Testes de Integração, Cobertura >= 80% e 3 Fluxos E2E com Maestro`
+- **Milestone:** `v0.2.0 — Núcleo & Jogos em 1 Celular (UC01–UC06)`
+- **Labels:** `tests`, `qualidade:es3`, `camada:view`, `camada:viewmodel`, `camada:usecase`
+- **Especificação detalhada:** [`docs/qualidade-e-testes/estrategia-testes-e-iso25010.md`](../qualidade-e-testes/estrategia-testes-e-iso25010.md) e [`docs/harness/06-testes-e-qualidade-es3.md`](../harness/06-testes-e-qualidade-es3.md)
+- **Descrição:**
+  Consolidar as 7 categorias obrigatórias de testes automatizados de **Engenharia de Software III** (Prof. Jeferson Soares), garantindo commits separados por categoria (`test(...)`), cobertura mínima de `80%` nas 4 métricas do Jest e execução dos 3 fluxos E2E em dispositivo/emulador:
+  1. **Testes Unitários (`tests/unit/`)**: `PgPlayUseCases` (sucesso, falha `ValidationError` e casos de borda) + `tokens.test.ts`.
+  2. **Testes de Componentes com RNTL (`tests/components/`)**: os 6 componentes visuais validando consultas semânticas (`getByRole`, `getByLabelText`, `accessibilityState`).
+  3. **Testes de Componentes com Mocks (`tests/mocks/`)**: telas isolando ViewModels/serviços para testar os 4 estados (`loading`, `error`, `empty`, `content`).
+  4. **Testes de Hooks (`tests/hooks/`)**: `renderHook` para `useHubViewModel`, `useTeamsViewModel` e hooks das arenas.
+  5. **Testes de Integração Real (`tests/integration/`)**: `View + ViewModel + UseCase + MemoryDataSource` sem mockar o domínio (formulário + validação + estado + exibição).
+  6. **Cobertura de Código (`>= 80%`)**: `npm test -- --coverage` atingindo `>= 80%` em `statements`, `branches`, `functions` e `lines`.
+  7. **3 Fluxos E2E (`e2e/`)**: `01-hub-e-cadastro-equipes.yaml`, `02-partida-quiz-ate-placar.yaml` e `03-partida-forca-e-reinicio.yaml`.

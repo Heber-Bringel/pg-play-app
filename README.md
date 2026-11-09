@@ -1,6 +1,6 @@
 # 🎮 PG PLAY · Minigames para Pequenos Grupos
 
-Repositório oficial do trabalho final integrado das disciplinas de **Interação Humano-Computador (IHC)** e **Programação para Dispositivos Móveis (PDM)** — **IFPI Campus Piripiri**.
+Repositório oficial do trabalho final integrado das disciplinas de **Interação Humano-Computador (IHC)**, **Programação para Dispositivos Móveis (PDM)** e **Engenharia de Software III** — **IFPI Campus Piripiri**.
 
 O **PG PLAY** é um aplicativo móvel desenvolvido em **React Native + Expo + TypeScript** voltado para dinâmicas presenciais em Pequenos Grupos (PGs) de jovens e adultos, reunindo jogos rápidos em **1 celular compartilhado** (**Mímica Expressiva**, **Quiz Relâmpago** e **Jogo da Forca**) e jogos em **Sala Multiplayer** (**Cidade Dorme** e **Adedonha Bíblica**).
 
@@ -64,6 +64,7 @@ src/
    - [`docs/harness/03-expo-e-react-native.md`](docs/harness/03-expo-e-react-native.md) — Regras de Expo Router, espelhamento 1:1 `app/` ↔ `view/` e navegação restrita à ViewModel.
    - [`docs/harness/04-views-e-design-system.md`](docs/harness/04-views-e-design-system.md) — Consumo estrito de tokens via `@/view/theme` e componentes do Design System.
    - [`docs/harness/05-infraestrutura-e-supabase.md`](docs/harness/05-infraestrutura-e-supabase.md) — Arquitetura da camada `src/infra/`: Fase 1 local (`Memory*` + `AsyncStorage`) e Fase 2 multiplayer (**Supabase** Realtime/RLS + `expo-av`).
+   - [`docs/harness/06-testes-e-qualidade-es3.md`](docs/harness/06-testes-e-qualidade-es3.md) — As 7 categorias obrigatórias de testes automatizados (Unitários, Componentes RNTL, Mocks, Hooks, Cobertura `>= 80%`, Integração e 3 Fluxos E2E com Maestro).
 3. **Receitas / Skills (`.claude/skills/` e `.github/prompts/`)**:
    - [`/speckit`](.claude/skills/speckit/SKILL.md) — Conduz o fluxo **GitHub Spec Kit** (`specify` → `plan` → `tasks` → `implement`) validado contra [`.specify/memory/constitution.md`](.specify/memory/constitution.md).
    - [`/sincronizar-tema`](.claude/skills/sincronizar-tema/SKILL.md) — Traduz `design-system/` para `src/view/theme.ts` e `src/view/components/`.
@@ -74,22 +75,37 @@ src/
 4. **Linter Arquitetural Determinístico**: [`scripts/check-arquitetura.mjs`](scripts/check-arquitetura.mjs) — Verifica estrutura de pastas, grafo de imports, espelho `app/` ↔ `view/`, proibição de cores literais e assinaturas `[state, actions]`.
 5. **Hooks Automáticos (`.claude/settings.json`)**: [`.claude/settings.json`](.claude/settings.json) — Executa o verificador automaticamente após cada edição (`PostToolUse`) e antes de encerrar (`Stop`).
 
-### Comandos Disponíveis
+### Comandos Disponíveis (Instalação, Verificação, Testes, Cobertura e E2E)
 
 ```bash
-# Cria um novo workspace de especificação no GitHub Spec Kit (specs/NNN-slug/)
-npm run spec:new -- uc01-hub-jogos
+# 1. Instalar dependências do projeto
+npm install
 
-# Verifica todas as regras arquiteturais do Harness MVVM Sofisticado
+# 2. Verificar regras arquiteturais do Harness MVVM Sofisticado
 npm run arquitetura
 
-# Executa verificação completa (Arquitetura + TypeScript + Jest)
+# 3. Executar verificação completa (Arquitetura + TypeScript + Jest)
 npm run check
 
-# Executa a suíte de testes unitários
+# 4. Executar toda a suíte de testes automatizados (Unitários, Componentes, Mocks, Hooks e Integração)
 npm test
 
-# Pré-visualiza ou cadastra Labels, Milestones e Issues no GitHub via gh CLI
+# 5. Gerar relatório de cobertura de código (Meta mínima: >= 80% em statements, branches, functions e lines)
+npm test -- --coverage
+# ou:
+npm run test:coverage
+
+# 6. Executar os 3 fluxos E2E automatizados em emulador/dispositivo com Maestro
+maestro test e2e/01-hub-e-cadastro-equipes.yaml
+maestro test e2e/02-partida-quiz-ate-placar.yaml
+maestro test e2e/03-partida-forca-e-reinicio.yaml
+# Ou rodar toda a pasta E2E de uma vez:
+maestro test e2e/
+
+# 7. Criar um novo workspace de especificação no GitHub Spec Kit (specs/NNN-slug/)
+npm run spec:new -- uc01-hub-jogos
+
+# 8. Pré-visualizar ou cadastrar Labels, Milestones e Issues no GitHub via gh CLI
 npm run github:setup -- --dry-run
 ```
 
@@ -108,8 +124,9 @@ npm run github:setup -- --dry-run
 Toda a documentação de engenharia de requisitos, arquitetura, casos de uso e especificação detalhada das dinâmicas está organizada na pasta [`docs/`](docs/README.md):
 
 - 📄 **[Índice Geral da Documentação (`docs/README.md`)](docs/README.md)**
-- 🛡️ **[Documentação do Harness MVVM Sofisticado (`docs/harness/README.md`)](docs/harness/README.md)** — Regras arquiteturais, convenções de código, Expo Router e integração com o Design System.
-- 📋 **[Especificação de Requisitos e Casos de Uso (`docs/requisitos/requisitos-e-casos-de-uso-pg-play.md`)](docs/requisitos/requisitos-e-casos-de-uso-pg-play.md)** — Requisitos Funcionais (`RF01–RF23`), Requisitos Não Funcionais (`RNF01–RNF11`), Casos de Uso (`UC01–UC08`) e Matriz de Rastreabilidade.
+- 🛡️ **[Documentação do Harness MVVM Sofisticado (`docs/harness/README.md`)](docs/harness/README.md)** — Regras arquiteturais, convenções de código, Expo Router, infraestrutura Supabase e integração com o Design System.
+- 🧪 **[Estratégia de Testes Automatizados e Qualidade ISO/IEC 25010 (`docs/qualidade-e-testes/estrategia-testes-e-iso25010.md`)](docs/qualidade-e-testes/estrategia-testes-e-iso25010.md)** — Características da **ISO/IEC 25010**, mapeamento das 7 categorias obrigatórias de testes (**Engenharia de Software III**), governança de commits de teste e **Respostas às 18 Perguntas da Defesa Oral**.
+- 📋 **[Especificação de Requisitos e Casos de Uso (`docs/requisitos/requisitos-e-casos-de-uso-pg-play.md`)](docs/requisitos/requisitos-e-casos-de-uso-pg-play.md)** — Requisitos Funcionais (`RF01–RF31`), Requisitos Não Funcionais (`RNF01–RNF11`), Casos de Uso (`UC01–UC08`) e Matriz de Rastreabilidade.
 - 🎮 **[Catálogo de Jogos (`docs/jogos/README.md`)](docs/jogos/README.md)**
   - 🌙 **[Cidade Dorme (`docs/jogos/cidade-dorme.md`)](docs/jogos/cidade-dorme.md)** — Dedução social em Sala Multiplayer com Narrador por áudio clonado (voz masculina ou feminina) e alternância entre Tema Escuro (Noite) e Claro (Dia).
   - ✍️📖 **[Adedonha Bíblica (`docs/jogos/adedonha-biblica.md`)](docs/jogos/adedonha-biblica.md)** — Disputa em Sala Multiplayer com Roleta Expressiva do Alfabeto (M3 Expressive), colunas criadas pelo Moderador e apuração assistida com botão *"Levantar Dúvida ✋"*.
