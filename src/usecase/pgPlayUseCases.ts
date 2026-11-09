@@ -7,6 +7,7 @@ import type { IPgPlayUseCases } from '@/usecase/iPgPlayUseCases';
 
 export const DEFAULT_MIMICA_HIT_POINTS = 20;
 export const DEFAULT_MIMICA_SKIP_PENALTY = 5;
+export const DEFAULT_SCOREBOARD_BONUS_POINTS = 10;
 
 export class PgPlayUseCases implements IPgPlayUseCases {
   constructor(
@@ -70,5 +71,37 @@ export class PgPlayUseCases implements IPgPlayUseCases {
       await this.teamDataSource.addScore(cleanTeamId, deduction);
     }
     return this.teamDataSource.listTeams();
+  }
+
+  async getScoreboard(): Promise<Team[]> {
+    const teams = await this.teamDataSource.listTeams();
+    return [...teams].sort((a, b) => b.score - a.score);
+  }
+
+  async awardBonusPoints(
+    teamId: string,
+    bonusPoints: number = DEFAULT_SCOREBOARD_BONUS_POINTS
+  ): Promise<Team[]> {
+    const cleanTeamId = teamId.trim();
+    if (!cleanTeamId) {
+      throw new ValidationError('Identificador da equipe é obrigatório para conceder bônus.');
+    }
+    if (bonusPoints <= 0) {
+      throw new ValidationError('A pontuação de bônus deve ser maior que zero.');
+    }
+
+    const teams = await this.teamDataSource.listTeams();
+    const target = teams.find((team) => team.id === cleanTeamId);
+    if (!target) {
+      throw new ValidationError('Equipe não encontrada na sessão atual.');
+    }
+
+    await this.teamDataSource.addScore(cleanTeamId, bonusPoints);
+    return this.getScoreboard();
+  }
+
+  async resetScoreboard(): Promise<Team[]> {
+    await this.teamDataSource.resetScores();
+    return this.getScoreboard();
   }
 }

@@ -6,4 +6,7 @@ export interface IPgPlayUseCases {
   listMimicaCards(categories?: MimicaCategory[]): Promise<MimicaCard[]>;
   scoreMimicaHit(teamId: string, points?: number): Promise<Team[]>;
   scoreMimicaSkip(teamId: string, penalty?: number): Promise<Team[]>;
+  getScoreboard(): Promise<Team[]>;
+  awardBonusPoints(teamId: string, bonusPoints?: number): Promise<Team[]>;
+  resetScoreboard(): Promise<Team[]>;
 }
