@@ -65,7 +65,12 @@ const LABELS = [
   {
     name: 'tests',
     color: '374151',
-    description: 'Testes unitários e de integração com Jest',
+    description: 'Testes unitários, componentes RNTL, hooks e mocks com Jest',
+  },
+  {
+    name: 'qualidade:es3',
+    color: '0D9488',
+    description: 'Qualidade ISO/IEC 25010, Cobertura >= 80%, Integração e 3 Fluxos E2E (Eng. Software III)',
   },
 ];
 
@@ -73,17 +78,17 @@ const MILESTONES = [
   {
     title: 'v0.1.0 — Fundação: Harness MVVM & Design System',
     description:
-      'Configuração dos 5 Pilares do Harness MVVM Sofisticado, árvore de 7 pastas com .gitkeep, sincronização de src/view/theme.ts e dos 6 componentes do PG Play Expressive.',
+      'Configuração dos 5 Pilares do Harness MVVM Sofisticado, árvore de 7 pastas com .gitkeep, sincronização de src/view/theme.ts, dos 6 componentes do PG Play Expressive e testes de componentes com RNTL.',
   },
   {
     title: 'v0.2.0 — Núcleo & Jogos em 1 Celular (UC01–UC06)',
     description:
-      'Domínio base, MemoryDataSources, Hub de Jogos (UC01), Gestão de Equipes (UC02), Mímica Expressiva (UC03), Quiz Relâmpago (UC04), Jogo da Forca (UC05) e Placar Geral (UC06).',
+      'Domínio base, MemoryDataSources + AsyncStorage, Hub de Jogos (UC01), Gestão de Equipes (UC02), Mímica Expressiva (UC03), Quiz Relâmpago (UC04), Jogo da Forca (UC05), Placar Geral (UC06) e suíte de testes ES III (unitários, hooks, mocks, integração, cobertura >= 80% e 3 fluxos E2E).',
   },
   {
     title: 'v1.0.0 — Jogos em Sala Multiplayer (UC07–UC08)',
     description:
-      'Serviço de salas multiplayer, Cidade Dorme com Narrador por áudio (UC07) e Adedonha Bíblica com Roleta Expressiva e botão Levantar Dúvida (UC08).',
+      'Serviço de salas multiplayer (Supabase Realtime/RLS + Memory*), Cidade Dorme com Narrador por áudio expo-av (UC07) e Adedonha Bíblica com Roleta Expressiva e botão Levantar Dúvida (UC08).',
   },
 ];
 
@@ -101,7 +106,7 @@ Estruturar os 5 Pilares do Harness MVVM Sofisticado e a árvore das 7 pastas can
 - [x] Pilar 3: Skills em \`.claude/skills/\` (\`nova-tela\`, \`nova-funcionalidade\`, \`sincronizar-tema\`, \`revisar-arquitetura\`)
 - [x] Pilar 4: Verificador determinístico \`scripts/check-arquitetura.mjs\`
 - [x] Pilar 5: Hook automático em \`.claude/settings.json\`
-- [x] Templates de PR e Issues em \`.github/\` e guia \`CONTRIBUTING.md\`
+- [x] Templates de PR, Issues, guia \`CONTRIBUTING.md\` e pipeline CI em \`.github/workflows/ci.yml\`
 
 ## ✅ Critérios de Aceite
 - \`npm run arquitetura\` retornando 0 violações.`,
@@ -152,10 +157,11 @@ Permitir cadastrar, listar e remover equipes (mínimo 2, máximo 6) com validaç
 
 ## 🏗️ Camadas MVVM
 - [ ] \`src/model/entities/team.ts\` e \`src/model/datasources/iTeamDataSource.ts\`
-- [ ] \`src/infra/datasources/memoryTeamDataSource.ts\`
+- [ ] \`src/infra/datasources/memoryTeamDataSource.ts\` e \`src/infra/datasources/asyncStorageTeamDataSource.ts\`
 - [ ] Métodos \`listTeams\`, \`addTeam\` e \`removeTeam\` em \`PgPlayUseCases\`
 - [ ] \`src/viewmodel/useTeamsViewModel.ts\`
-- [ ] \`src/view/teams.tsx\` e rota fina \`src/app/teams.tsx\``,
+- [ ] \`src/view/teams.tsx\` e rota fina \`src/app/teams.tsx\`
+- [ ] Testes unitários (\`tests/unit/pgPlayUseCases.teams.test.ts\`) e de hook (\`tests/hooks/useTeamsViewModel.test.ts\`)`,
   },
   {
     title: '[UC03] Implementar Arena de Mímica Expressiva (RF07–RF09)',
@@ -209,13 +215,14 @@ Exibir ranking ordenado por pontuação, destaque de equipe líder, bônus e aç
     milestone: MILESTONES[2].title,
     labels: ['camada:model', 'camada:infra', 'camada:usecase', 'camada:viewmodel', 'camada:view', 'modo:multiplayer', 'tests'],
     body: `## 🎯 Caso de Uso: UC07 — Jogar Cidade Dorme em Sala Multiplayer
-Referência: \`docs/jogos/cidade-dorme.md\`.
-Sorteio de papéis secretos (\`Cidadão\`, \`Sabotador\`, \`Anjo\`, \`Detetive\`), transição de fases (\`Noite\` ↔ \`Dia\` ↔ \`Votação\`) e apuração automática de vitória.
+Referência: \`docs/jogos/cidade-dorme.md\` e \`docs/harness/05-infraestrutura-e-supabase.md\`.
+Sorteio de papéis secretos (\`Cidadão\`, \`Assassino\`, \`Anjo\`, \`Detetive\`), transição de fases (\`Noite\` ↔ \`Dia\` ↔ \`Votação\`) com Narrador por áudio clonado (\`expo-av\`) e apuração automática de vitória via **Supabase Realtime/RLS**.
 
 ## 🏗️ Camadas MVVM
 - [ ] \`CidadeDormeRoom\` e \`CidadeDormePlayer\` em \`src/model/entities/multiplayerSession.ts\`
-- [ ] \`src/model/services/iMultiplayerRoomService.ts\`
-- [ ] \`src/infra/services/memoryMultiplayerRoomService.ts\`
+- [ ] \`src/model/services/iMultiplayerRoomService.ts\` e \`src/model/services/iNarratorAudioService.ts\`
+- [ ] \`src/infra/services/memoryMultiplayerRoomService.ts\` e \`src/infra/services/supabaseMultiplayerRoomService.ts\`
+- [ ] \`src/infra/services/memoryNarratorAudioService.ts\` e \`src/infra/services/expoAvNarratorAudioService.ts\`
 - [ ] \`src/viewmodel/useCidadeDormeViewModel.ts\`
 - [ ] \`src/view/cidade-dorme.tsx\` e rota fina \`src/app/cidade-dorme.tsx\``,
   },
@@ -224,13 +231,31 @@ Sorteio de papéis secretos (\`Cidadão\`, \`Sabotador\`, \`Anjo\`, \`Detetive\`
     milestone: MILESTONES[2].title,
     labels: ['camada:model', 'camada:infra', 'camada:usecase', 'camada:viewmodel', 'camada:view', 'modo:multiplayer', 'tests'],
     body: `## 🎯 Caso de Uso: UC08 — Jogar Adedonha Bíblica em Sala Multiplayer
-Referência: \`docs/jogos/adedonha-biblica.md\`.
-Sorteio da letra da rodada, preenchimento de categorias bíblicas/temáticas, botão Jumbo **STOP!** e apuração assistida com botão *"Levantar Dúvida ✋"*.
+Referência: \`docs/jogos/adedonha-biblica.md\` e \`docs/harness/05-infraestrutura-e-supabase.md\`.
+Sorteio da letra da rodada na Roleta Expressiva M3, preenchimento de categorias bíblicas/temáticas, botão Jumbo **ADEDONHA!** e apuração assistida com botão *"Levantar Dúvida ✋"* via **Supabase Realtime**.
 
 ## 🏗️ Camadas MVVM
 - [ ] \`AdedonhaRoom\` e \`AdedonhaSubmission\` em \`src/model/entities/multiplayerSession.ts\`
+- [ ] \`src/infra/services/memoryMultiplayerRoomService.ts\` e \`src/infra/services/supabaseMultiplayerRoomService.ts\`
 - [ ] \`src/viewmodel/useAdedonhaViewModel.ts\`
 - [ ] \`src/view/adedonha.tsx\` e rota fina \`src/app/adedonha.tsx\``,
+  },
+  {
+    title: '[ES3] Implementar Testes de Integração, Cobertura >= 80% e 3 Fluxos E2E com Maestro',
+    milestone: MILESTONES[1].title,
+    labels: ['tests', 'qualidade:es3', 'camada:view', 'camada:viewmodel', 'camada:usecase'],
+    body: `## 🧪 Engenharia de Software III — Suíte Completa de Testes e Qualidade ISO/IEC 25010
+Referência: \`docs/qualidade-e-testes/estrategia-testes-e-iso25010.md\` e \`docs/harness/06-testes-e-qualidade-es3.md\`.
+
+## 📦 Entregáveis Obrigatórios (7 Categorias + Commits Separados)
+- [ ] **Critério 1 — Testes Unitários (\`tests/unit/\`)**: \`pgPlayUseCases.teams.test.ts\`, \`pgPlayUseCases.arenas.test.ts\` e \`tokens.test.ts\` (sucesso, falha \`ValidationError\` e casos de borda).
+- [ ] **Critério 2 — Testes de Componentes (\`tests/components/\`)**: os 6 componentes visuais com React Native Testing Library (\`getByRole\`, \`getByLabelText\`, \`accessibilityState\`, \`fireEvent\`).
+- [ ] **Critério 3 — Testes de Componentes com Mocks (\`tests/mocks/\`)**: telas isolando ViewModels/serviços para validar estados de \`loading\`, \`error\`, \`empty\` e \`content\`.
+- [ ] **Critério 4 — Testes de Hooks (\`tests/hooks/\`)**: \`renderHook\` nas ViewModels (\`useHubViewModel\`, \`useTeamsViewModel\`, \`useArenasViewModel\`).
+- [ ] **Critério 5 — Cobertura de Código (\`>= 80%\`)**: \`npm test -- --coverage\` atingindo \`>= 80%\` em \`statements\`, \`branches\`, \`functions\` e \`lines\`.
+- [ ] **Critério 6 — Testes de Integração Real (\`tests/integration/\`)**: \`View + ViewModel + UseCase + MemoryDataSource\` integrados sem mockar o domínio.
+- [ ] **Critério 7 — Pelo menos 3 Fluxos E2E (\`e2e/\`)**: fluxos automatizados com Maestro (\`01-hub-e-cadastro-equipes.yaml\`, \`02-partida-quiz-ate-placar.yaml\`, \`03-partida-forca-e-reinicio.yaml\`).
+- [ ] **Histórico Git**: mínimo de 5 commits separados por categoria de teste (\`test(...)\`).`,
   },
 ];
 
@@ -281,7 +306,7 @@ function main() {
     ]);
   }
 
-  console.log('\n3. Criando as 10 Issues do Projeto...');
+  console.log('\n3. Criando as 11 Issues do Projeto...');
   for (const issue of ISSUES) {
     const args = [
       'issue',
