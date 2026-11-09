@@ -5,6 +5,8 @@ module.exports = {
   roots: ['<rootDir>/src', '<rootDir>/tests'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
+    '^react-native$': '<rootDir>/tests/__mocks__/react-native.tsx',
+    '^@expo/vector-icons$': '<rootDir>/tests/__mocks__/expo-vector-icons.tsx',
   },
   collectCoverageFrom: [
     'src/view/theme.ts',
