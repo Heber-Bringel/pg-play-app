@@ -1,0 +1,51 @@
+name: CI — Harness MVVM & Testes ES III
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  check-and-test:
+    name: Arquitetura MVVM, TypeScript & Testes (ISO/IEC 25010)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Verificar Arquitetura MVVM Sofisticada (7 camadas)
+        run: npm run arquitetura
+
+      - name: Verificar tipagem estrita TypeScript
+        run: npx tsc --noEmit
+
+      - name: Verificar ausência de .only e .skip em tests/ (Eng. Software III)
+        run: |
+          if [ -d "tests" ] && grep -rnE "\b(describe|it|test)\.(only|skip)\b" tests/; then
+            echo "Erro: Foram encontrados .only ou .skip indevidos na pasta tests/."
+            exit 1
+          fi
+
+      - name: Executar testes automatizados e gerar cobertura
+        run: npm run test:coverage
+
+      - name: Publicar relatório de cobertura como artefato
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          if-no-files-found: ignore
