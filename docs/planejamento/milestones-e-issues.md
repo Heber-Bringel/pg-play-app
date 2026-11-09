@@ -38,8 +38,8 @@ Este documento especifica o roteiro oficial de entregas (**Milestones**), **Labe
 | # | Milestone | Escopo Principal | Issues Vinculadas |
 | :-: | :--- | :--- | :--- |
 | **M1** | **`v0.1.0` — Fundação: Harness MVVM & Design System** | Os 5 Pilares do Harness, árvore de 7 pastas com `.gitkeep`, sincronização de `src/view/theme.ts` e dos 6 componentes do `PG Play Expressive`. | Issues **#1**, **#2** |
-| **M2** | **`v0.2.0` — Núcleo & Jogos em 1 Celular (`UC01–UC06`)** | Domínio base, `MemoryDataSources`, Hub de Jogos, Gestão de Equipes, Mímica Expressiva, Quiz Relâmpago, Jogo da Forca e Placar Geral. | Issues **#3**, **#4**, **#5**, **#6**, **#7**, **#8** |
-| **M3** | **`v1.0.0` — Jogos em Sala Multiplayer (`UC07–UC08`)** | Serviço de salas multiplayer, Cidade Dorme com Narrador por áudio clonado (Noite/Dia) e Adedonha Bíblica com Roleta Expressiva e botão *"Levantar Dúvida ✋"*. | Issues **#9**, **#10** |
+| **M2** | **`v0.2.0` — Núcleo & Jogos em 1 Celular (`UC01–UC06`)** | Domínio base, `MemoryDataSources` + `AsyncStorage`, Hub de Jogos, Gestão de Equipes, Mímica Expressiva, Quiz Relâmpago, Jogo da Forca e Placar Geral. | Issues **#3**, **#4**, **#5**, **#6**, **#7**, **#8** |
+| **M3** | **`v1.0.0` — Jogos em Sala Multiplayer (`UC07–UC08`)** | Serviço de salas multiplayer (**Supabase** Realtime/RLS + `Memory*`), Cidade Dorme com Narrador por áudio clonado (`expo-av` Noite/Dia) e Adedonha Bíblica com Roleta Expressiva e botão *"Levantar Dúvida ✋"*. | Issues **#9**, **#10** |
 
 ---
 
@@ -111,7 +111,7 @@ Este documento especifica o roteiro oficial de entregas (**Milestones**), **Labe
   - Garantir mínimo de 2 e máximo de 6 equipes por sessão.
 - **Arquivos por camada:**
   - `src/model/entities/team.ts`, `src/model/datasources/iTeamDataSource.ts`
-  - `src/infra/datasources/memoryTeamDataSource.ts`
+  - `src/infra/datasources/memoryTeamDataSource.ts` e `src/infra/datasources/asyncStorageTeamDataSource.ts`
   - `src/viewmodel/useTeamsViewModel.ts`
   - `src/view/teams.tsx` ↔ `src/app/teams.tsx`
 
@@ -174,8 +174,9 @@ Este documento especifica o roteiro oficial de entregas (**Milestones**), **Labe
   Jogo de dedução social em Sala Multiplayer (mínimo 4–5 jogadores) com sorteio secreto de papéis (`Cidadão`, `Sabotador/Assassino`, `Anjo`, `Detetive`), condução automática das fases (`Noite` em Tema Escuro ↔ `Dia/Votação` em Tema Claro) e verificação de vitória.
 - **Arquivos por camada:**
   - `src/model/entities/multiplayerSession.ts` (`CidadeDormeRoom`, `CidadeDormePlayer`)
-  - `src/model/services/iMultiplayerRoomService.ts`
-  - `src/infra/services/memoryMultiplayerRoomService.ts`
+  - `src/model/services/iMultiplayerRoomService.ts` e `src/model/services/iNarratorAudioService.ts`
+  - `src/infra/services/memoryMultiplayerRoomService.ts` e `src/infra/services/supabaseMultiplayerRoomService.ts`
+  - `src/infra/services/memoryNarratorAudioService.ts` e `src/infra/services/expoAvNarratorAudioService.ts`
   - `src/viewmodel/useCidadeDormeViewModel.ts`
   - `src/view/cidade-dorme.tsx` ↔ `src/app/cidade-dorme.tsx`
 
@@ -184,10 +185,11 @@ Este documento especifica o roteiro oficial de entregas (**Milestones**), **Labe
 #### Issue #10 — `[UC08] Implementar Adedonha Bíblica em Sala Multiplayer com Roleta Expressiva (RF21–RF23)`
 - **Milestone:** `v1.0.0 — Jogos em Sala Multiplayer (UC07–UC08)`
 - **Labels:** `camada:model`, `camada:infra`, `camada:usecase`, `camada:viewmodel`, `camada:view`, `modo:multiplayer`, `tests`
-- **Especificação detalhada:** [`docs/jogos/adedonha-biblica.md`](../jogos/adedonha-biblica.md)
+- **Especificação detalhada:** [`docs/jogos/adedonha-biblica.md`](../jogos/adedonha-biblica.md) e [`docs/harness/05-infraestrutura-e-supabase.md`](../harness/05-infraestrutura-e-supabase.md)
 - **Descrição:**
-  Disputa em Sala Multiplayer com sorteio da letra da rodada, preenchimento de categorias bíblicas/temáticas, validação da letra inicial, botão Jumbo **STOP!** para travar a rodada e apuração assistida com botão *"Levantar Dúvida ✋"*.
+  Disputa em Sala Multiplayer via **Supabase Realtime** com sorteio da letra da rodada, preenchimento de categorias bíblicas/temáticas, validação da letra inicial, botão Jumbo **ADEDONHA!** para travar a rodada e apuração assistida com botão *"Levantar Dúvida ✋"*.
 - **Arquivos por camada:**
   - `src/model/entities/multiplayerSession.ts` (`AdedonhaRoom`, `AdedonhaSubmission`)
+  - `src/infra/services/memoryMultiplayerRoomService.ts` e `src/infra/services/supabaseMultiplayerRoomService.ts`
   - `src/viewmodel/useAdedonhaViewModel.ts`
   - `src/view/adedonha.tsx` ↔ `src/app/adedonha.tsx`
