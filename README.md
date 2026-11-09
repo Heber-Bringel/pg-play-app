@@ -63,6 +63,7 @@ src/
    - [`docs/harness/02-convencoes-de-codigo.md`](docs/harness/02-convencoes-de-codigo.md) — Nomenclatura de arquivos, `type` vs `interface`, proibição de `any`/`React.FC`/`Repository` e erros de domínio (`DomainError`).
    - [`docs/harness/03-expo-e-react-native.md`](docs/harness/03-expo-e-react-native.md) — Regras de Expo Router, espelhamento 1:1 `app/` ↔ `view/` e navegação restrita à ViewModel.
    - [`docs/harness/04-views-e-design-system.md`](docs/harness/04-views-e-design-system.md) — Consumo estrito de tokens via `@/view/theme` e componentes do Design System.
+   - [`docs/harness/05-infraestrutura-e-supabase.md`](docs/harness/05-infraestrutura-e-supabase.md) — Arquitetura da camada `src/infra/`: Fase 1 local (`Memory*` + `AsyncStorage`) e Fase 2 multiplayer (**Supabase** Realtime/RLS + `expo-av`).
 3. **Receitas / Skills (`.claude/skills/` e `.github/prompts/`)**:
    - [`/speckit`](.claude/skills/speckit/SKILL.md) — Conduz o fluxo **GitHub Spec Kit** (`specify` → `plan` → `tasks` → `implement`) validado contra [`.specify/memory/constitution.md`](.specify/memory/constitution.md).
    - [`/sincronizar-tema`](.claude/skills/sincronizar-tema/SKILL.md) — Traduz `design-system/` para `src/view/theme.ts` e `src/view/components/`.

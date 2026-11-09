@@ -12,6 +12,7 @@ Esta pasta compõe o **Pilar 2 (Documentação Sob Demanda)** do Harness de Enge
 | **[`02-convencoes-de-codigo.md`](02-convencoes-de-codigo.md)** | Ao criar tipos, interfaces, classes ou testes | Padrões de nomenclatura (`camelCase`, prefixo `i`), `type` vs `interface`, proibição de `any`/`React.FC`/`Repository` e hierarquia `DomainError`. |
 | **[`03-expo-e-react-native.md`](03-expo-e-react-native.md)** | Ao trabalhar com rotas, navegação ou pacotes Expo | Rotas finas de 2 linhas em `src/app/`, espelhamento 1:1 com `src/view/` e navegação restrita à camada `src/viewmodel/`. |
 | **[`04-views-e-design-system.md`](04-views-e-design-system.md)** | Ao criar telas (`src/view/`) ou componentes visuais | Integração com o **PG Play Expressive (`design-system/`)**, uso exclusivo de tokens de `@/view/theme` e acessibilidade WCAG 2.1. |
+| **[`05-infraestrutura-e-supabase.md`](05-infraestrutura-e-supabase.md)** | Ao criar `DataSources` ou `Services` em `src/infra/` | Roteiro 1 (`Memory*` + `AsyncStorage` nos jogos de 1 celular) e Roteiro 2 (**Supabase** Realtime/RLS + `expo-av` nas Salas Multiplayer). |
 
 ---
 

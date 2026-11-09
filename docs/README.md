@@ -14,7 +14,8 @@ docs/
 │   ├── 01-arquitetura-mvvm.md                 # As 7 pastas de src/, responsabilidades e fluxo MVVM
 │   ├── 02-convencoes-de-codigo.md             # Nomes, type vs interface, erros de domínio e testes
 │   ├── 03-expo-e-react-native.md              # Expo Router, rotas finas e navegação na ViewModel
-│   └── 04-views-e-design-system.md            # Consumo de tokens (@/view/theme) e componentes M3
+│   ├── 04-views-e-design-system.md            # Consumo de tokens (@/view/theme) e componentes M3
+│   └── 05-infraestrutura-e-supabase.md        # Roteiro 1 (Memory/AsyncStorage) e Roteiro 2 (Supabase Realtime/RLS)
 ├── requisitos/
 │   └── requisitos-e-casos-de-uso-pg-play.md   # RF, RNF, Atores, Casos de Uso (UC01–UC08) e Rastreabilidade
 ├── planejamento/

@@ -42,14 +42,15 @@ Este documento orienta o uso de comandos do Expo, roteamento com Expo Router e o
 | Armazenamento chave-valor local | `@react-native-async-storage/async-storage` | `src/infra/datasources/` |
 | Banco de dados relacional local | `expo-sqlite` | `src/infra/datasources/` |
 | Requisições HTTP / REST | `fetch` | `src/infra/datasources/` |
-| Backend em nuvem | `firebase` / `@supabase/supabase-js` | `src/infra/` + `src/di/container.ts` |
+| Backend em nuvem (Salas Multiplayer) | `@supabase/supabase-js` | `src/infra/services/` + `src/di/container.ts` |
 | Áudio, câmera, localização, notificações | `expo-av`, `expo-camera`, `expo-location`, `expo-notifications` | Operação em `src/infra/services/`; componente visual (ex.: `CameraView`) em `src/view/` |
 
 ---
 
 ## 4. Backend, Variáveis de Ambiente e Build
 
-- Clientes externos (Firebase/Supabase) são criados por funções em `src/infra/` e instanciados apenas em `src/di/container.ts`.
+- O roteiro completo de infraestrutura (Fase 1 local com `Memory*`/`AsyncStorage` e Fase 2 multiplayer com **Supabase** + `expo-av`) está detalhado em [`05-infraestrutura-e-supabase.md`](05-infraestrutura-e-supabase.md).
+- Clientes externos (`@supabase/supabase-js`) são encapsulados em `src/infra/` e instanciados apenas em `src/di/container.ts`.
 - Toda funcionalidade deve ter uma implementação `MemoryX` funcional em `src/infra/` para permitir execução e testes offline sem rede.
-- Variáveis `EXPO_PUBLIC_` são embutidas no pacote final e **não são segredos**: nunca armazene chaves privadas de serviço no repositório.
+- Variáveis `EXPO_PUBLIC_` (`EXPO_PUBLIC_SUPABASE_URL` e `EXPO_PUBLIC_SUPABASE_ANON_KEY`) são embutidas no pacote final e **não são segredos**: nunca armazene chaves privadas (`service_role`) no repositório.
 - Não edite `ios/` ou `android/` manualmente; configure permissões, `name`, `version` e `package` em `app.json`.
