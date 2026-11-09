@@ -1,8 +1,12 @@
-/**
- * Container de Injeção de Dependências (DI) — PG PLAY
- *
- * Ponto único de composição do aplicativo: instancia as implementações de
- * infraestrutura (@/infra) e conecta com as regras de negócio (@/usecase).
- */
+import { MemoryGameCatalogDataSource } from '@/infra/datasources/memoryGameCatalogDataSource';
+import { MemoryTeamDataSource } from '@/infra/datasources/memoryTeamDataSource';
+import type { IPgPlayUseCases } from '@/usecase/iPgPlayUseCases';
+import { PgPlayUseCases } from '@/usecase/pgPlayUseCases';
 
-export const container = {};
+const teamDataSource = new MemoryTeamDataSource();
+const gameCatalogDataSource = new MemoryGameCatalogDataSource();
+
+export const pgPlayUseCases: IPgPlayUseCases = new PgPlayUseCases(
+  teamDataSource,
+  gameCatalogDataSource
+);
