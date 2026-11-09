@@ -92,3 +92,16 @@ declare module '@expo/vector-icons' {
     glyphMap: Record<string, number>;
   };
 }
+
+declare module 'expo-router' {
+  export type Router = {
+    push: (href: string) => void;
+    replace: (href: string) => void;
+    back: () => void;
+    dismissTo: (href: string) => void;
+  };
+
+  export function useRouter(): Router;
+  export const router: Router;
+  export function useLocalSearchParams<T extends Record<string, string | string[]> = Record<string, string>>(): T;
+}
