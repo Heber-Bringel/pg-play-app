@@ -1,0 +1,27 @@
+{
+  "expo": {
+    "name": "PG PLAY",
+    "slug": "pg-play-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "pgplay",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "br.edu.ifpi.pgplay"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font"
+    ],
+    "experiments": {
+      "typedRoutes": false
+    }
+  }
+}
