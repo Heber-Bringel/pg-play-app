@@ -16,3 +16,10 @@ export const StyleSheet = {
     return style;
   },
 };
+
+export const useWindowDimensions = () => ({
+  width: 360,
+  height: 640,
+  scale: 1,
+  fontScale: 1,
+});

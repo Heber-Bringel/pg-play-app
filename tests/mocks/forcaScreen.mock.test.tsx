@@ -1,6 +1,8 @@
 import React from 'react';
 import renderer, { act } from 'react-test-renderer';
+import * as ReactNative from 'react-native';
 import ForcaRoute from '@/app/forca';
+import { LetterKey } from '@/view/components/letterKey';
 import ForcaScreen from '@/view/forca';
 import * as forcaVmModule from '@/viewmodel/useForcaViewModel';
 import type { ForcaActions, ForcaState } from '@/viewmodel/useForcaViewModel';
@@ -178,5 +180,46 @@ describe('ForcaScreen — Testes de Tela com Mocks de ViewModel (UC05)', () => {
       scoreboardBtn.props.onPress();
     });
     expect(actions.handleGoToScoreboard).toHaveBeenCalledTimes(1);
+  });
+
+  it('deve calcular a quantidade de teclas da row responsivamente usando useWindowDimensions', () => {
+    const actions = createMockActions();
+    jest.spyOn(forcaVmModule, 'useForcaViewModel').mockReturnValue([
+      {
+        ...baseState,
+        phase: 'playing',
+        currentPuzzle: { id: 'f1', word: 'TESTE', hint: 'Dica', category: 'Bíblico' },
+        guessedLetters: [],
+        maskedWord: [
+          { original: 'T', normalized: 'T', revealed: false, isSpecial: false },
+          { original: 'E', normalized: 'E', revealed: false, isSpecial: false },
+        ],
+      },
+      actions,
+    ]);
+
+    // Teste com largura padrão (360)
+    let tree!: renderer.ReactTestRenderer;
+    act(() => {
+      tree = renderer.create(<ForcaScreen />);
+    });
+    const keys = tree.root.findAllByType(LetterKey);
+    expect(keys.length).toBe(26);
+
+    // Teste com largura maior (tablet - 768)
+    const dimSpy = jest.spyOn(ReactNative, 'useWindowDimensions').mockReturnValue({
+      width: 768,
+      height: 1024,
+      scale: 1,
+      fontScale: 1,
+    });
+
+    act(() => {
+      tree.update(<ForcaScreen />);
+    });
+    const tabletKeys = tree.root.findAllByType(LetterKey);
+    expect(tabletKeys.length).toBe(26);
+
+    dimSpy.mockRestore();
   });
 });

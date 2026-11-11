@@ -1,20 +1,33 @@
-import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useMemo } from 'react';
+import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
 import { GameCard } from '@/view/components/gameCard';
 import { LetterKey } from '@/view/components/letterKey';
-import { border, color, font, radius, space, typography } from '@/view/theme';
+import { border, color, font, key, radius, space } from '@/view/theme';
 import { normalizeChar, useForcaViewModel } from '@/viewmodel/useForcaViewModel';
 
-const KEYBOARD_ROWS = [
-  ['A', 'B', 'C', 'D', 'E', 'F'],
-  ['G', 'H', 'I', 'J', 'K', 'L'],
-  ['M', 'N', 'O', 'P', 'Q', 'R'],
-  ['S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'],
+const ALL_LETTERS = [
+  'A', 'B', 'C', 'D', 'E', 'F',
+  'G', 'H', 'I', 'J', 'K', 'L',
+  'M', 'N', 'O', 'P', 'Q', 'R',
+  'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
 ];
 
 export const ForcaScreen = () => {
   const [state, actions] = useForcaViewModel();
+  const { width } = useWindowDimensions();
+
+  const availableWidth = width - space.md * 2;
+  const keyUnitWidth = key.size + space.xs;
+  const keysPerRow = Math.max(1, Math.floor((availableWidth + space.xs) / keyUnitWidth));
+
+  const keyboardRows = useMemo(() => {
+    const rows: string[][] = [];
+    for (let i = 0; i < ALL_LETTERS.length; i += keysPerRow) {
+      rows.push(ALL_LETTERS.slice(i, i + keysPerRow));
+    }
+    return rows;
+  }, [keysPerRow]);
 
   if (state.loading) {
     return (
@@ -158,7 +171,7 @@ export const ForcaScreen = () => {
           </View>
 
           <View style={styles.keyboardContainer}>
-            {KEYBOARD_ROWS.map((row, rowIndex) => (
+            {keyboardRows.map((row, rowIndex) => (
               <View key={`row-${rowIndex}`} style={styles.keyboardRow}>
                 {row.map((char) => {
                   const norm = normalizeChar(char);
