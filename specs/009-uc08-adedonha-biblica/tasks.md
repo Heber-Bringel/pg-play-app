@@ -17,7 +17,7 @@
 ## Fase 2: Infraestrutura Offline/Memória e Supabase (`src/infra/`)
 *Objetivo: Implementar o contrato `IMultiplayerRoomService` com versão `Memory*` funcional e classe `Supabase*`.*
 
-- [ ] **T003** Implementar `MemoryMultiplayerRoomService` com `implements IMultiplayerRoomService` em `src/infra/services/memoryMultiplayerRoomService.ts` e `SupabaseMultiplayerRoomService` em `src/infra/services/supabaseMultiplayerRoomService.ts`
+- [x] **T003** Implementar `MemoryMultiplayerRoomService` com `implements IMultiplayerRoomService` em `src/infra/services/memoryMultiplayerRoomService.ts` e `SupabaseMultiplayerRoomService` em `src/infra/services/supabaseMultiplayerRoomService.ts`
 
 ---
 
