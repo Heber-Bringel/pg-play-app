@@ -47,5 +47,5 @@
 ## Fase 6: Testes de Hook, Mocks de Tela e Verificação Arquitetural
 *Objetivo: Cobrir ViewModel e View com testes automatizados e validar `npm run check` com 0 violações.*
 
-- [ ] **T009** Criar `tests/hooks/useAdedonhaViewModel.test.ts` e `tests/mocks/adedonhaScreen.mock.test.tsx`
-- [ ] **T010** Executar `npm run check` (`node scripts/check-arquitetura.mjs && tsc --noEmit && jest`) e confirmar **0 violações**
+- [x] **T009** Criar `tests/hooks/useAdedonhaViewModel.test.ts` e `tests/mocks/adedonhaScreen.mock.test.tsx`
+- [x] **T010** Executar `npm run check` (`node scripts/check-arquitetura.mjs && tsc --noEmit && jest`) e confirmar **0 violações**

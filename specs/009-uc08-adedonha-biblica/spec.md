@@ -2,7 +2,7 @@
 
 - **Branch da Feature:** `feat/009-uc08-adedonha-biblica`
 - **Criado em:** 2026-11-11
-- **Status:** Em Revisão
+- **Status:** Aprovado
 - **Caso(s) de Uso / Requisito(s):** `UC08` (`RF09`, `RF10`, `RF11`, `RF21`, `RF22`, `RF23`, `RNF03`, `RNF06`, `RNF07`, `RNF09`, `RNF10`) — Ref.: `docs/requisitos/requisitos-e-casos-de-uso-pg-play.md` e `docs/jogos/adedonha-biblica.md`
 - **Milestone / Issue vinculada:** `v1.0.0 — Jogos em Sala Multiplayer (UC07–UC08)` / Issue `#16`
 
