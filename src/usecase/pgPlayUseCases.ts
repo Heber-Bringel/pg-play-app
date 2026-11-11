@@ -26,6 +26,46 @@ export class PgPlayUseCases implements IPgPlayUseCases {
     return this.teamDataSource.listTeams();
   }
 
+  async addTeam(name: string): Promise<Team> {
+    const cleanName = name.trim();
+    if (cleanName.length < 2) {
+      throw new ValidationError('Digite um nome com pelo menos 2 letras para a equipe.');
+    }
+    if (cleanName.length > 20) {
+      throw new ValidationError('O nome da equipe deve ter no máximo 20 caracteres.');
+    }
+
+    const currentTeams = await this.teamDataSource.listTeams();
+    if (currentTeams.length >= 6) {
+      throw new ValidationError('Limite máximo de 6 equipes atingido para a sessão.');
+    }
+
+    const duplicate = currentTeams.some(
+      (team) => team.name.toLowerCase() === cleanName.toLowerCase()
+    );
+    if (duplicate) {
+      throw new ValidationError('Já existe uma equipe cadastrada com este nome.');
+    }
+
+    return this.teamDataSource.addTeam(cleanName);
+  }
+
+  async removeTeam(teamId: string): Promise<Team[]> {
+    const cleanTeamId = teamId.trim();
+    if (!cleanTeamId) {
+      throw new ValidationError('Identificador da equipe é obrigatório para remoção.');
+    }
+
+    const currentTeams = await this.teamDataSource.listTeams();
+    const target = currentTeams.find((team) => team.id === cleanTeamId);
+    if (!target) {
+      throw new ValidationError('Equipe não encontrada para remoção.');
+    }
+
+    await this.teamDataSource.removeTeam(cleanTeamId);
+    return this.teamDataSource.listTeams();
+  }
+
   async listMimicaCards(categories?: MimicaCategory[]): Promise<MimicaCard[]> {
     if (categories !== undefined && categories.length === 0) {
       throw new ValidationError('Selecione pelo menos um pacote de categoria para a Mímica.');
