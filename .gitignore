@@ -8,3 +8,8 @@ atividade-sistema-de-design.md
 mvp-pg-play.html
 Tutoriais-de-PDM (1).pdf
 Montando um Harness MVVM Sofisticado.pptx
+
+# Expo
+expo-env.d.ts
+dist/
+web-build/
