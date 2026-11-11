@@ -105,11 +105,19 @@ describe('useScoreboardViewModel — Hook do Placar e Ranking Geral do PG (UC06)
   it('deve converter DomainError em mensagem de erro legível na ViewModel', async () => {
     const failingUseCases: IPgPlayUseCases = {
       listTeams: async () => [],
+      addTeam: async () => {
+        throw new ValidationError('Falha ao adicionar equipe.');
+      },
+      removeTeam: async () => {
+        throw new ValidationError('Falha ao remover equipe.');
+      },
       listMimicaCards: async () => [],
       scoreMimicaHit: async () => [],
       scoreMimicaSkip: async () => [],
       listForcaPuzzles: async () => [],
       scoreForcaWord: async () => [],
+      listQuizQuestions: async () => [],
+      scoreQuizAnswer: async () => [],
       getScoreboard: async () => {
         throw new ValidationError('Falha ao consultar o placar.');
       },

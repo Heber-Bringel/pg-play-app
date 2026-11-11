@@ -304,11 +304,19 @@ describe('useForcaViewModel — Hook da Arena do Jogo da Forca (UC05)', () => {
       listTeams: async () => {
         throw new ValidationError('Erro simulado ao carregar equipes.');
       },
+      addTeam: async () => {
+        throw new ValidationError('Erro simulado ao adicionar equipe.');
+      },
+      removeTeam: async () => {
+        throw new ValidationError('Erro simulado ao remover equipe.');
+      },
       listMimicaCards: async () => [],
       scoreMimicaHit: async () => [],
       scoreMimicaSkip: async () => [],
       listForcaPuzzles: async () => [],
       scoreForcaWord: async () => [],
+      listQuizQuestions: async () => [],
+      scoreQuizAnswer: async () => [],
       getScoreboard: async () => [],
       awardBonusPoints: async () => [],
       resetScoreboard: async () => [],
