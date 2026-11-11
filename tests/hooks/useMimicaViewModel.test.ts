@@ -222,6 +222,12 @@ describe('useMimicaViewModel — Hook da Arena de Mímica Expressiva (UC03)', ()
       listTeams: async () => {
         throw new ValidationError('Erro simulado ao carregar equipes.');
       },
+      addTeam: async () => {
+        throw new ValidationError('Erro simulado ao adicionar equipe.');
+      },
+      removeTeam: async () => {
+        throw new ValidationError('Erro simulado ao remover equipe.');
+      },
       listMimicaCards: async () => [],
       scoreMimicaHit: async () => [],
       scoreMimicaSkip: async () => [],
