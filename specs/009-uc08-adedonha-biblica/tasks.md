@@ -32,7 +32,7 @@
 ## Fase 4: Testes Unitários da Regra de Negócio (`tests/unit/`)
 *Objetivo: Validar `AdedonhaUseCases` e `MemoryMultiplayerRoomService` isoladamente.*
 
-- [ ] **T006** Criar testes unitários em `tests/unit/adedonhaUseCases.test.ts` cobrindo `RF21`, `RF22`, `RF23` e lançamentos de `ValidationError`
+- [x] **T006** Criar testes unitários em `tests/unit/adedonhaUseCases.test.ts` cobrindo `RF21`, `RF22`, `RF23` e lançamentos de `ValidationError`
 
 ---
 
