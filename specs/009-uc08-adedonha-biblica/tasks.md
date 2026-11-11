@@ -40,7 +40,7 @@
 *Objetivo: Expor `[state, actions]` na ViewModel, renderizar com tokens/componentes do Design System na View e criar rota fina de 2 linhas.*
 
 - [x] **T007** Implementar `useAdedonhaViewModel` em `src/viewmodel/useAdedonhaViewModel.ts`
-- [ ] **T008** Implementar a tela `src/view/adedonha.tsx` e a rota fina de 2 linhas em `src/app/adedonha.tsx`
+- [x] **T008** Implementar a tela `src/view/adedonha.tsx` e a rota fina de 2 linhas em `src/app/adedonha.tsx`
 
 ---
 
