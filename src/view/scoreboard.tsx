@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
 import { GameCard } from '@/view/components/gameCard';
@@ -64,7 +64,7 @@ export const ScoreboardScreen = () => {
   }
 
   return (
-    <View style={styles.screen}>
+    <ScrollView style={styles.screen} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
         <View style={styles.trophyBadge}>
           <MaterialCommunityIcons
@@ -124,7 +124,7 @@ export const ScoreboardScreen = () => {
           }}
         />
       </View>
-    </View>
+    </ScrollView>
   );
 };
 
