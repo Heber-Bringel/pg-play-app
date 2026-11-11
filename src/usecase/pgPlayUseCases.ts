@@ -5,6 +5,8 @@ import type {
   ForcaPuzzle,
   MimicaCard,
   MimicaCategory,
+  QuizCategory,
+  QuizQuestion,
 } from '@/model/entities/arenaChallenge';
 import type { Team } from '@/model/entities/team';
 import { ValidationError } from '@/model/errors';
@@ -15,6 +17,7 @@ export const DEFAULT_MIMICA_SKIP_PENALTY = 5;
 export const DEFAULT_SCOREBOARD_BONUS_POINTS = 10;
 export const DEFAULT_FORCA_WIN_POINTS = 30;
 export const DEFAULT_FORCA_ATTEMPT_BONUS = 2;
+export const DEFAULT_QUIZ_CORRECT_POINTS = 10;
 
 export class PgPlayUseCases implements IPgPlayUseCases {
   constructor(
@@ -151,6 +154,38 @@ export class PgPlayUseCases implements IPgPlayUseCases {
         : 0;
 
     if (points > 0) {
+      await this.teamDataSource.addScore(cleanTeamId, points);
+    }
+    return this.teamDataSource.listTeams();
+  }
+
+  async listQuizQuestions(categories?: QuizCategory[]): Promise<QuizQuestion[]> {
+    if (categories !== undefined && categories.length === 0) {
+      throw new ValidationError('Selecione pelo menos um pacote de categoria para o Quiz.');
+    }
+    return this.gameCatalogDataSource.listQuizQuestions(categories);
+  }
+
+  async scoreQuizAnswer(
+    teamId: string,
+    isCorrect: boolean,
+    points: number = DEFAULT_QUIZ_CORRECT_POINTS
+  ): Promise<Team[]> {
+    const cleanTeamId = teamId.trim();
+    if (!cleanTeamId) {
+      throw new ValidationError('Identificador da equipe é obrigatório para pontuar.');
+    }
+    if (points <= 0) {
+      throw new ValidationError('A pontuação por acerto deve ser maior que zero.');
+    }
+
+    const currentTeams = await this.teamDataSource.listTeams();
+    const target = currentTeams.find((team) => team.id === cleanTeamId);
+    if (!target) {
+      throw new ValidationError('Equipe não encontrada para pontuação no Quiz.');
+    }
+
+    if (isCorrect) {
       await this.teamDataSource.addScore(cleanTeamId, points);
     }
     return this.teamDataSource.listTeams();

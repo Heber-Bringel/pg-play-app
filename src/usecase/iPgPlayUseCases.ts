@@ -3,6 +3,8 @@ import type {
   ForcaPuzzle,
   MimicaCard,
   MimicaCategory,
+  QuizCategory,
+  QuizQuestion,
 } from '@/model/entities/arenaChallenge';
 import type { Team } from '@/model/entities/team';
 
@@ -15,6 +17,8 @@ export interface IPgPlayUseCases {
   scoreMimicaSkip(teamId: string, penalty?: number): Promise<Team[]>;
   listForcaPuzzles(categories?: ForcaCategory[]): Promise<ForcaPuzzle[]>;
   scoreForcaWord(teamId: string, remainingAttempts?: number): Promise<Team[]>;
+  listQuizQuestions(categories?: QuizCategory[]): Promise<QuizQuestion[]>;
+  scoreQuizAnswer(teamId: string, isCorrect: boolean, points?: number): Promise<Team[]>;
   getScoreboard(): Promise<Team[]>;
   awardBonusPoints(teamId: string, bonusPoints?: number): Promise<Team[]>;
   resetScoreboard(): Promise<Team[]>;
