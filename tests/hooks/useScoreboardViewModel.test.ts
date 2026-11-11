@@ -116,6 +116,8 @@ describe('useScoreboardViewModel — Hook do Placar e Ranking Geral do PG (UC06)
       scoreMimicaSkip: async () => [],
       listForcaPuzzles: async () => [],
       scoreForcaWord: async () => [],
+      listQuizQuestions: async () => [],
+      scoreQuizAnswer: async () => [],
       getScoreboard: async () => {
         throw new ValidationError('Falha ao consultar o placar.');
       },
