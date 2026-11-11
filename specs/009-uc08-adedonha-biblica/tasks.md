@@ -24,8 +24,8 @@
 ## Fase 3: Caso de Uso e Injeção de Dependências (`src/usecase/` e `src/di/`)
 *Objetivo: Concentrar validações (`RF21–RF23`) no UseCase e conectá-lo no container DI.*
 
-- [ ] **T004** Criar contrato `export interface IAdedonhaUseCases` em `src/usecase/iAdedonhaUseCases.ts` e implementar `export class AdedonhaUseCases implements IAdedonhaUseCases` em `src/usecase/adedonhaUseCases.ts`
-- [ ] **T005** Instanciar `MemoryMultiplayerRoomService` e exportar `adedonhaUseCases` em `src/di/container.ts`
+- [x] **T004** Criar contrato `export interface IAdedonhaUseCases` em `src/usecase/iAdedonhaUseCases.ts` e implementar `export class AdedonhaUseCases implements IAdedonhaUseCases` em `src/usecase/adedonhaUseCases.ts`
+- [x] **T005** Instanciar `MemoryMultiplayerRoomService` e exportar `adedonhaUseCases` em `src/di/container.ts`
 
 ---
 
