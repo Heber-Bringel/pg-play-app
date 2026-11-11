@@ -1,6 +1,7 @@
 import React from 'react';
 
 export const View = (props: any) => React.createElement('View', props, props.children);
+export const ScrollView = (props: any) => React.createElement('ScrollView', props, props.children);
 export const Text = (props: any) => React.createElement('Text', props, props.children);
 export const TextInput = (props: any) => React.createElement('TextInput', props, props.children);
 export const Pressable = (props: any) => React.createElement('Pressable', props, props.children);
@@ -15,3 +16,10 @@ export const StyleSheet = {
     return style;
   },
 };
+
+export const useWindowDimensions = () => ({
+  width: 360,
+  height: 640,
+  scale: 1,
+  fontScale: 1,
+});

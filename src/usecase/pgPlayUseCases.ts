@@ -1,6 +1,11 @@
 import type { IGameCatalogDataSource } from '@/model/datasources/iGameCatalogDataSource';
 import type { ITeamDataSource } from '@/model/datasources/iTeamDataSource';
-import type { MimicaCard, MimicaCategory } from '@/model/entities/arenaChallenge';
+import type {
+  ForcaCategory,
+  ForcaPuzzle,
+  MimicaCard,
+  MimicaCategory,
+} from '@/model/entities/arenaChallenge';
 import type { Team } from '@/model/entities/team';
 import { ValidationError } from '@/model/errors';
 import type { IPgPlayUseCases } from '@/usecase/iPgPlayUseCases';
@@ -8,6 +13,8 @@ import type { IPgPlayUseCases } from '@/usecase/iPgPlayUseCases';
 export const DEFAULT_MIMICA_HIT_POINTS = 20;
 export const DEFAULT_MIMICA_SKIP_PENALTY = 5;
 export const DEFAULT_SCOREBOARD_BONUS_POINTS = 10;
+export const DEFAULT_FORCA_WIN_POINTS = 30;
+export const DEFAULT_FORCA_ATTEMPT_BONUS = 2;
 
 export class PgPlayUseCases implements IPgPlayUseCases {
   constructor(
@@ -69,6 +76,42 @@ export class PgPlayUseCases implements IPgPlayUseCases {
     const deduction = -Math.min(target.score, penalty);
     if (deduction !== 0) {
       await this.teamDataSource.addScore(cleanTeamId, deduction);
+    }
+    return this.teamDataSource.listTeams();
+  }
+
+  async listForcaPuzzles(categories?: ForcaCategory[]): Promise<ForcaPuzzle[]> {
+    if (categories !== undefined && categories.length === 0) {
+      throw new ValidationError('Selecione pelo menos um pacote de categoria para o Jogo da Forca.');
+    }
+    return this.gameCatalogDataSource.listForcaPuzzles(categories);
+  }
+
+  async scoreForcaWord(
+    teamId: string,
+    remainingAttempts: number = 0
+  ): Promise<Team[]> {
+    const cleanTeamId = teamId.trim();
+    if (!cleanTeamId) {
+      throw new ValidationError('Identificador da equipe é obrigatório para pontuar.');
+    }
+    if (remainingAttempts < 0) {
+      throw new ValidationError('O número de tentativas restantes não pode ser negativo.');
+    }
+
+    const teams = await this.teamDataSource.listTeams();
+    const target = teams.find((team) => team.id === cleanTeamId);
+    if (!target) {
+      throw new ValidationError('Equipe não encontrada na sessão atual.');
+    }
+
+    const points =
+      remainingAttempts > 0
+        ? DEFAULT_FORCA_WIN_POINTS + remainingAttempts * DEFAULT_FORCA_ATTEMPT_BONUS
+        : 0;
+
+    if (points > 0) {
+      await this.teamDataSource.addScore(cleanTeamId, points);
     }
     return this.teamDataSource.listTeams();
   }

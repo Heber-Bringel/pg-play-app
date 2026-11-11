@@ -13,3 +13,19 @@ export type MimicaCard = {
   category: MimicaCategory;
   points: number;
 };
+
+export type ForcaCategory =
+  | 'Bíblico'
+  | 'Animais'
+  | 'Países e Cidades'
+  | 'Frutas e Comidas'
+  | 'Filmes'
+  | 'Profissões'
+  | 'Esportes';
+
+export type ForcaPuzzle = {
+  id: string;
+  word: string;
+  hint: string;
+  category: ForcaCategory;
+};

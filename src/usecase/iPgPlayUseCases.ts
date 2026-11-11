@@ -1,4 +1,9 @@
-import type { MimicaCard, MimicaCategory } from '@/model/entities/arenaChallenge';
+import type {
+  ForcaCategory,
+  ForcaPuzzle,
+  MimicaCard,
+  MimicaCategory,
+} from '@/model/entities/arenaChallenge';
 import type { Team } from '@/model/entities/team';
 
 export interface IPgPlayUseCases {
@@ -6,6 +11,8 @@ export interface IPgPlayUseCases {
   listMimicaCards(categories?: MimicaCategory[]): Promise<MimicaCard[]>;
   scoreMimicaHit(teamId: string, points?: number): Promise<Team[]>;
   scoreMimicaSkip(teamId: string, penalty?: number): Promise<Team[]>;
+  listForcaPuzzles(categories?: ForcaCategory[]): Promise<ForcaPuzzle[]>;
+  scoreForcaWord(teamId: string, remainingAttempts?: number): Promise<Team[]>;
   getScoreboard(): Promise<Team[]>;
   awardBonusPoints(teamId: string, bonusPoints?: number): Promise<Team[]>;
   resetScoreboard(): Promise<Team[]>;
