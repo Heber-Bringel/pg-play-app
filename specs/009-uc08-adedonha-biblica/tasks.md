@@ -9,8 +9,8 @@
 ## Fase 1: Domínio Puro (`src/model/`)
 *Objetivo: Definir entidades (`type`) e contrato de serviço (`interface`) sem dependências externas.*
 
-- [ ] **T001** Criar entidades `AdedonhaRoom`, `AdedonhaPlayer`, `AdedonhaSubmission`, `AdedonhaConfig`, `AdedonhaPhase` e `AdedonhaTallyVerdict` como `export type` em `src/model/entities/multiplayerSession.ts`
-- [ ] **T002** Criar contrato `export interface IMultiplayerRoomService` em `src/model/services/iMultiplayerRoomService.ts`
+- [x] **T001** Criar entidades `AdedonhaRoom`, `AdedonhaPlayer`, `AdedonhaSubmission`, `AdedonhaConfig`, `AdedonhaPhase` e `AdedonhaTallyVerdict` como `export type` em `src/model/entities/multiplayerSession.ts`
+- [x] **T002** Criar contrato `export interface IMultiplayerRoomService` em `src/model/services/iMultiplayerRoomService.ts`
 
 ---
 
