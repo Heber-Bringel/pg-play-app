@@ -29,3 +29,28 @@ export type ForcaPuzzle = {
   hint: string;
   category: ForcaCategory;
 };
+
+export type QuizCategory =
+  | 'Bíblico'
+  | 'Conhecimentos Gerais'
+  | 'Geografia'
+  | 'História'
+  | 'Ciência'
+  | 'Música e Cinema'
+  | 'Esportes';
+
+export type QuizOptionKey = 'A' | 'B' | 'C' | 'D';
+
+export type QuizOptionItem = {
+  key: QuizOptionKey;
+  text: string;
+};
+
+export type QuizQuestion = {
+  id: string;
+  question: string;
+  options: QuizOptionItem[];
+  correctKey: QuizOptionKey;
+  explanation?: string;
+  category: QuizCategory;
+};

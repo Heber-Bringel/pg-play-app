@@ -233,6 +233,8 @@ describe('useMimicaViewModel — Hook da Arena de Mímica Expressiva (UC03)', ()
       scoreMimicaSkip: async () => [],
       listForcaPuzzles: async () => [],
       scoreForcaWord: async () => [],
+      listQuizQuestions: async () => [],
+      scoreQuizAnswer: async () => [],
       getScoreboard: async () => [],
       awardBonusPoints: async () => [],
       resetScoreboard: async () => [],
