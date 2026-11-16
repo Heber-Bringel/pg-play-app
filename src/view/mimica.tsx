@@ -71,7 +71,7 @@ export const MimicaScreen = () => {
         <ExpressiveButton
           label="Sair"
           variant="outlined"
-          icon="close-circle"
+          icon="arrow-left"
           onPress={actions.handleRequestExit}
         />
         <View style={styles.roundBadge}>
@@ -117,7 +117,6 @@ export const MimicaScreen = () => {
             description="Passe o celular ao representante da vez. A palavra secreta só aparecerá após tocar no botão abaixo!"
             playersTag={`${state.turnDurationSeconds}s por turno`}
             icon="drama-masks"
-            highlightLeader
           />
           <ExpressiveButton
             label="Estou Pronto!"
@@ -151,14 +150,14 @@ export const MimicaScreen = () => {
             >
               {state.wordVisible && state.currentCard
                 ? state.currentCard.word
-                : '🤫 Palavra escondida'}
+                : 'Palavra escondida'}
             </Text>
           </View>
 
           <ExpressiveButton
             label={state.wordVisible ? 'Esconder do Grupo' : 'Revelar Palavra'}
             variant="tonal"
-            icon="eye"
+            icon={state.wordVisible ? 'eye-off' : 'eye'}
             onPress={actions.handleToggleWordVisibility}
           />
 
@@ -208,8 +207,7 @@ export const MimicaScreen = () => {
             title="Partida de Mímica Concluída!"
             description="Todas as rodadas ou palavras do pacote atual foram finalizadas. Confira a classificação geral do PG!"
             playersTag="Concluído"
-            icon="trophy"
-            highlightLeader
+            icon="party-popper"
           />
           <ExpressiveButton
             label="Ir para o Placar Final"
@@ -246,6 +244,7 @@ const styles = StyleSheet.create({
     fontFamily: font.caption.family,
     fontSize: font.caption.size,
     fontWeight: font.caption.weight,
+    lineHeight: font.caption.lineHeight,
     color: color.onSurface,
   },
   exitBanner: {
@@ -260,6 +259,7 @@ const styles = StyleSheet.create({
     fontFamily: font.subtitle.family,
     fontSize: font.subtitle.size,
     fontWeight: font.subtitle.weight,
+    lineHeight: font.subtitle.lineHeight,
     color: color.onErrorContainer,
   },
   exitActions: {
@@ -280,12 +280,15 @@ const styles = StyleSheet.create({
     fontFamily: font.subtitle.family,
     fontSize: font.subtitle.size,
     fontWeight: font.subtitle.weight,
+    lineHeight: font.subtitle.lineHeight,
     color: color.onActionContainer,
+    flexShrink: 1,
   },
   scoreLabel: {
     fontFamily: font.title.family,
     fontSize: font.title.size,
     fontWeight: font.title.weight,
+    lineHeight: font.title.lineHeight,
     color: color.onActionContainer,
   },
   phaseContainer: {
@@ -306,6 +309,7 @@ const styles = StyleSheet.create({
     fontFamily: font.caption.family,
     fontSize: font.caption.size,
     fontWeight: font.caption.weight,
+    lineHeight: font.caption.lineHeight,
     color: color.onSurfaceMuted,
   },
   secretWord: {
@@ -323,6 +327,7 @@ const styles = StyleSheet.create({
     fontFamily: font.title.family,
     fontSize: font.title.size,
     fontWeight: font.title.weight,
+    lineHeight: font.title.lineHeight,
     color: color.onSurface,
     textAlign: 'center',
   },

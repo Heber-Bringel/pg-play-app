@@ -1,9 +1,10 @@
 import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
 import { GameCard } from '@/view/components/gameCard';
 import { LetterKey } from '@/view/components/letterKey';
-import { border, color, font, key, radius, space } from '@/view/theme';
+import { border, color, font, icon, key, radius, space } from '@/view/theme';
 import { normalizeChar, useForcaViewModel } from '@/viewmodel/useForcaViewModel';
 
 const ALL_LETTERS = [
@@ -18,8 +19,8 @@ export const ForcaScreen = () => {
   const { width } = useWindowDimensions();
 
   const availableWidth = width - space.md * 2;
-  const keyUnitWidth = key.size + space.xs;
-  const keysPerRow = Math.max(1, Math.floor((availableWidth + space.xs) / keyUnitWidth));
+  const keyUnitWidth = key.size + space.sm;
+  const keysPerRow = Math.max(1, Math.floor((availableWidth + space.sm) / keyUnitWidth));
 
   const keyboardRows = useMemo(() => {
     const rows: string[][] = [];
@@ -95,13 +96,29 @@ export const ForcaScreen = () => {
         <ExpressiveButton
           label="Sair"
           variant="outlined"
-          icon="chevron-left"
+          icon="arrow-left"
           onPress={actions.handleRequestExit}
         />
-        <View style={styles.attemptsBadge}>
-          <Text allowFontScaling style={styles.attemptsText}>
-            {`❤️ ${state.remainingAttempts} tentativas`}
-          </Text>
+        <View style={styles.headerInfo}>
+          <View style={styles.teamBadge}>
+            <Text allowFontScaling style={styles.teamBadgeText}>
+              {teamName}
+            </Text>
+          </View>
+          <View
+            style={styles.attemptsBadge}
+            accessible
+            accessibilityLabel={`${state.remainingAttempts} tentativas restantes`}
+          >
+            <MaterialCommunityIcons
+              name="heart"
+              size={icon.sm}
+              color={color.onSecondaryContainer}
+            />
+            <Text allowFontScaling style={styles.attemptsText}>
+              {`${state.remainingAttempts} tentativas`}
+            </Text>
+          </View>
         </View>
       </View>
 
@@ -132,7 +149,6 @@ export const ForcaScreen = () => {
             description={`Palavra ${state.currentRound} de ${state.totalRounds}. A equipe possui ${teamScore} pts. Reúnam o grupo e preparem-se para adivinhar!`}
             playersTag="Passa-Celular"
             icon="account-group"
-            highlightLeader={teamScore > 0}
           />
           <View style={styles.actionBlock}>
             <ExpressiveButton
@@ -220,7 +236,6 @@ export const ForcaScreen = () => {
               description={`A equipe ${teamName} acertou "${state.currentPuzzle?.word}" e somou +${state.earnedPoints} pts (+30 pts + bônus de ${state.bonusPoints} pts por tentativas restantes)!`}
               playersTag={`+${state.earnedPoints} pts`}
               icon="trophy"
-              highlightLeader
             />
           ) : (
             <GameCard
@@ -280,7 +295,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: space.sm,
   },
+  headerInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
+    gap: space.xs,
+    flexShrink: 1,
+  },
+  teamBadge: {
+    backgroundColor: color.actionContainer,
+    paddingHorizontal: space.md,
+    paddingVertical: space.sm,
+    borderRadius: radius.full,
+  },
+  teamBadgeText: {
+    color: color.onActionContainer,
+    fontFamily: font.label.family,
+    fontSize: font.label.size,
+    fontWeight: font.label.weight,
+    lineHeight: font.label.lineHeight,
+  },
   attemptsBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.xs,
     backgroundColor: color.secondaryContainer,
     paddingHorizontal: space.md,
     paddingVertical: space.sm,
@@ -291,6 +330,7 @@ const styles = StyleSheet.create({
     fontFamily: font.label.family,
     fontSize: font.label.size,
     fontWeight: font.label.weight,
+    lineHeight: font.label.lineHeight,
   },
   exitBanner: {
     backgroundColor: color.errorContainer,
@@ -304,6 +344,7 @@ const styles = StyleSheet.create({
     fontFamily: font.title.family,
     fontSize: font.title.size,
     fontWeight: font.title.weight,
+    lineHeight: font.title.lineHeight,
     color: color.onErrorContainer,
   },
   exitActions: {
@@ -327,6 +368,7 @@ const styles = StyleSheet.create({
     fontFamily: font.title.family,
     fontSize: font.body.size,
     fontWeight: font.title.weight,
+    lineHeight: font.body.lineHeight,
     color: color.onSurface,
     textAlign: 'center',
   },
@@ -341,8 +383,8 @@ const styles = StyleSheet.create({
     gap: space.xs,
   },
   letterSlot: {
-    minWidth: 32,
-    height: 42,
+    minWidth: space.xl,
+    minHeight: key.size,
     backgroundColor: color.surfaceVariant,
     borderRadius: radius.sm,
     alignItems: 'center',
@@ -353,10 +395,11 @@ const styles = StyleSheet.create({
     fontFamily: font.title.family,
     fontSize: font.title.size,
     fontWeight: font.display.weight,
+    lineHeight: font.title.lineHeight,
     color: color.onSurface,
   },
   slotUnderline: {
-    height: 4,
+    height: space.xs,
     width: '100%',
     backgroundColor: color.action,
     borderRadius: radius.sm,
@@ -365,14 +408,14 @@ const styles = StyleSheet.create({
     width: space.md,
   },
   keyboardContainer: {
-    gap: space.xs,
+    gap: space.sm,
     alignItems: 'center',
   },
   keyboardRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: space.xs,
+    gap: space.sm,
   },
   resetButtonContainer: {
     alignItems: 'center',
@@ -385,6 +428,7 @@ const styles = StyleSheet.create({
     fontFamily: font.title.family,
     fontSize: font.title.size,
     fontWeight: font.title.weight,
+    lineHeight: font.title.lineHeight,
     color: color.onSurface,
     textAlign: 'center',
   },

@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
 import { ExpressiveTextField } from '@/view/components/expressiveTextField';
 import { ExpressiveTimer } from '@/view/components/expressiveTimer';
 import { GameCard } from '@/view/components/gameCard';
 import { LetterKey } from '@/view/components/letterKey';
-import { border, color, font, icon, radius, space } from '@/view/theme';
+import { border, button, color, font, icon, input, radius, space } from '@/view/theme';
 import { useAdedonhaViewModel } from '@/viewmodel/useAdedonhaViewModel';
 
 const ROULETTE_PREVIEW_LETTERS: string[] = [
@@ -24,6 +24,7 @@ const ROULETTE_PREVIEW_LETTERS: string[] = [
 export const AdedonhaScreen = () => {
   const [state, actions] = useAdedonhaViewModel();
   const [newColumnInput, setNewColumnInput] = useState<string>('');
+  const [focusedColumn, setFocusedColumn] = useState<string | null>(null);
 
   if (state.loading) {
     return (
@@ -133,7 +134,6 @@ export const AdedonhaScreen = () => {
             description={`Moderador configura as colunas temáticas e gira a Roleta Expressiva do Alfabeto.`}
             playersTag={`${room.players.length} jogadores`}
             icon="alphabetical-variant"
-            highlightLeader
           />
 
           <View style={styles.rouletteBox}>
@@ -193,21 +193,37 @@ export const AdedonhaScreen = () => {
             <View style={styles.columnList}>
               {room.config.columns.map((col, idx) => (
                 <View key={col} style={styles.columnItem}>
-                  <GameCard
-                    title={`${idx + 1}. ${col}`}
-                    description="Coluna ativa para todos os jogadores da sala"
-                    playersTag="Ativa"
-                    icon="book-open-page-variant"
-                  />
+                  <View style={styles.columnInfo}>
+                    <View style={styles.columnAvatar}>
+                      <Text allowFontScaling style={styles.columnAvatarText}>
+                        {idx + 1}
+                      </Text>
+                    </View>
+                    <Text allowFontScaling style={styles.columnName}>
+                      {col}
+                    </Text>
+                  </View>
                   {room.config.columns.length > 1 && (
-                    <ExpressiveButton
-                      label={`Remover · ${col}`}
-                      variant="outlined"
-                      icon="delete-outline"
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Remover coluna ${col}`}
+                      onFocus={() => setFocusedColumn(col)}
+                      onBlur={() => setFocusedColumn(null)}
+                      style={({ pressed }) => [
+                        styles.removeColumnButton,
+                        pressed && styles.removeColumnButtonPressed,
+                        focusedColumn === col && styles.removeColumnButtonFocused,
+                      ]}
                       onPress={() => {
                         void actions.handleRemoveColumn(col);
                       }}
-                    />
+                    >
+                      <MaterialCommunityIcons
+                        name="trash-can-outline"
+                        size={icon.md}
+                        color={color.error}
+                      />
+                    </Pressable>
                   )}
                 </View>
               ))}
@@ -287,7 +303,6 @@ export const AdedonhaScreen = () => {
             }`}
             playersTag={`Letra ${room.currentLetter ?? ''}`}
             icon="scale-balance"
-            highlightLeader
           />
 
           <View style={styles.submissionList}>
@@ -312,16 +327,15 @@ export const AdedonhaScreen = () => {
                     title={`${sub.playerNickname}: "${sub.answerText || '(Em branco)'}"`}
                     description={
                       sub.doubtCount > 0
-                        ? `⚠️ ${sub.doubtCount} jogador(es) levantaram dúvida sobre esta resposta`
+                        ? `${sub.doubtCount} jogador(es) levantaram dúvida sobre esta resposta`
                         : 'Pré-classificada automaticamente pelo sistema'
                     }
                     playersTag={statusLabel}
                     icon={statusIcon}
-                    highlightLeader={sub.status === 'unique'}
                   />
                   <View style={styles.judgeActions}>
                     <ExpressiveButton
-                      label={`Levantar Dúvida ✋ · ${sub.playerNickname}`}
+                      label={`Levantar Dúvida · ${sub.playerNickname}`}
                       variant="tonal"
                       icon="hand-pointing-up"
                       onPress={() => {
@@ -380,13 +394,12 @@ export const AdedonhaScreen = () => {
             description={`Letras já sorteadas: ${room.usedLetters.join(', ')}`}
             playersTag={`${room.players.length} jogadores`}
             icon="trophy-award"
-            highlightLeader
           />
 
           {state.awards.generalChampion && (
             <GameCard
-              title={`🥇 Campeão Geral: ${state.awards.generalChampion.nickname}`}
-              description={`⚡ Mão Mais Rápida: ${state.awards.fastestHand?.nickname ?? '-'} · 🧠 Vocabulário Raro: ${state.awards.rareVocabulary?.nickname ?? '-'}`}
+              title={`Campeão Geral: ${state.awards.generalChampion.nickname}`}
+              description={`Mão Mais Rápida: ${state.awards.fastestHand?.nickname ?? '-'} · Vocabulário Raro: ${state.awards.rareVocabulary?.nickname ?? '-'}`}
               playersTag={`${state.awards.generalChampion.score} pts`}
               icon="crown"
               highlightLeader
@@ -455,6 +468,7 @@ const styles = StyleSheet.create({
   roomBadgeText: {
     fontFamily: font.caption.family,
     fontSize: font.caption.size,
+    lineHeight: font.caption.lineHeight,
     fontWeight: font.caption.weight,
     color: color.onActionContainer,
   },
@@ -472,6 +486,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: font.body.family,
     fontSize: font.body.size,
+    lineHeight: font.body.lineHeight,
     color: color.onErrorContainer,
   },
   section: {
@@ -480,12 +495,14 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontFamily: font.subtitle.family,
     fontSize: font.subtitle.size,
+    lineHeight: font.subtitle.lineHeight,
     fontWeight: font.subtitle.weight,
     color: color.onSurface,
   },
   sectionSubtitle: {
     fontFamily: font.body.family,
     fontSize: font.body.size,
+    lineHeight: font.body.lineHeight,
     color: color.onSurfaceMuted,
   },
   rouletteBox: {
@@ -505,10 +522,62 @@ const styles = StyleSheet.create({
     gap: space.md,
   },
   columnList: {
-    gap: space.md,
+    gap: space.sm,
   },
   columnItem: {
-    gap: space.xs,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: color.surfaceContainer,
+    borderRadius: radius.md,
+    borderWidth: border.thin,
+    borderColor: color.outline,
+    padding: space.sm,
+    minHeight: input.minHeight,
+  },
+  columnInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    flex: 1,
+  },
+  columnAvatar: {
+    width: space.xl,
+    height: space.xl,
+    borderRadius: radius.full,
+    backgroundColor: color.actionContainer,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  columnAvatarText: {
+    fontSize: font.body.size,
+    fontFamily: font.body.family,
+    fontWeight: font.label.weight,
+    lineHeight: font.body.lineHeight,
+    color: color.onActionContainer,
+  },
+  columnName: {
+    flex: 1,
+    fontSize: font.body.size,
+    fontFamily: font.body.family,
+    fontWeight: font.label.weight,
+    lineHeight: font.body.lineHeight,
+    color: color.onSurface,
+  },
+  removeColumnButton: {
+    width: button.minHeight,
+    height: button.minHeight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.full,
+    borderWidth: border.focus,
+    borderColor: color.transparent,
+  },
+  removeColumnButtonPressed: {
+    backgroundColor: color.errorContainer,
+  },
+  removeColumnButtonFocused: {
+    borderColor: color.focus,
   },
   roundHeader: {
     flexDirection: 'row',
@@ -529,12 +598,14 @@ const styles = StyleSheet.create({
   heroLetterCaption: {
     fontFamily: font.caption.family,
     fontSize: font.caption.size,
+    lineHeight: font.caption.lineHeight,
     fontWeight: font.caption.weight,
     color: color.onAction,
   },
   heroLetterText: {
     fontFamily: font.display.family,
     fontSize: font.display.size,
+    lineHeight: font.display.lineHeight,
     fontWeight: font.display.weight,
     color: color.onAction,
   },
@@ -559,6 +630,7 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: font.title.family,
     fontSize: font.title.size,
+    lineHeight: font.title.lineHeight,
     fontWeight: font.title.weight,
     color: color.onSurface,
     textAlign: 'center',
