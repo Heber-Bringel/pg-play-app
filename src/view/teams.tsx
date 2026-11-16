@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -10,12 +10,21 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { Team } from '@/model/entities/team';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
 import { ExpressiveTextField } from '@/view/components/expressiveTextField';
-import { GameCard } from '@/view/components/gameCard';
-import { color, font, icon, radius, space } from '@/view/theme';
+import {
+  border,
+  button,
+  color,
+  font,
+  icon,
+  input,
+  radius,
+  space,
+} from '@/view/theme';
 import { useTeamsViewModel } from '@/viewmodel/useTeamsViewModel';
 
 export const TeamsScreen = () => {
   const [state, actions] = useTeamsViewModel();
+  const [focusedRemoveId, setFocusedRemoveId] = useState<string | null>(null);
 
   if (state.loading) {
     return (
@@ -97,12 +106,24 @@ export const TeamsScreen = () => {
         </Text>
 
         {state.teams.length === 0 ? (
-          <GameCard
-            title="Nenhuma equipe cadastrada ainda"
-            description="Adicione pelo menos 2 equipes acima para liberar o botão de iniciar rodada."
-            playersTag="0 equipes"
-            icon="account-group-outline"
-          />
+          <View
+            style={styles.emptyCard}
+            accessible
+            accessibilityRole="summary"
+            accessibilityLabel="Nenhuma equipe cadastrada ainda. Adicione pelo menos 2 equipes acima para liberar o botão de iniciar rodada."
+          >
+            <MaterialCommunityIcons
+              name="account-group-outline"
+              size={icon.lg}
+              color={color.onSurfaceMuted}
+            />
+            <Text allowFontScaling style={styles.emptyTitle}>
+              Nenhuma equipe cadastrada ainda
+            </Text>
+            <Text allowFontScaling style={styles.emptyDescription}>
+              Adicione pelo menos 2 equipes acima para liberar o botão de iniciar rodada.
+            </Text>
+          </View>
         ) : (
           state.teams.map((team: Team, index: number) => (
             <View key={team.id} style={styles.teamCard}>
@@ -125,9 +146,12 @@ export const TeamsScreen = () => {
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={`Remover equipe ${team.name}`}
+                onFocus={() => setFocusedRemoveId(team.id)}
+                onBlur={() => setFocusedRemoveId(null)}
                 style={({ pressed }) => [
                   styles.removeButton,
                   pressed && styles.removeButtonPressed,
+                  focusedRemoveId === team.id && styles.removeButtonFocused,
                 ]}
                 onPress={() => {
                   void actions.handleRemoveTeam(team.id);
@@ -202,6 +226,7 @@ const styles = StyleSheet.create({
     fontFamily: font.title.family,
     color: color.onSurface,
     fontWeight: font.title.weight,
+    lineHeight: font.title.lineHeight,
   },
   subtitle: {
     fontSize: font.body.size,
@@ -213,7 +238,7 @@ const styles = StyleSheet.create({
     backgroundColor: color.surfaceContainer,
     padding: space.md,
     borderRadius: radius.lg,
-    borderWidth: 1,
+    borderWidth: border.thin,
     borderColor: color.outline,
     gap: space.sm,
   },
@@ -228,6 +253,31 @@ const styles = StyleSheet.create({
     fontFamily: font.subtitle.family,
     color: color.onSurface,
     fontWeight: font.subtitle.weight,
+    lineHeight: font.subtitle.lineHeight,
+  },
+  emptyCard: {
+    alignItems: 'center',
+    gap: space.sm,
+    padding: space.lg,
+    borderRadius: radius.xl,
+    borderWidth: border.thin,
+    borderStyle: 'dashed',
+    borderColor: color.outline,
+  },
+  emptyTitle: {
+    fontSize: font.subtitle.size,
+    fontFamily: font.subtitle.family,
+    fontWeight: font.subtitle.weight,
+    lineHeight: font.subtitle.lineHeight,
+    color: color.onSurface,
+    textAlign: 'center',
+  },
+  emptyDescription: {
+    fontSize: font.body.size,
+    fontFamily: font.body.family,
+    lineHeight: font.body.lineHeight,
+    color: color.onSurfaceMuted,
+    textAlign: 'center',
   },
   teamCard: {
     flexDirection: 'row',
@@ -235,10 +285,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     backgroundColor: color.surfaceContainer,
     borderRadius: radius.md,
-    borderWidth: 1,
+    borderWidth: border.thin,
     borderColor: color.outline,
     padding: space.sm,
-    minHeight: 56,
+    minHeight: input.minHeight,
   },
   teamInfo: {
     flexDirection: 'row',
@@ -247,8 +297,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   avatarCircle: {
-    width: 36,
-    height: 36,
+    width: space.xl,
+    height: space.xl,
     borderRadius: radius.full,
     backgroundColor: color.actionContainer,
     alignItems: 'center',
@@ -258,7 +308,7 @@ const styles = StyleSheet.create({
     fontSize: font.body.size,
     fontFamily: font.body.family,
     color: color.onActionContainer,
-    fontWeight: '700',
+    fontWeight: font.label.weight,
   },
   teamTextWrapper: {
     flex: 1,
@@ -267,22 +317,29 @@ const styles = StyleSheet.create({
     fontSize: font.body.size,
     fontFamily: font.body.family,
     color: color.onSurface,
-    fontWeight: '700',
+    fontWeight: font.label.weight,
+    lineHeight: font.body.lineHeight,
   },
   teamScore: {
     fontSize: font.caption.size,
     fontFamily: font.caption.family,
     color: color.onSurfaceMuted,
+    lineHeight: font.caption.lineHeight,
   },
   removeButton: {
-    width: 48,
-    height: 48,
+    width: button.minHeight,
+    height: button.minHeight,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.full,
+    borderWidth: border.focus,
+    borderColor: color.transparent,
   },
   removeButtonPressed: {
     backgroundColor: color.errorContainer,
+  },
+  removeButtonFocused: {
+    borderColor: color.focus,
   },
   footerSection: {
     marginTop: space.md,
