@@ -179,7 +179,7 @@ describe('AdedonhaScreen — Testes de Tela com Mocks de ViewModel (UC08)', () =
       accessibilityLabel: 'Adicionar Coluna',
     } as any);
     const removeBtn = tree.root.findByProps({
-      accessibilityLabel: 'Remover · Personagem Bíblico',
+      accessibilityLabel: 'Remover coluna Personagem Bíblico',
     } as any);
     const spinBtn = tree.root.findByProps({
       accessibilityLabel: 'Girar Roleta Expressiva',
@@ -222,7 +222,7 @@ describe('AdedonhaScreen — Testes de Tela com Mocks de ViewModel (UC08)', () =
     expect(actions.handleTriggerAdedonha).toHaveBeenCalledTimes(1);
   });
 
-  it('deve renderizar a Apuração Assistida (Levantar Dúvida ✋ e Veredito do Moderador) e o Pódio Final (RF23)', () => {
+  it('deve renderizar a Apuração Assistida (Levantar Dúvida e Veredito do Moderador) e o Pódio Final (RF23)', () => {
     const actions = createMockActions();
     jest.spyOn(adedonhaVmModule, 'useAdedonhaViewModel').mockReturnValue([
       {
@@ -238,7 +238,7 @@ describe('AdedonhaScreen — Testes de Tela com Mocks de ViewModel (UC08)', () =
     });
 
     const doubtBtn = tallyTree.root.findByProps({
-      accessibilityLabel: 'Levantar Dúvida ✋ · Líder do PG',
+      accessibilityLabel: 'Levantar Dúvida · Líder do PG',
     } as any);
     const uniqueBtn = tallyTree.root.findByProps({
       accessibilityLabel: 'Validar Única (+10) · Líder do PG',
