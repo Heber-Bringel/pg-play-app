@@ -8,14 +8,19 @@ export type ExpressiveTimerProps = {
 };
 
 export const ExpressiveTimer = ({ secondsRemaining }: ExpressiveTimerProps) => {
-  const isCritical = secondsRemaining <= 10;
-  const formattedSeconds =
-    secondsRemaining < 10 ? `0${secondsRemaining}` : `${secondsRemaining}`;
+  const safeSeconds = Math.max(0, Math.floor(secondsRemaining));
+  const isCritical = safeSeconds <= 10;
+  const isExpired = safeSeconds === 0;
+  const minutes = String(Math.floor(safeSeconds / 60)).padStart(2, '0');
+  const seconds = String(safeSeconds % 60).padStart(2, '0');
+  const iconName = isExpired ? 'bell-ring' : isCritical ? 'alert' : 'timer-outline';
 
   return (
     <View
       accessibilityRole="timer"
-      accessibilityLabel={`Tempo restante: ${secondsRemaining} segundos`}
+      accessibilityLabel={
+        isExpired ? 'Tempo esgotado' : `Tempo restante: ${safeSeconds} segundos`
+      }
       accessibilityLiveRegion={isCritical ? 'assertive' : 'none'}
       style={[
         styles.container,
@@ -30,7 +35,7 @@ export const ExpressiveTimer = ({ secondsRemaining }: ExpressiveTimerProps) => {
       ]}
     >
       <MaterialCommunityIcons
-        name={isCritical ? 'alert' : 'timer-outline'}
+        name={iconName}
         size={tokens.semantic.icon.md}
         color={
           isCritical
@@ -50,7 +55,7 @@ export const ExpressiveTimer = ({ secondsRemaining }: ExpressiveTimerProps) => {
           },
         ]}
       >
-        00:{formattedSeconds}
+        {`${minutes}:${seconds}`}
       </Text>
     </View>
   );
@@ -58,6 +63,8 @@ export const ExpressiveTimer = ({ secondsRemaining }: ExpressiveTimerProps) => {
 
 const styles = StyleSheet.create({
   container: {
+    alignSelf: 'center',
+    justifyContent: 'center',
     minHeight: tokens.semantic.space.xxl,
     paddingHorizontal: tokens.semantic.space.lg,
     paddingVertical: tokens.semantic.space.sm,
@@ -69,5 +76,6 @@ const styles = StyleSheet.create({
     fontFamily: tokens.semantic.font.title.family,
     fontSize: tokens.semantic.font.title.size,
     fontWeight: tokens.semantic.font.title.weight,
+    lineHeight: tokens.semantic.font.title.lineHeight,
   },
 });
