@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
 import { GameCard } from '@/view/components/gameCard';
-import { color, font, icon, radius, space } from '@/view/theme';
+import { border, color, font, icon, radius, space } from '@/view/theme';
 import { useScoreboardViewModel } from '@/viewmodel/useScoreboardViewModel';
 
 export const ScoreboardScreen = () => {
@@ -83,14 +83,14 @@ export const ScoreboardScreen = () => {
 
       <View style={styles.list}>
         {state.teams.map((team, index) => {
-          const isLeader = index === 0;
+          const isLeader = state.leaderTeam?.id === team.id;
           return (
             <View key={team.id} style={styles.teamItem}>
               <GameCard
-                title={`${index + 1}º · ${team.name}`}
-                playersTag={`${team.score} pts`}
+                title={`${index + 1}º · ${team.name} — ${team.score} pts`}
+                playersTag={isLeader ? 'Líder' : `${index + 1}º lugar`}
                 description={
-                  isLeader ? 'Equipe Campeã da Rodada' : 'Equipe Participante'
+                  isLeader ? 'Equipe na liderança do encontro' : 'Equipe participante'
                 }
                 icon={isLeader ? 'crown' : 'account-group'}
                 highlightLeader={isLeader}
@@ -115,14 +115,38 @@ export const ScoreboardScreen = () => {
           variant="primaryJumbo"
           onPress={actions.handleChooseAnotherGame}
         />
-        <ExpressiveButton
-          label="Zerar Placar do PG"
-          icon="refresh"
-          variant="outlined"
-          onPress={() => {
-            void actions.handleResetScoreboard();
-          }}
-        />
+        {state.confirmingReset ? (
+          <View style={styles.resetBanner} accessibilityLiveRegion="polite">
+            <Text allowFontScaling style={styles.resetTitle}>
+              Zerar o placar do PG?
+            </Text>
+            <Text allowFontScaling style={styles.resetDescription}>
+              Todas as equipes voltam a 0 pts. Essa ação não pode ser desfeita.
+            </Text>
+            <View style={styles.resetActions}>
+              <ExpressiveButton
+                label="Cancelar"
+                variant="outlined"
+                onPress={actions.handleCancelReset}
+              />
+              <ExpressiveButton
+                label="Confirmar e Zerar"
+                variant="secondary"
+                icon="refresh"
+                onPress={() => {
+                  void actions.handleResetScoreboard();
+                }}
+              />
+            </View>
+          </View>
+        ) : (
+          <ExpressiveButton
+            label="Zerar Placar do PG"
+            icon="refresh"
+            variant="outlined"
+            onPress={actions.handleRequestReset}
+          />
+        )}
       </View>
     </ScrollView>
   );
@@ -151,14 +175,43 @@ const styles = StyleSheet.create({
     fontFamily: font.title.family,
     fontSize: font.title.size,
     fontWeight: font.title.weight,
+    lineHeight: font.title.lineHeight,
     color: color.onSurface,
     textAlign: 'center',
   },
   subtitle: {
     fontFamily: font.body.family,
     fontSize: font.body.size,
+    lineHeight: font.body.lineHeight,
     color: color.onSurfaceMuted,
     textAlign: 'center',
+  },
+  resetBanner: {
+    backgroundColor: color.errorContainer,
+    borderColor: color.error,
+    borderWidth: border.thin,
+    borderRadius: radius.lg,
+    padding: space.md,
+    gap: space.sm,
+  },
+  resetTitle: {
+    fontFamily: font.subtitle.family,
+    fontSize: font.subtitle.size,
+    fontWeight: font.subtitle.weight,
+    lineHeight: font.subtitle.lineHeight,
+    color: color.onErrorContainer,
+  },
+  resetDescription: {
+    fontFamily: font.body.family,
+    fontSize: font.body.size,
+    lineHeight: font.body.lineHeight,
+    color: color.onErrorContainer,
+  },
+  resetActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
+    gap: space.sm,
   },
   list: {
     gap: space.md,
