@@ -404,6 +404,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: font.body.size,
     fontFamily: font.body.family,
+    fontWeight: font.body.weight,
     color: color.onSurfaceMuted,
     lineHeight: font.body.lineHeight,
     textAlign: 'center',
@@ -460,8 +461,8 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   avatarTeam: {
-    width: space.xxxl,
-    height: space.xxxl,
+    width: space['3xl'],
+    height: space['3xl'],
     borderRadius: radius.full,
     backgroundColor: color.actionContainer,
     justifyContent: 'center',
@@ -470,6 +471,7 @@ const styles = StyleSheet.create({
   passTurnSubtitle: {
     fontSize: font.subtitle.size,
     fontFamily: font.subtitle.family,
+    fontWeight: font.subtitle.weight,
     lineHeight: font.subtitle.lineHeight,
     color: color.onSurfaceMuted,
   },
@@ -484,12 +486,14 @@ const styles = StyleSheet.create({
   passTurnScore: {
     fontSize: font.body.size,
     fontFamily: font.body.family,
+    fontWeight: font.body.weight,
     lineHeight: font.body.lineHeight,
     color: color.onSurfaceMuted,
   },
   instructionNotice: {
     fontSize: font.body.size,
     fontFamily: font.body.family,
+    fontWeight: font.body.weight,
     lineHeight: font.body.lineHeight,
     color: color.onSurface,
     textAlign: 'center',
@@ -501,8 +505,8 @@ const styles = StyleSheet.create({
     marginVertical: space.md,
   },
   trophyCircle: {
-    width: space.xxxl,
-    height: space.xxxl,
+    width: space['3xl'],
+    height: space['3xl'],
     borderRadius: radius.full,
     backgroundColor: color.highlight,
     justifyContent: 'center',

@@ -91,7 +91,10 @@ export function createTokens(mode: ThemeMode = 'light') {
     lg: primitive.space.space24,
     xl: primitive.space.space32,
     xxl: primitive.space.space48,
+    '2xl': primitive.space.space48,
+    container: primitive.space.space56,
     xxxl: primitive.space.space64,
+    '3xl': primitive.space.space64,
   };
 
   const semanticRadius = {
@@ -186,8 +189,11 @@ export function createTokens(mode: ThemeMode = 'light') {
       labelDisabled: semantic.color.disabledText,
       radius: semantic.radius.full,
       radiusPressed: semantic.radius.md,
-      minHeight: semantic.space.xxl,
-      jumboHeight: semantic.space.xxxl,
+      minHeight: semantic.space['2xl'],
+      jumboHeight: semantic.space['3xl'],
+      jumbo: {
+        height: semantic.space['3xl'],
+      },
     },
     input: {
       bg: semantic.color.surfaceContainer,
@@ -197,14 +203,14 @@ export function createTokens(mode: ThemeMode = 'light') {
       borderError: semantic.color.error,
       bgError: semantic.color.errorContainer,
       radius: semantic.radius.md,
-      minHeight: primitive.space.space56,
+      minHeight: semantic.space.container,
     },
     card: {
       bg: semantic.color.surfaceContainer,
       border: semantic.color.outline,
       radius: semantic.radius.xl,
       padding: semantic.space.lg,
-      badgeSize: primitive.space.space56,
+      badgeSize: semantic.space.container,
     },
     timer: {
       bgNormal: semantic.color.highlight,
@@ -213,6 +219,18 @@ export function createTokens(mode: ThemeMode = 'light') {
       textCritical: semantic.color.onError,
       radiusNormal: semantic.radius.full,
       radiusCritical: semantic.radius.md,
+      bg: {
+        normal: semantic.color.highlight,
+        critical: semantic.color.error,
+      },
+      text: {
+        normal: semantic.color.onHighlight,
+        critical: semantic.color.onError,
+      },
+      radius: {
+        normal: semantic.radius.full,
+        critical: semantic.radius.md,
+      },
     },
     quiz: {
       optionBg: semantic.color.surfaceContainer,
@@ -220,13 +238,31 @@ export function createTokens(mode: ThemeMode = 'light') {
       optionRadius: semantic.radius.lg,
       optionCorrectBg: semantic.color.success,
       optionWrongBg: semantic.color.error,
-      minHeight: primitive.space.space56,
+      minHeight: semantic.space.container,
+      option: {
+        bg: semantic.color.surfaceContainer,
+        border: semantic.color.outline,
+        radius: semantic.radius.lg,
+        correct: {
+          bg: semantic.color.success,
+        },
+        wrong: {
+          bg: semantic.color.error,
+        },
+        minHeight: semantic.space.container,
+      },
     },
     key: {
-      size: semantic.space.xxl,
+      size: semantic.space['2xl'],
       radius: semantic.radius.md,
       hitBg: semantic.color.success,
       missBg: semantic.color.errorContainer,
+      hit: {
+        bg: semantic.color.success,
+      },
+      miss: {
+        bg: semantic.color.errorContainer,
+      },
     },
   };
 

@@ -13,7 +13,6 @@ import { ExpressiveTextField } from '@/view/components/expressiveTextField';
 import { GameCard } from '@/view/components/gameCard';
 import {
   border,
-  button,
   color,
   font,
   icon,
@@ -292,8 +291,8 @@ const styles = StyleSheet.create({
     marginBottom: space.xs,
   },
   brandBadge: {
-    width: button.minHeight,
-    height: button.minHeight,
+    width: space['2xl'],
+    height: space['2xl'],
     borderRadius: radius.lg,
     backgroundColor: color.actionContainer,
     alignItems: 'center',
@@ -349,7 +348,7 @@ const styles = StyleSheet.create({
     gap: space.sm,
   },
   chip: {
-    minHeight: button.minHeight,
+    minHeight: space['2xl'],
     paddingHorizontal: space.md,
     borderRadius: radius.full,
     borderWidth: border.thin,
@@ -367,9 +366,9 @@ const styles = StyleSheet.create({
   },
   chipLabel: {
     fontFamily: font.label.family,
-    fontSize: font.caption.size,
+    fontSize: font.label.size,
     fontWeight: font.label.weight,
-    lineHeight: font.caption.lineHeight,
+    lineHeight: font.label.lineHeight,
   },
   chipLabelDefault: {
     color: color.onSurface,

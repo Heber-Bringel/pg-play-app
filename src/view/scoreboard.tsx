@@ -164,8 +164,8 @@ const styles = StyleSheet.create({
     gap: space.xs,
   },
   trophyBadge: {
-    width: space.xxxl,
-    height: space.xxxl,
+    width: space['3xl'],
+    height: space['3xl'],
     borderRadius: radius.full,
     backgroundColor: color.highlight,
     justifyContent: 'center',
@@ -182,6 +182,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontFamily: font.body.family,
     fontSize: font.body.size,
+    fontWeight: font.body.weight,
     lineHeight: font.body.lineHeight,
     color: color.onSurfaceMuted,
     textAlign: 'center',
@@ -204,6 +205,7 @@ const styles = StyleSheet.create({
   resetDescription: {
     fontFamily: font.body.family,
     fontSize: font.body.size,
+    fontWeight: font.body.weight,
     lineHeight: font.body.lineHeight,
     color: color.onErrorContainer,
   },

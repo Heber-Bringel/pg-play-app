@@ -48,6 +48,11 @@ export const GameCard = ({
           borderRadius: pressed
             ? tokens.semantic.radius.md
             : tokens.component.card.radius,
+          elevation: disabled
+            ? tokens.semantic.elevation.none
+            : highlightLeader
+            ? tokens.semantic.elevation.floating
+            : tokens.semantic.elevation.card,
         },
       ]}
     >
@@ -107,6 +112,7 @@ const styles = StyleSheet.create({
     fontFamily: tokens.semantic.font.caption.family,
     fontSize: tokens.semantic.font.caption.size,
     fontWeight: tokens.semantic.font.caption.weight,
+    lineHeight: tokens.semantic.font.caption.lineHeight,
     color: tokens.semantic.color.onSurface,
   },
   body: {
@@ -116,11 +122,14 @@ const styles = StyleSheet.create({
     fontFamily: tokens.semantic.font.subtitle.family,
     fontSize: tokens.semantic.font.subtitle.size,
     fontWeight: tokens.semantic.font.subtitle.weight,
+    lineHeight: tokens.semantic.font.subtitle.lineHeight,
     color: tokens.semantic.color.onSurface,
   },
   description: {
     fontFamily: tokens.semantic.font.body.family,
     fontSize: tokens.semantic.font.body.size,
+    fontWeight: tokens.semantic.font.body.weight,
+    lineHeight: tokens.semantic.font.body.lineHeight,
     color: tokens.semantic.color.onSurfaceMuted,
   },
 });

@@ -89,5 +89,6 @@ const styles = StyleSheet.create({
     fontFamily: tokens.semantic.font.label.family,
     fontSize: tokens.semantic.font.label.size,
     fontWeight: tokens.semantic.font.label.weight,
+    lineHeight: tokens.semantic.font.label.lineHeight,
   },
 });
