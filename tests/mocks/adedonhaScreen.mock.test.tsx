@@ -22,6 +22,8 @@ const createMockActions = (): AdedonhaActions => ({
   handleAdvanceTallyColumn: jest.fn(async () => {}),
   handleAdvanceToNextRound: jest.fn(async () => {}),
   handleGoToScoreboard: jest.fn(),
+  handleRequestExit: jest.fn(),
+  handleCancelExit: jest.fn(),
   handleExitArena: jest.fn(),
   handleRetry: jest.fn(async () => {}),
 });
@@ -101,6 +103,7 @@ const baseState: AdedonhaState = {
     fastestHand: baseRoom.players[0],
     rareVocabulary: baseRoom.players[0],
   },
+  confirmingExit: false,
 };
 
 describe('AdedonhaScreen — Testes de Tela com Mocks de ViewModel (UC08)', () => {
