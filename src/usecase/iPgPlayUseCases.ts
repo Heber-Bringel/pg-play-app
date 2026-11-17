@@ -6,9 +6,11 @@ import type {
   QuizCategory,
   QuizQuestion,
 } from '@/model/entities/arenaChallenge';
+import type { GameModalityFilter, Minigame } from '@/model/entities/minigame';
 import type { Team } from '@/model/entities/team';
 
 export interface IPgPlayUseCases {
+  listMinigames(query?: string, modality?: GameModalityFilter): Promise<Minigame[]>;
   listTeams(): Promise<Team[]>;
   addTeam(name: string): Promise<Team>;
   removeTeam(teamId: string): Promise<Team[]>;
