@@ -64,36 +64,6 @@ export const QuizScreen = () => {
     );
   }
 
-  if (state.confirmingExit) {
-    return (
-      <ScrollView
-        style={styles.screen}
-        contentContainerStyle={styles.stackContent}
-      >
-        <GameCard
-          title="Deseja realmente sair?"
-          description="A partida atual de Quiz será encerrada e os pontos acumulados até aqui serão mantidos no placar do encontro."
-          playersTag="Confirmação"
-          icon="exit-to-app"
-        />
-        <View style={styles.exitActions}>
-          <ExpressiveButton
-            label="Continuar Jogando"
-            variant="primaryJumbo"
-            icon="play"
-            onPress={actions.handleCancelExit}
-          />
-          <ExpressiveButton
-            label="Sair da Partida"
-            variant="outlined"
-            icon="arrow-left"
-            onPress={actions.handleConfirmExit}
-          />
-        </View>
-      </ScrollView>
-    );
-  }
-
   if (state.phase === 'finished') {
     return (
       <View style={styles.screen}>
@@ -151,6 +121,26 @@ export const QuizScreen = () => {
               </Text>
             </View>
           </View>
+
+          {state.confirmingExit && (
+            <View style={styles.exitBanner} accessibilityLiveRegion="polite">
+              <Text allowFontScaling style={styles.exitTitle}>
+                Deseja encerrar a partida do Quiz Relâmpago?
+              </Text>
+              <View style={styles.exitActions}>
+                <ExpressiveButton
+                  label="Continuar Jogando"
+                  variant="tonal"
+                  onPress={actions.handleCancelExit}
+                />
+                <ExpressiveButton
+                  label="Confirmar Saída"
+                  variant="secondary"
+                  onPress={actions.handleConfirmExit}
+                />
+              </View>
+            </View>
+          )}
 
           <View style={styles.passTurnContent}>
             <View style={styles.passTurnCard}>
@@ -220,6 +210,26 @@ export const QuizScreen = () => {
             </View>
           </View>
         </View>
+
+        {state.confirmingExit && (
+          <View style={styles.exitBanner} accessibilityLiveRegion="polite">
+            <Text allowFontScaling style={styles.exitTitle}>
+              Deseja encerrar a partida do Quiz Relâmpago?
+            </Text>
+            <View style={styles.exitActions}>
+              <ExpressiveButton
+                label="Continuar Jogando"
+                variant="tonal"
+                onPress={actions.handleCancelExit}
+              />
+              <ExpressiveButton
+                label="Confirmar Saída"
+                variant="secondary"
+                onPress={actions.handleConfirmExit}
+              />
+            </View>
+          </View>
+        )}
 
         <View style={styles.timerWrapper}>
           <ExpressiveTimer secondsRemaining={state.secondsRemaining} />
@@ -404,6 +414,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: font.body.size,
     fontFamily: font.body.family,
+    fontWeight: font.body.weight,
     color: color.onSurfaceMuted,
     lineHeight: font.body.lineHeight,
     textAlign: 'center',
@@ -442,6 +453,7 @@ const styles = StyleSheet.create({
   passTurnScroll: {
     flexGrow: 1,
     padding: space.md,
+    gap: space.md,
   },
   passTurnContent: {
     flex: 1,
@@ -460,8 +472,8 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   avatarTeam: {
-    width: space.xxxl,
-    height: space.xxxl,
+    width: space['3xl'],
+    height: space['3xl'],
     borderRadius: radius.full,
     backgroundColor: color.actionContainer,
     justifyContent: 'center',
@@ -470,6 +482,7 @@ const styles = StyleSheet.create({
   passTurnSubtitle: {
     fontSize: font.subtitle.size,
     fontFamily: font.subtitle.family,
+    fontWeight: font.subtitle.weight,
     lineHeight: font.subtitle.lineHeight,
     color: color.onSurfaceMuted,
   },
@@ -484,12 +497,14 @@ const styles = StyleSheet.create({
   passTurnScore: {
     fontSize: font.body.size,
     fontFamily: font.body.family,
+    fontWeight: font.body.weight,
     lineHeight: font.body.lineHeight,
     color: color.onSurfaceMuted,
   },
   instructionNotice: {
     fontSize: font.body.size,
     fontFamily: font.body.family,
+    fontWeight: font.body.weight,
     lineHeight: font.body.lineHeight,
     color: color.onSurface,
     textAlign: 'center',
@@ -501,16 +516,30 @@ const styles = StyleSheet.create({
     marginVertical: space.md,
   },
   trophyCircle: {
-    width: space.xxxl,
-    height: space.xxxl,
+    width: space['3xl'],
+    height: space['3xl'],
     borderRadius: radius.full,
     backgroundColor: color.highlight,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  exitBanner: {
+    backgroundColor: color.errorContainer,
+    borderColor: color.error,
+    borderWidth: border.thin,
+    borderRadius: radius.lg,
+    padding: space.md,
+    gap: space.sm,
+  },
+  exitTitle: {
+    fontFamily: font.subtitle.family,
+    fontSize: font.subtitle.size,
+    fontWeight: font.subtitle.weight,
+    lineHeight: font.subtitle.lineHeight,
+    color: color.onErrorContainer,
+  },
   exitActions: {
     gap: space.sm,
-    marginTop: space.md,
   },
 });
 

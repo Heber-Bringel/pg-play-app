@@ -6,6 +6,35 @@ export const Text = (props: any) => React.createElement('Text', props, props.chi
 export const TextInput = (props: any) => React.createElement('TextInput', props, props.children);
 export const Pressable = (props: any) => React.createElement('Pressable', props, props.children);
 
+export const Animated = {
+  View: (props: any) => React.createElement('View', props, props.children),
+  Text: (props: any) => React.createElement('Text', props, props.children),
+  Value: class {
+    val: number;
+    constructor(val: number) {
+      this.val = val;
+    }
+    setValue(v: number) {
+      this.val = v;
+    }
+  },
+  spring: (_val: any, _config: any) => ({
+    start: (cb?: any) => {
+      if (cb) cb({ finished: true });
+    },
+  }),
+  timing: (_val: any, _config: any) => ({
+    start: (cb?: any) => {
+      if (cb) cb({ finished: true });
+    },
+  }),
+  sequence: (_animations: any[]) => ({
+    start: (cb?: any) => {
+      if (cb) cb({ finished: true });
+    },
+  }),
+};
+
 export const StyleSheet = {
   create: <T extends Record<string, any>>(styles: T): T => styles,
   flatten: (style: any): any => {

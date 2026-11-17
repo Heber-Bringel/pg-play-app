@@ -12,11 +12,9 @@ import { ExpressiveButton } from '@/view/components/expressiveButton';
 import { ExpressiveTextField } from '@/view/components/expressiveTextField';
 import {
   border,
-  button,
   color,
   font,
   icon,
-  input,
   radius,
   space,
 } from '@/view/theme';
@@ -220,6 +218,7 @@ const styles = StyleSheet.create({
     fontFamily: font.caption.family,
     color: color.onActionContainer,
     fontWeight: font.caption.weight,
+    lineHeight: font.caption.lineHeight,
   },
   title: {
     fontSize: font.title.size,
@@ -231,6 +230,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: font.body.size,
     fontFamily: font.body.family,
+    fontWeight: font.body.weight,
     color: color.onSurfaceMuted,
     lineHeight: font.body.lineHeight,
   },
@@ -275,6 +275,7 @@ const styles = StyleSheet.create({
   emptyDescription: {
     fontSize: font.body.size,
     fontFamily: font.body.family,
+    fontWeight: font.body.weight,
     lineHeight: font.body.lineHeight,
     color: color.onSurfaceMuted,
     textAlign: 'center',
@@ -288,7 +289,7 @@ const styles = StyleSheet.create({
     borderWidth: border.thin,
     borderColor: color.outline,
     padding: space.sm,
-    minHeight: input.minHeight,
+    minHeight: space.container,
   },
   teamInfo: {
     flexDirection: 'row',
@@ -305,40 +306,43 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarText: {
-    fontSize: font.body.size,
-    fontFamily: font.body.family,
-    color: color.onActionContainer,
+    fontFamily: font.label.family,
+    fontSize: font.label.size,
     fontWeight: font.label.weight,
+    lineHeight: font.label.lineHeight,
+    color: color.onActionContainer,
   },
   teamTextWrapper: {
     flex: 1,
   },
   teamName: {
-    fontSize: font.body.size,
-    fontFamily: font.body.family,
-    color: color.onSurface,
+    fontFamily: font.label.family,
+    fontSize: font.label.size,
     fontWeight: font.label.weight,
-    lineHeight: font.body.lineHeight,
+    lineHeight: font.label.lineHeight,
+    color: color.onSurface,
   },
   teamScore: {
     fontSize: font.caption.size,
     fontFamily: font.caption.family,
+    fontWeight: font.caption.weight,
     color: color.onSurfaceMuted,
     lineHeight: font.caption.lineHeight,
   },
   removeButton: {
-    width: button.minHeight,
-    height: button.minHeight,
+    width: space['2xl'],
+    height: space['2xl'],
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.full,
-    borderWidth: border.focus,
+    borderWidth: border.thin,
     borderColor: color.transparent,
   },
   removeButtonPressed: {
     backgroundColor: color.errorContainer,
   },
   removeButtonFocused: {
+    borderWidth: border.focus,
     borderColor: color.focus,
   },
   footerSection: {
@@ -348,6 +352,8 @@ const styles = StyleSheet.create({
   helperNotice: {
     fontSize: font.caption.size,
     fontFamily: font.caption.family,
+    fontWeight: font.caption.weight,
+    lineHeight: font.caption.lineHeight,
     color: color.onSurfaceMuted,
     textAlign: 'center',
   },

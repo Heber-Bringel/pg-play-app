@@ -83,8 +83,6 @@ export const ExpressiveTextField = ({
             {
               color: disabled
                 ? tokens.semantic.color.disabledText
-                : hasError
-                ? tokens.semantic.color.onErrorContainer
                 : tokens.component.input.text,
             },
           ]}
@@ -131,11 +129,14 @@ const styles = StyleSheet.create({
     fontFamily: tokens.semantic.font.caption.family,
     fontSize: tokens.semantic.font.caption.size,
     fontWeight: tokens.semantic.font.caption.weight,
+    lineHeight: tokens.semantic.font.caption.lineHeight,
     color: tokens.semantic.color.onSurface,
   },
   counter: {
     fontFamily: tokens.semantic.font.caption.family,
     fontSize: tokens.semantic.font.caption.size,
+    fontWeight: tokens.semantic.font.caption.weight,
+    lineHeight: tokens.semantic.font.caption.lineHeight,
     color: tokens.semantic.color.onSurfaceMuted,
   },
   inputWrapper: {
@@ -151,6 +152,8 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: tokens.semantic.font.body.family,
     fontSize: tokens.semantic.font.body.size,
+    fontWeight: tokens.semantic.font.body.weight,
+    lineHeight: tokens.semantic.font.body.lineHeight,
   },
   helperRow: {
     flexDirection: 'row',
@@ -161,5 +164,6 @@ const styles = StyleSheet.create({
     fontFamily: tokens.semantic.font.caption.family,
     fontSize: tokens.semantic.font.caption.size,
     fontWeight: tokens.semantic.font.caption.weight,
+    lineHeight: tokens.semantic.font.caption.lineHeight,
   },
 });

@@ -66,7 +66,10 @@ describe('Sistema de Design PG Play Expressive - Tokens (02-tokens.md)', () => {
     expect(space.lg).toBe(24);
     expect(space.xl).toBe(32);
     expect(space.xxl).toBe(48);
+    expect(space['2xl']).toBe(48);
+    expect(space.container).toBe(56);
     expect(space.xxxl).toBe(64);
+    expect(space['3xl']).toBe(64);
     expect(radius.full).toBe(9999);
     expect(font.display.size).toBe(30);
     expect(border.thin).toBe(2);
@@ -75,10 +78,14 @@ describe('Sistema de Design PG Play Expressive - Tokens (02-tokens.md)', () => {
     expect(elevation.card).toBe(4);
     expect(motion.duration.short).toBe(150);
     expect(button.radius).toBe(9999);
+    expect(button.jumbo.height).toBe(64);
     expect(input.minHeight).toBe(56);
     expect(card.radius).toBe(28);
     expect(timer.radiusNormal).toBe(9999);
+    expect(timer.bg.normal).toBe('#FACC15');
     expect(quiz.optionRadius).toBe(20);
+    expect(quiz.option.bg).toBe('#FFFFFF');
     expect(key.size).toBe(48);
+    expect(key.hit.bg).toBe('#15803D');
   });
 });

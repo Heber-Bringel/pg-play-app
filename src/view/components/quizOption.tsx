@@ -58,10 +58,14 @@ export const QuizOption = ({
           borderColor:
             status === 'default'
               ? tokens.component.quiz.optionBorder
+              : status === 'selected'
+              ? tokens.semantic.color.action
               : getBackgroundColor(),
           borderRadius:
             status === 'wrong'
               ? tokens.semantic.radius.sm
+              : status === 'correct'
+              ? tokens.semantic.radius.md
               : tokens.component.quiz.optionRadius,
         },
       ]}
@@ -127,6 +131,7 @@ const styles = StyleSheet.create({
     fontFamily: tokens.semantic.font.label.family,
     fontSize: tokens.semantic.font.label.size,
     fontWeight: tokens.semantic.font.label.weight,
+    lineHeight: tokens.semantic.font.label.lineHeight,
     color: tokens.semantic.color.onSurface,
   },
   optionText: {
@@ -134,5 +139,6 @@ const styles = StyleSheet.create({
     fontFamily: tokens.semantic.font.label.family,
     fontSize: tokens.semantic.font.label.size,
     fontWeight: tokens.semantic.font.label.weight,
+    lineHeight: tokens.semantic.font.label.lineHeight,
   },
 });

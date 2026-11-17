@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
 import { ExpressiveTimer } from '@/view/components/expressiveTimer';
 import { GameCard } from '@/view/components/gameCard';
-import { border, color, font, radius, space, typography } from '@/view/theme';
+import { border, card, color, elevation, font, radius, space, typography } from '@/view/theme';
 import { useMimicaViewModel } from '@/viewmodel/useMimicaViewModel';
 
 export const MimicaScreen = () => {
@@ -324,11 +324,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   wordCard: {
-    backgroundColor: color.surfaceContainer,
-    borderColor: color.outline,
+    backgroundColor: card.bg,
+    borderColor: card.border,
     borderWidth: border.thin,
-    borderRadius: radius.xl,
-    padding: space.lg,
+    borderRadius: card.radius,
+    padding: card.padding,
+    elevation: elevation.card,
     alignItems: 'center',
     gap: space.sm,
   },

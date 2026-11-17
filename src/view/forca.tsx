@@ -335,7 +335,7 @@ const styles = StyleSheet.create({
   exitBanner: {
     backgroundColor: color.errorContainer,
     padding: space.md,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     gap: space.sm,
     borderWidth: border.thin,
     borderColor: color.error,
@@ -363,10 +363,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   hintLabel: {
-    fontFamily: font.title.family,
-    fontSize: font.body.size,
-    fontWeight: font.title.weight,
-    lineHeight: font.body.lineHeight,
+    fontFamily: font.subtitle.family,
+    fontSize: font.subtitle.size,
+    fontWeight: font.subtitle.weight,
+    lineHeight: font.subtitle.lineHeight,
     color: color.onSurface,
     textAlign: 'center',
   },
@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
   },
   letterSlot: {
     minWidth: space.xl,
-    minHeight: key.size,
+    minHeight: space['2xl'],
     backgroundColor: color.surfaceVariant,
     borderRadius: radius.sm,
     alignItems: 'center',
@@ -392,7 +392,7 @@ const styles = StyleSheet.create({
   slotText: {
     fontFamily: font.title.family,
     fontSize: font.title.size,
-    fontWeight: font.display.weight,
+    fontWeight: font.title.weight,
     lineHeight: font.title.lineHeight,
     color: color.onSurface,
   },

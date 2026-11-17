@@ -284,7 +284,7 @@ describe('useQuizViewModel — Hook da Arena de Quiz Relâmpago (UC04)', () => {
     act(() => {
       harness.getActions().handleConfirmExit();
     });
-    expect(mockReplace).toHaveBeenCalledWith('/scoreboard');
+    expect(mockReplace).toHaveBeenCalledWith('/');
 
     act(() => {
       harness.getActions().handleGoToScoreboard();

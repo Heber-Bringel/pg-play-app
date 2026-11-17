@@ -9,11 +9,9 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { GameModalityFilter } from '@/model/entities/minigame';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
-import { ExpressiveTextField } from '@/view/components/expressiveTextField';
 import { GameCard } from '@/view/components/gameCard';
 import {
   border,
-  button,
   color,
   font,
   icon,
@@ -152,18 +150,6 @@ export const HubScreen = () => {
         </View>
       </View>
 
-      <ExpressiveTextField
-        label="Buscar minigame"
-        value={state.searchQuery}
-        placeholder="Ex.: Mímica, Quiz, Bíblico..."
-        helperText="Filtra instantaneamente por nome, tema ou modalidade"
-        icon="magnify"
-        maxLength={40}
-        onChangeText={(text) => {
-          void actions.setSearchQuery(text);
-        }}
-      />
-
       <View style={styles.filterSection}>
         <Text allowFontScaling style={styles.sectionTitle}>
           Modalidade
@@ -222,10 +208,10 @@ export const HubScreen = () => {
               Nenhum minigame encontrado
             </Text>
             <Text allowFontScaling style={styles.emptyDescription}>
-              Tente outro termo de busca ou restaure o catálogo completo de jogos do PG.
+              Nenhum jogo disponível para esta modalidade.
             </Text>
             <ExpressiveButton
-              label="Limpar busca"
+              label="Limpar filtros"
               variant="tonal"
               icon="filter-remove"
               onPress={() => {
@@ -292,8 +278,8 @@ const styles = StyleSheet.create({
     marginBottom: space.xs,
   },
   brandBadge: {
-    width: button.minHeight,
-    height: button.minHeight,
+    width: space['2xl'],
+    height: space['2xl'],
     borderRadius: radius.lg,
     backgroundColor: color.actionContainer,
     alignItems: 'center',
@@ -349,7 +335,7 @@ const styles = StyleSheet.create({
     gap: space.sm,
   },
   chip: {
-    minHeight: button.minHeight,
+    minHeight: space['2xl'],
     paddingHorizontal: space.md,
     borderRadius: radius.full,
     borderWidth: border.thin,
@@ -367,9 +353,9 @@ const styles = StyleSheet.create({
   },
   chipLabel: {
     fontFamily: font.label.family,
-    fontSize: font.caption.size,
+    fontSize: font.label.size,
     fontWeight: font.label.weight,
-    lineHeight: font.caption.lineHeight,
+    lineHeight: font.label.lineHeight,
   },
   chipLabelDefault: {
     color: color.onSurface,

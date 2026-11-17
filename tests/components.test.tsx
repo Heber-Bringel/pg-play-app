@@ -196,6 +196,7 @@ describe('Componentes do Sistema de Design PG Play Expressive (04-componentes/)'
       const releasedStyle = StyleSheet.flatten(pressable.props.style);
       expect(releasedStyle.borderRadius).toBe(tokens.component.card.radius);
       expect(releasedStyle.borderColor).toBe(tokens.component.card.border);
+      expect(releasedStyle.elevation).toBe(tokens.semantic.elevation.card);
     });
 
     it('renderiza variante pódio líder com borda destacada e sem clique quando não fornecido onPress', () => {
@@ -218,6 +219,7 @@ describe('Componentes do Sistema de Design PG Play Expressive (04-componentes/)'
       expect(pressable.props.accessibilityRole).toBe('summary');
       expect(flatStyle.backgroundColor).toBe(tokens.semantic.color.disabledBg);
       expect(flatStyle.borderColor).toBe(tokens.semantic.color.highlight);
+      expect(flatStyle.elevation).toBe(tokens.semantic.elevation.none);
     });
   });
 
@@ -250,6 +252,7 @@ describe('Componentes do Sistema de Design PG Play Expressive (04-componentes/)'
       expect(container.props.accessibilityLiveRegion).toBe('assertive');
       expect(flatStyle.backgroundColor).toBe(tokens.component.timer.bgCritical);
       expect(flatStyle.borderRadius).toBe(tokens.component.timer.radiusCritical);
+      expect(flatStyle.transform).toBeDefined();
 
       const icon = tree.root.findByType('MaterialCommunityIcons' as any);
       expect(icon.props.name).toBe('alert');
@@ -302,6 +305,7 @@ describe('Componentes do Sistema de Design PG Play Expressive (04-componentes/)'
 
         if (status === 'correct') {
           expect(flatStyle.backgroundColor).toBe(tokens.component.quiz.optionCorrectBg);
+          expect(flatStyle.borderRadius).toBe(tokens.semantic.radius.md);
           expect(pressable.props.accessibilityLabel).toContain('resposta correta');
           const icon = tree.root.findByType('MaterialCommunityIcons' as any);
           expect(icon.props.name).toBe('check-circle');
@@ -313,6 +317,7 @@ describe('Componentes do Sistema de Design PG Play Expressive (04-componentes/)'
           expect(icon.props.name).toBe('close-circle');
         } else if (status === 'selected') {
           expect(flatStyle.backgroundColor).toBe(tokens.semantic.color.actionContainer);
+          expect(flatStyle.borderColor).toBe(tokens.semantic.color.action);
         } else {
           expect(flatStyle.backgroundColor).toBe(tokens.component.quiz.optionBg);
         }

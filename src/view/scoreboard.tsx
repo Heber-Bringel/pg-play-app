@@ -64,48 +64,56 @@ export const ScoreboardScreen = () => {
   }
 
   return (
-    <ScrollView style={styles.screen} showsVerticalScrollIndicator={false}>
-      <View style={styles.header}>
-        <View style={styles.trophyBadge}>
-          <MaterialCommunityIcons
-            name="trophy-award"
-            size={icon.lg}
-            color={color.onHighlight}
-          />
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={styles.topSection}>
+        <View style={styles.header}>
+          <View style={styles.trophyBadge}>
+            <MaterialCommunityIcons
+              name="trophy-award"
+              size={icon.lg}
+              color={color.onHighlight}
+            />
+          </View>
+          <Text allowFontScaling style={styles.title}>
+            Ranking do Encontro
+          </Text>
+          <Text allowFontScaling style={styles.subtitle}>
+            Pontuação oficial das dinâmicas de hoje!
+          </Text>
         </View>
-        <Text allowFontScaling style={styles.title}>
-          Ranking do Encontro
-        </Text>
-        <Text allowFontScaling style={styles.subtitle}>
-          Pontuação oficial das dinâmicas de hoje!
-        </Text>
-      </View>
 
-      <View style={styles.list}>
-        {state.teams.map((team, index) => {
-          const isLeader = state.leaderTeam?.id === team.id;
-          return (
-            <View key={team.id} style={styles.teamItem}>
-              <GameCard
-                title={`${index + 1}º · ${team.name} — ${team.score} pts`}
-                playersTag={isLeader ? 'Líder' : `${index + 1}º lugar`}
-                description={
-                  isLeader ? 'Equipe na liderança do encontro' : 'Equipe participante'
-                }
-                icon={isLeader ? 'crown' : 'account-group'}
-                highlightLeader={isLeader}
-              />
-              <ExpressiveButton
-                label={`Bônus +10 pts · ${team.name}`}
-                variant="tonal"
-                icon="star-circle"
-                onPress={() => {
-                  void actions.handleAwardBonus(team.id);
-                }}
-              />
-            </View>
-          );
-        })}
+        <View style={styles.list}>
+          {state.teams.map((team, index) => {
+            const isLeader = state.leaderTeam?.id === team.id;
+            return (
+              <View key={team.id} style={styles.teamItem}>
+                <GameCard
+                  title={`${index + 1}º · ${team.name} — ${team.score} pts`}
+                  playersTag={isLeader ? 'Líder' : `${index + 1}º lugar`}
+                  description={
+                    isLeader ? 'Equipe na liderança do encontro' : 'Equipe participante'
+                  }
+                  icon={isLeader ? 'crown' : 'account-group'}
+                  highlightLeader={isLeader}
+                />
+                <View style={styles.bonusButtonWrapper}>
+                  <ExpressiveButton
+                    label={`Bônus +10 pts · ${team.name}`}
+                    variant="tonal"
+                    icon="star-circle"
+                    onPress={() => {
+                      void actions.handleAwardBonus(team.id);
+                    }}
+                  />
+                </View>
+              </View>
+            );
+          })}
+        </View>
       </View>
 
       <View style={styles.actions}>
@@ -156,20 +164,31 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: color.surface,
-    padding: space.md,
-    gap: space.lg,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: space.lg,
+    paddingTop: space.lg,
+    paddingBottom: space['3xl'],
+    justifyContent: 'space-between',
+    gap: space.xl,
+  },
+  topSection: {
+    gap: space.xl,
   },
   header: {
     alignItems: 'center',
-    gap: space.xs,
+    gap: space.sm,
+    paddingVertical: space.sm,
   },
   trophyBadge: {
-    width: space.xxxl,
-    height: space.xxxl,
+    width: space['3xl'],
+    height: space['3xl'],
     borderRadius: radius.full,
     backgroundColor: color.highlight,
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: space.xs,
   },
   title: {
     fontFamily: font.title.family,
@@ -182,6 +201,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontFamily: font.body.family,
     fontSize: font.body.size,
+    fontWeight: font.body.weight,
     lineHeight: font.body.lineHeight,
     color: color.onSurfaceMuted,
     textAlign: 'center',
@@ -204,6 +224,7 @@ const styles = StyleSheet.create({
   resetDescription: {
     fontFamily: font.body.family,
     fontSize: font.body.size,
+    fontWeight: font.body.weight,
     lineHeight: font.body.lineHeight,
     color: color.onErrorContainer,
   },
@@ -211,13 +232,17 @@ const styles = StyleSheet.create({
     gap: space.sm,
   },
   list: {
-    gap: space.md,
+    gap: space.lg,
   },
   teamItem: {
-    gap: space.xs,
+    gap: space.sm,
+  },
+  bonusButtonWrapper: {
+    paddingHorizontal: space.xs,
   },
   actions: {
-    gap: space.sm,
+    gap: space.md,
+    paddingTop: space.md,
   },
 });
 

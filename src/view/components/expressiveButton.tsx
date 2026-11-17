@@ -71,12 +71,19 @@ export const ExpressiveButton = ({
           borderRadius: pressed
             ? tokens.component.button.radiusPressed
             : tokens.component.button.radius,
+          borderWidth: focused
+            ? tokens.semantic.border.focus
+            : tokens.semantic.border.thin,
           borderColor:
             variant === 'outlined'
               ? tokens.semantic.color.outline
               : focused
               ? tokens.semantic.color.focus
               : tokens.semantic.color.transparent,
+          elevation:
+            disabled || variant === 'outlined'
+              ? tokens.semantic.elevation.none
+              : tokens.semantic.elevation.card,
         },
       ]}
     >
@@ -104,7 +111,6 @@ const styles = StyleSheet.create({
   base: {
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: tokens.semantic.border.thin,
   },
   content: {
     flexDirection: 'row',

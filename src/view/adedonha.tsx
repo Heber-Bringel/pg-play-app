@@ -6,7 +6,7 @@ import { ExpressiveTextField } from '@/view/components/expressiveTextField';
 import { ExpressiveTimer } from '@/view/components/expressiveTimer';
 import { GameCard } from '@/view/components/gameCard';
 import { LetterKey } from '@/view/components/letterKey';
-import { border, button, color, font, icon, input, radius, space } from '@/view/theme';
+import { border, color, font, icon, radius, space } from '@/view/theme';
 import { useAdedonhaViewModel } from '@/viewmodel/useAdedonhaViewModel';
 
 const ROULETTE_PREVIEW_LETTERS: string[] = [
@@ -527,6 +527,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     fontFamily: font.body.family,
     fontSize: font.body.size,
+    fontWeight: font.body.weight,
     lineHeight: font.body.lineHeight,
     color: color.onErrorContainer,
   },
@@ -543,6 +544,7 @@ const styles = StyleSheet.create({
   sectionSubtitle: {
     fontFamily: font.body.family,
     fontSize: font.body.size,
+    fontWeight: font.body.weight,
     lineHeight: font.body.lineHeight,
     color: color.onSurfaceMuted,
   },
@@ -574,7 +576,7 @@ const styles = StyleSheet.create({
     borderWidth: border.thin,
     borderColor: color.outline,
     padding: space.sm,
-    minHeight: input.minHeight,
+    minHeight: space.container,
   },
   columnInfo: {
     flexDirection: 'row',
@@ -591,33 +593,34 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   columnAvatarText: {
-    fontSize: font.body.size,
-    fontFamily: font.body.family,
+    fontFamily: font.label.family,
+    fontSize: font.label.size,
     fontWeight: font.label.weight,
-    lineHeight: font.body.lineHeight,
+    lineHeight: font.label.lineHeight,
     color: color.onActionContainer,
   },
   columnName: {
     flex: 1,
-    fontSize: font.body.size,
-    fontFamily: font.body.family,
+    fontFamily: font.label.family,
+    fontSize: font.label.size,
     fontWeight: font.label.weight,
-    lineHeight: font.body.lineHeight,
+    lineHeight: font.label.lineHeight,
     color: color.onSurface,
   },
   removeColumnButton: {
-    width: button.minHeight,
-    height: button.minHeight,
+    width: space['2xl'],
+    height: space['2xl'],
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.full,
-    borderWidth: border.focus,
+    borderWidth: border.thin,
     borderColor: color.transparent,
   },
   removeColumnButtonPressed: {
     backgroundColor: color.errorContainer,
   },
   removeColumnButtonFocused: {
+    borderWidth: border.focus,
     borderColor: color.focus,
   },
   roundHeader: {
@@ -627,8 +630,8 @@ const styles = StyleSheet.create({
     gap: space.md,
   },
   heroLetterBadge: {
-    minWidth: space.xxxl,
-    minHeight: space.xxxl,
+    minWidth: space['3xl'],
+    minHeight: space['3xl'],
     paddingHorizontal: space.lg,
     paddingVertical: space.sm,
     borderRadius: radius.xl,
