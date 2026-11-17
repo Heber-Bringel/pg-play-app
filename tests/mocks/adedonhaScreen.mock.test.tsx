@@ -10,12 +10,16 @@ import type {
 } from '@/viewmodel/useAdedonhaViewModel';
 
 const createMockActions = (): AdedonhaActions => ({
+  handleCreateRoom: jest.fn(async () => true),
+  handleJoinRoom: jest.fn(async () => true),
+  handleJoinDemoRoom: jest.fn(async () => true),
   handleAddColumn: jest.fn(async () => true),
   handleRemoveColumn: jest.fn(async () => {}),
   handleUpdateConfig: jest.fn(async () => {}),
   handleSpinRoulette: jest.fn(async () => {}),
   handleChangeAnswer: jest.fn(),
   handleTriggerAdedonha: jest.fn(async () => {}),
+  handleFinalizeStopNow: jest.fn(async () => {}),
   handleTimeOut: jest.fn(async () => {}),
   handleRaiseDoubt: jest.fn(async () => {}),
   handleJudgeSubmission: jest.fn(async () => {}),
@@ -81,9 +85,12 @@ const baseRoom: AdedonhaRoom = {
 
 const baseState: AdedonhaState = {
   room: baseRoom,
+  currentPlayerId: 'player-host',
+  isCurrentPlayerHost: true,
+  isRealtimeEnabled: false,
   loading: false,
   error: null,
-  suggestedColumns: ['Personagem Bíblico', 'Livro da Bíblia'],
+  suggestedColumns: ['Personagem Bíblico', 'Livro da Bíblia', 'Milagre ou Parábola'],
   availableLetters: ['B', 'C', 'D'],
   answers: {
     'Personagem Bíblico': 'Débora',
@@ -115,7 +122,7 @@ describe('AdedonhaScreen — Testes de Tela com Mocks de ViewModel (UC08)', () =
     expect(AdedonhaRoute).toBe(AdedonhaScreen);
   });
 
-  it('deve renderizar os estados de carregamento (loading), erro e vazio', () => {
+  it('deve renderizar a etapa de identificação (Criar Sala / Entrar com PIN / Demo) e loading', async () => {
     const actions = createMockActions();
     jest
       .spyOn(adedonhaVmModule, 'useAdedonhaViewModel')
@@ -136,35 +143,60 @@ describe('AdedonhaScreen — Testes de Tela com Mocks de ViewModel (UC08)', () =
       {
         ...baseState,
         room: null,
-        error: 'Sem conexão com a sala multiplayer.',
+        error: 'Digite um apelido com pelo menos 2 letras.',
       },
       actions,
     ]);
 
-    let errorTree!: renderer.ReactTestRenderer;
+    let entryTree!: renderer.ReactTestRenderer;
     act(() => {
-      errorTree = renderer.create(<AdedonhaScreen />);
+      entryTree = renderer.create(<AdedonhaScreen />);
     });
-    const retryBtn = errorTree.root.findByProps({
-      accessibilityLabel: 'Tentar Novamente',
+
+    const nickInput = entryTree.root.findByProps({
+      accessibilityLabel: 'Seu Apelido',
     } as any);
     act(() => {
-      retryBtn.props.onPress();
+      nickInput.props.onChangeText('Heber');
     });
-    expect(actions.handleRetry).toHaveBeenCalledTimes(1);
 
-    jest
-      .spyOn(adedonhaVmModule, 'useAdedonhaViewModel')
-      .mockReturnValue([{ ...baseState, room: null, error: null }, actions]);
+    const createBtn = entryTree.root.findByProps({
+      accessibilityLabel: 'Criar Sala (Moderador)',
+    } as any);
+    await act(async () => {
+      createBtn.props.onPress();
+    });
+    expect(actions.handleCreateRoom).toHaveBeenCalledWith('Heber');
 
-    let emptyTree!: renderer.ReactTestRenderer;
+    const joinTab = entryTree.root.findByProps({
+      accessibilityLabel: 'Modo Entrar com Código PIN',
+    } as any);
     act(() => {
-      emptyTree = renderer.create(<AdedonhaScreen />);
+      joinTab.props.onPress();
     });
-    const emptyTexts = emptyTree.root.findAllByType('Text' as any);
-    expect(
-      emptyTexts.some((t) => t.props.children === 'Nenhuma Sala Encontrada')
-    ).toBe(true);
+
+    const pinInput = entryTree.root.findByProps({
+      accessibilityLabel: 'Código PIN da Sala',
+    } as any);
+    act(() => {
+      pinInput.props.onChangeText('PG2026');
+    });
+
+    const joinBtn = entryTree.root.findByProps({
+      accessibilityLabel: 'Entrar na Sala',
+    } as any);
+    await act(async () => {
+      joinBtn.props.onPress();
+    });
+    expect(actions.handleJoinRoom).toHaveBeenCalledWith('PG2026', 'Heber');
+
+    const demoBtn = entryTree.root.findByProps({
+      accessibilityLabel: 'Entrar na Sala Demo Offline (PG2026)',
+    } as any);
+    await act(async () => {
+      demoBtn.props.onPress();
+    });
+    expect(actions.handleJoinDemoRoom).toHaveBeenCalledTimes(1);
   });
 
   it('deve renderizar o Lobby, adicionar/remover colunas e girar a Roleta Expressiva (RF21)', async () => {
@@ -178,27 +210,38 @@ describe('AdedonhaScreen — Testes de Tela com Mocks de ViewModel (UC08)', () =
       tree = renderer.create(<AdedonhaScreen />);
     });
 
+    const spinBtn = tree.root.findByProps({
+      accessibilityLabel: 'Girar Roleta Expressiva',
+    } as any);
+
+    await act(async () => {
+      spinBtn.props.onPress();
+    });
+    expect(actions.handleSpinRoulette).toHaveBeenCalledTimes(1);
+
+    const configTab = tree.root.findByProps({
+      accessibilityLabel: 'Aba Configurar Colunas e Regras',
+    } as any);
+    act(() => {
+      configTab.props.onPress();
+    });
+
     const addBtn = tree.root.findByProps({
       accessibilityLabel: 'Adicionar Coluna',
     } as any);
     const removeBtn = tree.root.findByProps({
       accessibilityLabel: 'Remover coluna Personagem Bíblico',
     } as any);
-    const spinBtn = tree.root.findByProps({
-      accessibilityLabel: 'Girar Roleta Expressiva',
-    } as any);
 
     await act(async () => {
       addBtn.props.onPress();
       removeBtn.props.onPress();
-      spinBtn.props.onPress();
     });
 
     expect(actions.handleAddColumn).toHaveBeenCalledTimes(1);
     expect(actions.handleRemoveColumn).toHaveBeenCalledWith(
       'Personagem Bíblico'
     );
-    expect(actions.handleSpinRoulette).toHaveBeenCalledTimes(1);
   });
 
   it('deve renderizar a fase de preenchimento e acionar o botão Jumbo ADEDONHA! (RF22)', () => {
@@ -225,7 +268,7 @@ describe('AdedonhaScreen — Testes de Tela com Mocks de ViewModel (UC08)', () =
     expect(actions.handleTriggerAdedonha).toHaveBeenCalledTimes(1);
   });
 
-  it('deve renderizar a Apuração Assistida (Levantar Dúvida e Veredito do Moderador) e o Pódio Final (RF23)', () => {
+  it('deve renderizar a Apuração Assistida refatorada (Levantar Dúvida e Veredito do Moderador) e o Pódio Final (RF23)', () => {
     const actions = createMockActions();
     jest.spyOn(adedonhaVmModule, 'useAdedonhaViewModel').mockReturnValue([
       {
