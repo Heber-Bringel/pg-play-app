@@ -301,6 +301,7 @@ describe('useForcaViewModel — Hook da Arena do Jogo da Forca (UC05)', () => {
 
   it('deve converter DomainError em mensagem de erro legível no estado', async () => {
     const failingUseCases: IPgPlayUseCases = {
+      listMinigames: async () => [],
       listTeams: async () => {
         throw new ValidationError('Erro simulado ao carregar equipes.');
       },

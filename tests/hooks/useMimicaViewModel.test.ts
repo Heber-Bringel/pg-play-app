@@ -256,6 +256,7 @@ describe('useMimicaViewModel — Hook da Arena de Mímica Expressiva (UC03)', ()
     expect(mockReplace).toHaveBeenCalledWith('/');
 
     const failingUseCases: IPgPlayUseCases = {
+      listMinigames: async () => [],
       listTeams: async () => {
         throw new ValidationError('Erro simulado ao carregar equipes.');
       },

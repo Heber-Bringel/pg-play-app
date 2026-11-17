@@ -8,9 +8,24 @@ import type {
   QuizCategory,
   QuizQuestion,
 } from '@/model/entities/arenaChallenge';
+import type { GameModalityFilter, Minigame } from '@/model/entities/minigame';
 import type { Team } from '@/model/entities/team';
 import { ValidationError } from '@/model/errors';
 import type { IPgPlayUseCases } from '@/usecase/iPgPlayUseCases';
+
+const VALID_MODALITIES: ReadonlySet<GameModalityFilter> = new Set([
+  'Todos',
+  '1 Celular',
+  'Multi-Celular',
+]);
+
+function normalizeSearchText(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+}
 
 export const DEFAULT_MIMICA_HIT_POINTS = 20;
 export const DEFAULT_MIMICA_SKIP_PENALTY = 5;
@@ -24,6 +39,34 @@ export class PgPlayUseCases implements IPgPlayUseCases {
     private readonly teamDataSource: ITeamDataSource,
     private readonly gameCatalogDataSource: IGameCatalogDataSource
   ) {}
+
+  async listMinigames(
+    query: string = '',
+    modality: GameModalityFilter = 'Todos'
+  ): Promise<Minigame[]> {
+    if (!VALID_MODALITIES.has(modality)) {
+      throw new ValidationError('Modalidade de filtro inválida para o catálogo de jogos.');
+    }
+
+    const normalizedQuery = normalizeSearchText(query);
+    const games = await this.gameCatalogDataSource.listMinigames();
+
+    return games.filter((game) => {
+      const matchesModality = modality === 'Todos' || game.modality === modality;
+      if (!matchesModality) return false;
+      if (!normalizedQuery) return true;
+
+      const searchableFields = [
+        game.title,
+        game.description,
+        game.playersTag,
+        ...game.themes,
+      ];
+      return searchableFields.some((field) =>
+        normalizeSearchText(field).includes(normalizedQuery)
+      );
+    });
+  }
 
   async listTeams(): Promise<Team[]> {
     return this.teamDataSource.listTeams();

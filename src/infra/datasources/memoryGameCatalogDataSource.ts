@@ -7,7 +7,71 @@ import type {
   QuizCategory,
   QuizQuestion,
 } from '@/model/entities/arenaChallenge';
+import type { Minigame } from '@/model/entities/minigame';
 import { DataSourceError } from '@/model/errors';
+
+const DEFAULT_MINIGAMES: Minigame[] = [
+  {
+    id: 'mimica',
+    title: 'Mímica Expressiva',
+    description:
+      'Faça gestos sem falar para sua equipe adivinhar a palavra secreta antes do tempo acabar.',
+    modality: '1 Celular',
+    playersTag: '1 Celular · 2+ equipes',
+    route: '/mimica',
+    icon: 'drama-masks',
+    themes: ['gestos', 'equipes', 'biblico', 'filmes', 'esportes', 'passa-celular'],
+    available: true,
+  },
+  {
+    id: 'quiz',
+    title: 'Quiz Relâmpago',
+    description:
+      'Responda perguntas bíblicas e temáticas em 4 alternativas com explicação imediata.',
+    modality: '1 Celular',
+    playersTag: '1 Celular · 2+ equipes',
+    route: '/quiz',
+    icon: 'lightning-bolt',
+    themes: ['perguntas', 'biblico', 'conhecimentos gerais', 'equipes', 'passa-celular'],
+    available: true,
+  },
+  {
+    id: 'forca',
+    title: 'Jogo da Forca',
+    description:
+      'Descubra a palavra secreta usando a dica temática e escolhendo letras de A a Z.',
+    modality: '1 Celular',
+    playersTag: '1 Celular · 2+ equipes',
+    route: '/forca',
+    icon: 'alphabetical-variant',
+    themes: ['letras', 'palavras', 'biblico', 'dica', 'equipes', 'passa-celular'],
+    available: true,
+  },
+  {
+    id: 'adedonha',
+    title: 'Adedonha Bíblica',
+    description:
+      'Gire a roleta de letras, preencha as categorias bíblicas e grite ADEDONHA na sala!',
+    modality: 'Multi-Celular',
+    playersTag: 'Multi-Celular · 2–12 jogadores',
+    route: '/adedonha',
+    icon: 'format-list-checks',
+    themes: ['stop', 'roleta', 'biblico', 'multiplayer', 'categorias', 'sala'],
+    available: true,
+  },
+  {
+    id: 'cidade-dorme',
+    title: 'Cidade Dorme',
+    description:
+      'Dedução social com papéis secretos e narrador por áudio conduzindo Noite e Dia.',
+    modality: 'Multi-Celular',
+    playersTag: 'Multi-Celular · Em breve',
+    route: '/cidade-dorme',
+    icon: 'weather-night',
+    themes: ['misterio', 'blefe', 'narrador', 'multiplayer', 'papeis', 'sala'],
+    available: false,
+  },
+];
 
 const DEFAULT_MIMICA_CARDS: MimicaCard[] = [
   { id: 'mimica-1', word: 'Davi e Golias', category: 'Bíblico', points: 20 },
@@ -250,6 +314,7 @@ const DEFAULT_QUIZ_QUESTIONS: QuizQuestion[] = [
 ];
 
 export class MemoryGameCatalogDataSource implements IGameCatalogDataSource {
+  private minigames: Minigame[];
   private mimicaCards: MimicaCard[];
   private forcaPuzzles: ForcaPuzzle[];
   private quizQuestions: QuizQuestion[];
@@ -257,14 +322,30 @@ export class MemoryGameCatalogDataSource implements IGameCatalogDataSource {
   constructor(
     initialCards: MimicaCard[] = DEFAULT_MIMICA_CARDS,
     initialPuzzles: ForcaPuzzle[] = DEFAULT_FORCA_PUZZLES,
-    initialQuestions: QuizQuestion[] = DEFAULT_QUIZ_QUESTIONS
+    initialQuestions: QuizQuestion[] = DEFAULT_QUIZ_QUESTIONS,
+    initialMinigames: Minigame[] = DEFAULT_MINIGAMES
   ) {
+    this.minigames = initialMinigames.map((game) => ({
+      ...game,
+      themes: [...game.themes],
+    }));
     this.mimicaCards = initialCards.map((card) => ({ ...card }));
     this.forcaPuzzles = initialPuzzles.map((puzzle) => ({ ...puzzle }));
     this.quizQuestions = initialQuestions.map((q) => ({
       ...q,
       options: q.options.map((opt) => ({ ...opt })),
     }));
+  }
+
+  async listMinigames(): Promise<Minigame[]> {
+    try {
+      return this.minigames.map((game) => ({
+        ...game,
+        themes: [...game.themes],
+      }));
+    } catch {
+      throw new DataSourceError('Não foi possível carregar o catálogo de minigames.');
+    }
   }
 
   async listMimicaCards(categories?: MimicaCategory[]): Promise<MimicaCard[]> {
