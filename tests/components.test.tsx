@@ -254,6 +254,30 @@ describe('Componentes do Sistema de Design PG Play Expressive (04-componentes/)'
       const icon = tree.root.findByType('MaterialCommunityIcons' as any);
       expect(icon.props.name).toBe('alert');
     });
+
+    it('formata o visor em MM:SS mesmo acima de 59 segundos', () => {
+      let tree!: renderer.ReactTestRenderer;
+      act(() => {
+        tree = renderer.create(<ExpressiveTimer secondsRemaining={85} />);
+      });
+
+      const text = tree.root.findByType('Text' as any);
+      expect(text.props.children).toBe('01:25');
+    });
+
+    it('renderiza estado esgotado (00:00) com ícone bell-ring e anúncio de tempo esgotado', () => {
+      let tree!: renderer.ReactTestRenderer;
+      act(() => {
+        tree = renderer.create(<ExpressiveTimer secondsRemaining={0} />);
+      });
+
+      const container = tree.root.findByType('View' as any);
+      expect(container.props.accessibilityLabel).toBe('Tempo esgotado');
+      expect(tree.root.findByType('Text' as any).props.children).toBe('00:00');
+      expect(
+        tree.root.findByType('MaterialCommunityIcons' as any).props.name
+      ).toBe('bell-ring');
+    });
   });
 
   describe('5. QuizOption (alternativa-quiz.md)', () => {

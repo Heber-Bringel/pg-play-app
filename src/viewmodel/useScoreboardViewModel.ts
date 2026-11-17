@@ -11,10 +11,13 @@ export type ScoreboardState = {
   totalPoints: number;
   loading: boolean;
   error: string | null;
+  confirmingReset: boolean;
 };
 
 export type ScoreboardActions = {
   handleAwardBonus: (teamId: string, bonusPoints?: number) => Promise<void>;
+  handleRequestReset: () => void;
+  handleCancelReset: () => void;
   handleResetScoreboard: () => Promise<void>;
   handleChooseAnotherGame: () => void;
   handleRetry: () => Promise<void>;
@@ -28,6 +31,7 @@ export function useScoreboardViewModel(
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [confirmingReset, setConfirmingReset] = useState<boolean>(false);
 
   const loadScoreboard = useCallback(async () => {
     setLoading(true);
@@ -67,7 +71,16 @@ export function useScoreboardViewModel(
     [useCase]
   );
 
+  const handleRequestReset = useCallback(() => {
+    setConfirmingReset(true);
+  }, []);
+
+  const handleCancelReset = useCallback(() => {
+    setConfirmingReset(false);
+  }, []);
+
   const handleResetScoreboard = useCallback(async () => {
+    setConfirmingReset(false);
     try {
       setError(null);
       const resetTeams = await useCase.resetScoreboard();
@@ -89,7 +102,13 @@ export function useScoreboardViewModel(
     await loadScoreboard();
   }, [loadScoreboard]);
 
-  const leaderTeam: Team | null = teams.length > 0 ? teams[0] : null;
+  // Só existe líder quando a 1ª equipe tem pontos e não está empatada com a 2ª.
+  const firstTeam = teams.length > 0 ? teams[0] : null;
+  const secondTeam = teams.length > 1 ? teams[1] : null;
+  const leaderTeam: Team | null =
+    firstTeam && firstTeam.score > 0 && (!secondTeam || firstTeam.score > secondTeam.score)
+      ? firstTeam
+      : null;
   const totalPoints = teams.reduce((sum, team) => sum + team.score, 0);
 
   const state: ScoreboardState = {
@@ -98,10 +117,13 @@ export function useScoreboardViewModel(
     totalPoints,
     loading,
     error,
+    confirmingReset,
   };
 
   const actions: ScoreboardActions = {
     handleAwardBonus,
+    handleRequestReset,
+    handleCancelReset,
     handleResetScoreboard,
     handleChooseAnotherGame,
     handleRetry,

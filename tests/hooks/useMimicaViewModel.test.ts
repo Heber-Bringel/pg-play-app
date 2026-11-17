@@ -172,6 +172,43 @@ describe('useMimicaViewModel — Hook da Arena de Mímica Expressiva (UC03)', ()
     harness.unmount();
   });
 
+  it('deve pausar o cronômetro enquanto a confirmação de saída estiver aberta (RF11)', async () => {
+    const useCases = new PgPlayUseCases(
+      new MemoryTeamDataSource(),
+      new MemoryGameCatalogDataSource()
+    );
+    const harness = createHookHarness(useCases);
+    await harness.mount();
+
+    act(() => {
+      harness.getActions().handleStartTurn();
+    });
+    const startSeconds = harness.getState().secondsRemaining;
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+    expect(harness.getState().secondsRemaining).toBe(startSeconds - 2);
+
+    act(() => {
+      harness.getActions().handleRequestExit();
+    });
+    act(() => {
+      jest.advanceTimersByTime(5000);
+    });
+    expect(harness.getState().secondsRemaining).toBe(startSeconds - 2);
+
+    act(() => {
+      harness.getActions().handleCancelExit();
+    });
+    act(() => {
+      jest.advanceTimersByTime(1000);
+    });
+    expect(harness.getState().secondsRemaining).toBe(startSeconds - 3);
+
+    harness.unmount();
+  });
+
   it('deve encerrar a partida automaticamente quando todas as cartas do pacote forem acertadas (RF12, RF30)', async () => {
     const smallCatalog = new MemoryGameCatalogDataSource([
       { id: 'c1', word: 'Davi', category: 'Bíblico', points: 20 },
