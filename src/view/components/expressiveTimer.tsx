@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Text, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { tokens } from '@/view/theme';
 
@@ -15,8 +15,24 @@ export const ExpressiveTimer = ({ secondsRemaining }: ExpressiveTimerProps) => {
   const seconds = String(safeSeconds % 60).padStart(2, '0');
   const iconName = isExpired ? 'bell-ring' : isCritical ? 'alert' : 'timer-outline';
 
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (isCritical && !isExpired) {
+      scaleAnim.setValue(1.08);
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        damping: tokens.semantic.motion.spring.spatial.damping,
+        stiffness: tokens.semantic.motion.spring.spatial.stiffness,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      scaleAnim.setValue(1);
+    }
+  }, [safeSeconds, isCritical, isExpired, scaleAnim]);
+
   return (
-    <View
+    <Animated.View
       accessibilityRole="timer"
       accessibilityLabel={
         isExpired ? 'Tempo esgotado' : `Tempo restante: ${safeSeconds} segundos`
@@ -31,6 +47,7 @@ export const ExpressiveTimer = ({ secondsRemaining }: ExpressiveTimerProps) => {
           borderRadius: isCritical
             ? tokens.component.timer.radiusCritical
             : tokens.component.timer.radiusNormal,
+          transform: [{ scale: scaleAnim }],
         },
       ]}
     >
@@ -57,7 +74,7 @@ export const ExpressiveTimer = ({ secondsRemaining }: ExpressiveTimerProps) => {
       >
         {`${minutes}:${seconds}`}
       </Text>
-    </View>
+    </Animated.View>
   );
 };
 
