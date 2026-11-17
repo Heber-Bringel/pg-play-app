@@ -213,5 +213,48 @@ describe('AdedonhaUseCases — Regras de Negócio da Adedonha Bíblica (UC08)', 
     );
     const synced = await configuredWithTransport.getAdedonhaRoom(created.id);
     expect(synced.id).toBe(created.id);
+
+    const listener = jest.fn();
+    const unsubscribe = useCases.subscribeToRoom(created.id, listener);
+    await useCases.addColumn(created.id, 'Milagre Bíblico');
+    expect(listener).toHaveBeenCalledTimes(1);
+    unsubscribe();
+
+    const localId = await useCases.getLocalPlayerId(created.id);
+    const rebeca = joined.players.find((p) => p.nickname === 'Rebeca');
+    expect(localId).toBe(rebeca?.id);
+  });
+
+  it('deve executar o fluxo de contagem regressiva de 5s (stop_countdown) e finalizar apuração', async () => {
+    const roomService = new MemoryMultiplayerRoomService();
+    const useCases = new AdedonhaUseCases(roomService);
+    const room = await useCases.createRoom('Heber');
+    await useCases.spinRoulette(room.id, 'D');
+
+    const countdownRoom = await useCases.startStopCountdown(
+      room.id,
+      'player-host',
+      {
+        'Personagem Bíblico': 'Davi',
+        'Livro da Bíblia': 'Daniel',
+        'Cidade, Monte ou Rio Bíblico': 'Damasco',
+      }
+    );
+    expect(countdownRoom.phase).toBe('stop_countdown');
+    expect(countdownRoom.stopTriggeredBy).toBe('Heber');
+
+    await useCases.submitAnswers(room.id, 'player-2', {
+      'Personagem Bíblico': 'Débora',
+      'Livro da Bíblia': 'Deuteronômio',
+      'Cidade, Monte ou Rio Bíblico': 'Dã',
+    });
+
+    const tallyRoom = await useCases.finalizeStopCountdown(room.id);
+    expect(tallyRoom.phase).toBe('tally');
+    expect(
+      tallyRoom.submissions.some(
+        (s) => s.playerId === 'player-2' && s.answerText === 'Débora'
+      )
+    ).toBe(true);
   });
 });

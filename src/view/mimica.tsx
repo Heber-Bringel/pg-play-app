@@ -1,5 +1,6 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ConfirmModal } from '@/view/components/confirmModal';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
 import { ExpressiveTimer } from '@/view/components/expressiveTimer';
 import { GameCard } from '@/view/components/gameCard';
@@ -85,25 +86,13 @@ export const MimicaScreen = () => {
         </View>
       </View>
 
-      {state.confirmingExit && (
-        <View style={styles.exitBanner} accessibilityLiveRegion="polite">
-          <Text allowFontScaling style={styles.exitTitle}>
-            Deseja encerrar a partida de Mímica?
-          </Text>
-          <View style={styles.exitActions}>
-            <ExpressiveButton
-              label="Continuar Jogando"
-              variant="tonal"
-              onPress={actions.handleCancelExit}
-            />
-            <ExpressiveButton
-              label="Confirmar Saída"
-              variant="secondary"
-              onPress={actions.handleConfirmExit}
-            />
-          </View>
-        </View>
-      )}
+      <ConfirmModal
+        visible={state.confirmingExit}
+        title="Deseja encerrar a partida de Mímica?"
+        description="O progresso desta rodada será encerrado para o grupo."
+        onCancel={actions.handleCancelExit}
+        onConfirm={actions.handleConfirmExit}
+      />
 
       <View
         style={styles.teamHeader}
@@ -264,24 +253,6 @@ const styles = StyleSheet.create({
     fontWeight: font.caption.weight,
     lineHeight: font.caption.lineHeight,
     color: color.onSurface,
-  },
-  exitBanner: {
-    backgroundColor: color.errorContainer,
-    borderColor: color.error,
-    borderWidth: border.thin,
-    borderRadius: radius.lg,
-    padding: space.md,
-    gap: space.sm,
-  },
-  exitTitle: {
-    fontFamily: font.subtitle.family,
-    fontSize: font.subtitle.size,
-    fontWeight: font.subtitle.weight,
-    lineHeight: font.subtitle.lineHeight,
-    color: color.onErrorContainer,
-  },
-  exitActions: {
-    gap: space.sm,
   },
   teamHeader: {
     flexDirection: 'row',

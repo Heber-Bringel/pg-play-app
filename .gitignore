@@ -3,6 +3,9 @@ Thumbs.db
 node_modules/
 coverage/
 .expo/
+.env
+.env.local
+.env.*.local
 IHC – Unidade 5 Sistemas de Design.pdf
 atividade-sistema-de-design.md
 mvp-pg-play.html

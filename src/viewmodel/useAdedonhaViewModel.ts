@@ -1,6 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { adedonhaUseCases } from '@/di/container';
+import {
+  adedonhaUseCases,
+  isSupabaseMultiplayerEnabled,
+} from '@/di/container';
 import type {
   AdedonhaAwards,
   AdedonhaConfig,
@@ -12,8 +15,13 @@ import type {
 import { DomainError } from '@/model/errors';
 import type { IAdedonhaUseCases } from '@/usecase/iAdedonhaUseCases';
 
+const ADEDONHA_STOP_COUNTDOWN_SECONDS = 5;
+
 export type AdedonhaState = {
   room: AdedonhaRoom | null;
+  currentPlayerId: string | null;
+  isCurrentPlayerHost: boolean;
+  isRealtimeEnabled: boolean;
   loading: boolean;
   error: string | null;
   suggestedColumns: string[];
@@ -30,6 +38,9 @@ export type AdedonhaState = {
 };
 
 export type AdedonhaActions = {
+  handleCreateRoom: (hostNickname: string) => Promise<boolean>;
+  handleJoinRoom: (code: string, nickname: string) => Promise<boolean>;
+  handleJoinDemoRoom: () => Promise<boolean>;
   handleAddColumn: (columnName: string) => Promise<boolean>;
   handleRemoveColumn: (columnName: string) => Promise<void>;
   handleUpdateConfig: (
@@ -38,6 +49,7 @@ export type AdedonhaActions = {
   handleSpinRoulette: (preferredLetter?: string) => Promise<void>;
   handleChangeAnswer: (columnName: string, value: string) => void;
   handleTriggerAdedonha: () => Promise<void>;
+  handleFinalizeStopNow: () => Promise<void>;
   handleTimeOut: () => Promise<void>;
   handleRaiseDoubt: (submissionId: string) => Promise<void>;
   handleJudgeSubmission: (
@@ -59,33 +71,116 @@ export function useAdedonhaViewModel(
   const router = useRouter();
 
   const [room, setRoom] = useState<AdedonhaRoom | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmingExit, setConfirmingExit] = useState<boolean>(false);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [secondsRemaining, setSecondsRemaining] = useState<number>(90);
+  const lastRoundKeyRef = useRef<string | null>(null);
+  const lastStopKeyRef = useRef<string | null>(null);
+  const answersRef = useRef<Record<string, string>>({});
+  answersRef.current = answers;
 
-  const loadRoom = useCallback(async () => {
+  const applyRoomState = useCallback(
+    async (loadedRoom: AdedonhaRoom) => {
+      const localId = await useCase.getLocalPlayerId(loadedRoom.id);
+      setCurrentPlayerId(localId ?? loadedRoom.hostId);
+      setRoom(loadedRoom);
+      setSecondsRemaining(loadedRoom.config.roundDurationSeconds);
+      lastRoundKeyRef.current = `${loadedRoom.currentRound}:${loadedRoom.currentLetter ?? ''}`;
+    },
+    [useCase]
+  );
+
+  const handleCreateRoom = useCallback(
+    async (hostNickname: string): Promise<boolean> => {
+      setLoading(true);
+      setError(null);
+      try {
+        const created = await useCase.createRoom(hostNickname);
+        await applyRoomState(created);
+        return true;
+      } catch (err: unknown) {
+        if (err instanceof DomainError) {
+          setError(err.message);
+        } else {
+          setError('Não foi possível criar a sala da Adedonha Bíblica.');
+        }
+        return false;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [applyRoomState, useCase]
+  );
+
+  const handleJoinRoom = useCallback(
+    async (code: string, nickname: string): Promise<boolean> => {
+      setLoading(true);
+      setError(null);
+      try {
+        const joined = await useCase.joinRoom(code, nickname);
+        await applyRoomState(joined);
+        return true;
+      } catch (err: unknown) {
+        if (err instanceof DomainError) {
+          setError(err.message);
+        } else {
+          setError('Não foi possível entrar na sala informada.');
+        }
+        return false;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [applyRoomState, useCase]
+  );
+
+  const handleJoinDemoRoom = useCallback(async (): Promise<boolean> => {
     setLoading(true);
     setError(null);
     try {
-      const currentRoom = await useCase.getRoom();
-      setRoom(currentRoom);
-      setSecondsRemaining(currentRoom.config.roundDurationSeconds);
+      const demoRoom = await useCase.getRoom();
+      await applyRoomState(demoRoom);
+      return true;
     } catch (err: unknown) {
       if (err instanceof DomainError) {
         setError(err.message);
       } else {
-        setError('Não foi possível carregar a sala de Adedonha Bíblica.');
+        setError('Não foi possível carregar a sala de demonstração.');
       }
+      return false;
     } finally {
       setLoading(false);
     }
-  }, [useCase]);
+  }, [applyRoomState, useCase]);
 
   useEffect(() => {
-    void loadRoom();
-  }, [loadRoom]);
+    if (!room?.id) return;
+    const unsubscribe = useCase.subscribeToRoom(room.id, (updatedRoom) => {
+      const roundKey = `${updatedRoom.currentRound}:${updatedRoom.currentLetter ?? ''}`;
+      if (
+        updatedRoom.phase === 'filling' &&
+        lastRoundKeyRef.current !== roundKey
+      ) {
+        lastRoundKeyRef.current = roundKey;
+        lastStopKeyRef.current = null;
+        setAnswers({});
+        setSecondsRemaining(updatedRoom.config.roundDurationSeconds);
+      } else if (
+        updatedRoom.phase === 'stop_countdown' &&
+        lastStopKeyRef.current !== roundKey
+      ) {
+        lastStopKeyRef.current = roundKey;
+        setSecondsRemaining(ADEDONHA_STOP_COUNTDOWN_SECONDS);
+      }
+      setRoom(updatedRoom);
+    });
+    return () => unsubscribe();
+  }, [room?.id, useCase]);
+
+  const activePlayerId = currentPlayerId ?? room?.hostId ?? '';
 
   const handleTimeOut = useCallback(async () => {
     if (!room) return;
@@ -93,7 +188,7 @@ export function useAdedonhaViewModel(
       setError(null);
       const updated = await useCase.finishRoundByTimeOut(
         room.id,
-        room.hostId,
+        activePlayerId,
         answers
       );
       setRoom(updated);
@@ -104,7 +199,23 @@ export function useAdedonhaViewModel(
         setError('Não foi possível encerrar o tempo da rodada.');
       }
     }
-  }, [answers, room, useCase]);
+  }, [activePlayerId, answers, room, useCase]);
+
+  const handleFinalizeStopNow = useCallback(async (): Promise<void> => {
+    if (!room) return;
+    try {
+      setError(null);
+      await useCase.submitAnswers(room.id, activePlayerId, answersRef.current);
+      const updated = await useCase.finalizeStopCountdown(room.id);
+      setRoom(updated);
+    } catch (err: unknown) {
+      if (err instanceof DomainError) {
+        setError(err.message);
+      } else {
+        setError('Não foi possível iniciar a apuração da rodada.');
+      }
+    }
+  }, [activePlayerId, room, useCase]);
 
   useEffect(() => {
     if (!room || room.phase !== 'filling') {
@@ -124,6 +235,43 @@ export function useAdedonhaViewModel(
 
     return () => clearInterval(timerId);
   }, [room, handleTimeOut]);
+
+  useEffect(() => {
+    if (!room || room.phase !== 'stop_countdown') {
+      return;
+    }
+
+    const timerId = setInterval(() => {
+      setSecondsRemaining((prev) => {
+        if (prev <= 1) {
+          clearInterval(timerId);
+          void (async () => {
+            try {
+              await useCase.submitAnswers(
+                room.id,
+                activePlayerId,
+                answersRef.current
+              );
+              const isHost =
+                !currentPlayerId || room.hostId === currentPlayerId;
+              if (isHost) {
+                const updated = await useCase.finalizeStopCountdown(room.id);
+                setRoom(updated);
+              }
+            } catch (err: unknown) {
+              if (err instanceof DomainError) {
+                setError(err.message);
+              }
+            }
+          })();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timerId);
+  }, [activePlayerId, currentPlayerId, room, useCase]);
 
   const handleAddColumn = useCallback(
     async (columnName: string): Promise<boolean> => {
@@ -192,6 +340,7 @@ export function useAdedonhaViewModel(
       try {
         setError(null);
         const updated = await useCase.spinRoulette(room.id, preferredLetter);
+        lastRoundKeyRef.current = `${updated.currentRound}:${updated.currentLetter ?? ''}`;
         setAnswers({});
         setSecondsRemaining(updated.config.roundDurationSeconds);
         setRoom(updated);
@@ -221,11 +370,13 @@ export function useAdedonhaViewModel(
     if (!room) return;
     try {
       setError(null);
-      const updated = await useCase.triggerAdedonha(
+      const updated = await useCase.startStopCountdown(
         room.id,
-        room.hostId,
+        activePlayerId,
         answers
       );
+      lastStopKeyRef.current = `${updated.currentRound}:${updated.currentLetter ?? ''}`;
+      setSecondsRemaining(ADEDONHA_STOP_COUNTDOWN_SECONDS);
       setRoom(updated);
     } catch (err: unknown) {
       if (err instanceof DomainError) {
@@ -234,7 +385,7 @@ export function useAdedonhaViewModel(
         setError('Não foi possível acionar o botão ADEDONHA!');
       }
     }
-  }, [answers, room, useCase]);
+  }, [activePlayerId, answers, room, useCase]);
 
   const handleRaiseDoubt = useCallback(
     async (submissionId: string): Promise<void> => {
@@ -299,6 +450,7 @@ export function useAdedonhaViewModel(
     try {
       setError(null);
       const updated = await useCase.advanceToNextRound(room.id);
+      lastRoundKeyRef.current = `${updated.currentRound}:${updated.currentLetter ?? ''}`;
       setAnswers({});
       setSecondsRemaining(updated.config.roundDurationSeconds);
       setRoom(updated);
@@ -329,11 +481,31 @@ export function useAdedonhaViewModel(
   }, [router]);
 
   const handleRetry = useCallback(async (): Promise<void> => {
-    await loadRoom();
-  }, [loadRoom]);
+    if (!room) {
+      setError(null);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const refreshed = await useCase.getRoom(room.id);
+      await applyRoomState(refreshed);
+    } catch (err: unknown) {
+      if (err instanceof DomainError) {
+        setError(err.message);
+      } else {
+        setError('Não foi possível reconectar à sala da Adedonha Bíblica.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [applyRoomState, room, useCase]);
 
   const suggestedColumns = useCase.getSuggestedColumns();
   const availableLetters = room ? useCase.getAvailableLetters(room) : [];
+  const isCurrentPlayerHost = Boolean(
+    room && (!currentPlayerId || room.hostId === currentPlayerId)
+  );
 
   const fieldErrors: Record<string, string | null> = {};
   if (room) {
@@ -380,6 +552,9 @@ export function useAdedonhaViewModel(
 
   const state: AdedonhaState = {
     room,
+    currentPlayerId,
+    isCurrentPlayerHost,
+    isRealtimeEnabled: isSupabaseMultiplayerEnabled,
     loading,
     error,
     suggestedColumns,
@@ -396,12 +571,16 @@ export function useAdedonhaViewModel(
   };
 
   const actions: AdedonhaActions = {
+    handleCreateRoom,
+    handleJoinRoom,
+    handleJoinDemoRoom,
     handleAddColumn,
     handleRemoveColumn,
     handleUpdateConfig,
     handleSpinRoulette,
     handleChangeAnswer,
     handleTriggerAdedonha,
+    handleFinalizeStopNow,
     handleTimeOut,
     handleRaiseDoubt,
     handleJudgeSubmission,

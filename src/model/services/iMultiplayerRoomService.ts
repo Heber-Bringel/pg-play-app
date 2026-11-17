@@ -6,6 +6,7 @@ import type {
 } from '@/model/entities/multiplayerSession';
 
 export interface IMultiplayerRoomService {
+  getLocalPlayerId(roomId?: string): Promise<string | null>;
   getAdedonhaRoom(roomId?: string): Promise<AdedonhaRoom>;
   createAdedonhaRoom(
     hostNickname: string,
@@ -44,4 +45,8 @@ export interface IMultiplayerRoomService {
   ): Promise<AdedonhaRoom>;
   advanceTallyColumn(roomId: string): Promise<AdedonhaRoom>;
   advanceToNextRound(roomId: string): Promise<AdedonhaRoom>;
+  subscribeToRoom(
+    roomId: string,
+    onRoomUpdated: (room: AdedonhaRoom) => void
+  ): () => void;
 }

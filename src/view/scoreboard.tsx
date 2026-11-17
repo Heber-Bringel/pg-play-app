@@ -1,9 +1,10 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { ConfirmModal } from '@/view/components/confirmModal';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
 import { GameCard } from '@/view/components/gameCard';
-import { border, color, font, icon, radius, space } from '@/view/theme';
+import { color, font, icon, radius, space } from '@/view/theme';
 import { useScoreboardViewModel } from '@/viewmodel/useScoreboardViewModel';
 
 export const ScoreboardScreen = () => {
@@ -123,39 +124,27 @@ export const ScoreboardScreen = () => {
           variant="primaryJumbo"
           onPress={actions.handleChooseAnotherGame}
         />
-        {state.confirmingReset ? (
-          <View style={styles.resetBanner} accessibilityLiveRegion="polite">
-            <Text allowFontScaling style={styles.resetTitle}>
-              Zerar o placar do PG?
-            </Text>
-            <Text allowFontScaling style={styles.resetDescription}>
-              Todas as equipes voltam a 0 pts. Essa ação não pode ser desfeita.
-            </Text>
-            <View style={styles.resetActions}>
-              <ExpressiveButton
-                label="Cancelar"
-                variant="outlined"
-                onPress={actions.handleCancelReset}
-              />
-              <ExpressiveButton
-                label="Confirmar e Zerar"
-                variant="secondary"
-                icon="refresh"
-                onPress={() => {
-                  void actions.handleResetScoreboard();
-                }}
-              />
-            </View>
-          </View>
-        ) : (
-          <ExpressiveButton
-            label="Zerar Placar do PG"
-            icon="refresh"
-            variant="outlined"
-            onPress={actions.handleRequestReset}
-          />
-        )}
+        <ExpressiveButton
+          label="Zerar Placar do PG"
+          icon="refresh"
+          variant="outlined"
+          onPress={actions.handleRequestReset}
+        />
       </View>
+
+      <ConfirmModal
+        visible={state.confirmingReset}
+        title="Zerar o placar do PG?"
+        description="Todas as equipes voltam a 0 pts. Essa ação não pode ser desfeita."
+        cancelLabel="Cancelar"
+        confirmLabel="Confirmar e Zerar"
+        confirmIcon="refresh"
+        icon="refresh"
+        onCancel={actions.handleCancelReset}
+        onConfirm={() => {
+          void actions.handleResetScoreboard();
+        }}
+      />
     </ScrollView>
   );
 };
@@ -205,31 +194,6 @@ const styles = StyleSheet.create({
     lineHeight: font.body.lineHeight,
     color: color.onSurfaceMuted,
     textAlign: 'center',
-  },
-  resetBanner: {
-    backgroundColor: color.errorContainer,
-    borderColor: color.error,
-    borderWidth: border.thin,
-    borderRadius: radius.lg,
-    padding: space.md,
-    gap: space.sm,
-  },
-  resetTitle: {
-    fontFamily: font.subtitle.family,
-    fontSize: font.subtitle.size,
-    fontWeight: font.subtitle.weight,
-    lineHeight: font.subtitle.lineHeight,
-    color: color.onErrorContainer,
-  },
-  resetDescription: {
-    fontFamily: font.body.family,
-    fontSize: font.body.size,
-    fontWeight: font.body.weight,
-    lineHeight: font.body.lineHeight,
-    color: color.onErrorContainer,
-  },
-  resetActions: {
-    gap: space.sm,
   },
   list: {
     gap: space.lg,

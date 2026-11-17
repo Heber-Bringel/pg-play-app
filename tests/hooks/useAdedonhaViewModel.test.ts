@@ -49,10 +49,63 @@ describe('useAdedonhaViewModel — Hook da Adedonha Bíblica em Sala Multiplayer
     jest.useRealTimers();
   });
 
-  it('deve carregar o Lobby, adicionar/remover colunas e girar a Roleta Expressiva (RF21)', async () => {
+  it('deve iniciar na etapa de identificação e permitir criar ou entrar em sala (RF-01, RF-02)', async () => {
+    const service = new MemoryMultiplayerRoomService();
+    const useCases = new AdedonhaUseCases(service);
+    const harness = createHookHarness(useCases);
+    await harness.mount();
+
+    expect(harness.getState().loading).toBe(false);
+    expect(harness.getState().room).toBeNull();
+
+    await act(async () => {
+      const ok = await harness.getActions().handleCreateRoom('Heber');
+      expect(ok).toBe(true);
+    });
+
+    expect(harness.getState().room?.phase).toBe('lobby');
+    expect(harness.getState().isCurrentPlayerHost).toBe(true);
+    expect(harness.getState().currentPlayerId).toBe('player-host');
+
+    const createdCode = harness.getState().room!.code;
+
+    const guestHarness = createHookHarness(useCases);
+    await guestHarness.mount();
+    await act(async () => {
+      const joined = await guestHarness
+        .getActions()
+        .handleJoinRoom(createdCode, 'Rebeca');
+      expect(joined).toBe(true);
+    });
+
+    expect(guestHarness.getState().isCurrentPlayerHost).toBe(false);
+    expect(
+      guestHarness
+        .getState()
+        .room?.players.some((p) => p.nickname === 'Rebeca')
+    ).toBe(true);
+
+    // Sincronização em tempo real: quando o host adiciona uma coluna, o convidado recebe automaticamente
+    await act(async () => {
+      await harness.getActions().handleAddColumn('Milagre ou Parábola');
+    });
+    expect(guestHarness.getState().room?.config.columns).toContain(
+      'Milagre ou Parábola'
+    );
+
+    guestHarness.unmount();
+    harness.unmount();
+  });
+
+  it('deve carregar a sala demo, adicionar/remover colunas e girar a Roleta Expressiva (RF21)', async () => {
     const useCases = new AdedonhaUseCases(new MemoryMultiplayerRoomService());
     const harness = createHookHarness(useCases);
     await harness.mount();
+
+    await act(async () => {
+      const ok = await harness.getActions().handleJoinDemoRoom();
+      expect(ok).toBe(true);
+    });
 
     expect(harness.getState().loading).toBe(false);
     expect(harness.getState().room?.phase).toBe('lobby');
@@ -95,6 +148,10 @@ describe('useAdedonhaViewModel — Hook da Adedonha Bíblica em Sala Multiplayer
     await harness.mount();
 
     await act(async () => {
+      await harness.getActions().handleJoinDemoRoom();
+    });
+
+    await act(async () => {
       await harness.getActions().handleSpinRoulette('D');
     });
 
@@ -119,6 +176,12 @@ describe('useAdedonhaViewModel — Hook da Adedonha Bíblica em Sala Multiplayer
 
     await act(async () => {
       await harness.getActions().handleTriggerAdedonha();
+    });
+    expect(harness.getState().room?.phase).toBe('stop_countdown');
+    expect(harness.getState().secondsRemaining).toBe(5);
+
+    await act(async () => {
+      await harness.getActions().handleFinalizeStopNow();
     });
     expect(harness.getState().room?.phase).toBe('tally');
     expect(harness.getState().currentTallyColumnName).toBe(
@@ -188,6 +251,10 @@ describe('useAdedonhaViewModel — Hook da Adedonha Bíblica em Sala Multiplayer
     await harness.mount();
 
     await act(async () => {
+      await harness.getActions().handleJoinDemoRoom();
+    });
+
+    await act(async () => {
       const ok = await harness.getActions().handleAddColumn('A');
       expect(ok).toBe(false);
     });
@@ -217,17 +284,19 @@ describe('useAdedonhaViewModel — Hook da Adedonha Bíblica em Sala Multiplayer
     harness.unmount();
   });
 
-  it('deve tratar erro ao carregar a sala inicialmente', async () => {
+  it('deve tratar erro ao tentar criar ou entrar em sala', async () => {
     const failingUseCases: IAdedonhaUseCases = {
       getSuggestedColumns: () => [],
+      getLocalPlayerId: async () => null,
+      subscribeToRoom: () => () => {},
       getRoom: async () => {
         throw new ValidationError('Falha ao conectar à sala multiplayer.');
       },
       createRoom: async () => {
-        throw new ValidationError('Erro');
+        throw new ValidationError('Apelido inválido para criar sala.');
       },
       joinRoom: async () => {
-        throw new ValidationError('Erro');
+        throw new ValidationError('Código PIN inválido.');
       },
       addColumn: async () => {
         throw new ValidationError('Erro');
@@ -245,6 +314,15 @@ describe('useAdedonhaViewModel — Hook da Adedonha Bíblica em Sala Multiplayer
       validateAnswerInitial: () => null,
       canTriggerStop: () => false,
       triggerAdedonha: async () => {
+        throw new ValidationError('Erro');
+      },
+      submitAnswers: async () => {
+        throw new ValidationError('Erro');
+      },
+      startStopCountdown: async () => {
+        throw new ValidationError('Erro');
+      },
+      finalizeStopCountdown: async () => {
         throw new ValidationError('Erro');
       },
       finishRoundByTimeOut: async () => {
@@ -272,6 +350,22 @@ describe('useAdedonhaViewModel — Hook da Adedonha Bíblica em Sala Multiplayer
     const harness = createHookHarness(failingUseCases);
     await harness.mount();
 
+    await act(async () => {
+      const ok = await harness.getActions().handleCreateRoom('');
+      expect(ok).toBe(false);
+    });
+    expect(harness.getState().error).toBe('Apelido inválido para criar sala.');
+
+    await act(async () => {
+      const ok = await harness.getActions().handleJoinRoom('12', 'Ana');
+      expect(ok).toBe(false);
+    });
+    expect(harness.getState().error).toBe('Código PIN inválido.');
+
+    await act(async () => {
+      const ok = await harness.getActions().handleJoinDemoRoom();
+      expect(ok).toBe(false);
+    });
     expect(harness.getState().error).toBe(
       'Falha ao conectar à sala multiplayer.'
     );

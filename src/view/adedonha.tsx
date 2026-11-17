@@ -1,682 +1,250 @@
-import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React from 'react';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { AdedonhaEntrySection } from '@/view/components/adedonhaEntrySection';
+import { AdedonhaFillingSection } from '@/view/components/adedonhaFillingSection';
+import { AdedonhaLobbySection } from '@/view/components/adedonhaLobbySection';
+import { AdedonhaSummarySection } from '@/view/components/adedonhaSummarySection';
+import { AdedonhaTallySection } from '@/view/components/adedonhaTallySection';
+import { ConfirmModal } from '@/view/components/confirmModal';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
-import { ExpressiveTextField } from '@/view/components/expressiveTextField';
-import { ExpressiveTimer } from '@/view/components/expressiveTimer';
-import { GameCard } from '@/view/components/gameCard';
-import { LetterKey } from '@/view/components/letterKey';
-import { border, color, font, icon, radius, space } from '@/view/theme';
+import { tokens } from '@/view/theme';
 import { useAdedonhaViewModel } from '@/viewmodel/useAdedonhaViewModel';
-
-const ROULETTE_PREVIEW_LETTERS: string[] = [
-  'A',
-  'B',
-  'C',
-  'D',
-  'E',
-  'J',
-  'M',
-  'P',
-  'S',
-];
 
 export const AdedonhaScreen = () => {
   const [state, actions] = useAdedonhaViewModel();
-  const [newColumnInput, setNewColumnInput] = useState<string>('');
-  const [focusedColumn, setFocusedColumn] = useState<string | null>(null);
 
   if (state.loading) {
     return (
       <View
-        style={styles.screen}
+        style={styles.centerScreen}
         accessibilityRole="progressbar"
-        accessibilityLabel="Carregando Sala Multiplayer da Adedonha Bíblica"
+        accessibilityLabel="Conectando à Sala Multiplayer da Adedonha Bíblica"
       >
-        <Text allowFontScaling style={styles.title}>
+        <Text
+          allowFontScaling
+          maxFontSizeMultiplier={tokens.semantic.typography.maxScale}
+          style={styles.title}
+        >
           Conectando à Sala da Adedonha Bíblica...
         </Text>
       </View>
     );
   }
 
-  if (!state.room && state.error) {
-    return (
-      <View style={styles.screen} accessibilityLiveRegion="assertive">
-        <GameCard
-          title="Erro na Sala Multiplayer"
-          description={state.error}
-          playersTag="Erro"
-          icon="alert-circle"
-        />
-        <ExpressiveButton
-          label="Tentar Novamente"
-          variant="primary"
-          icon="refresh"
-          onPress={() => {
-            void actions.handleRetry();
-          }}
-        />
-      </View>
-    );
-  }
-
   if (!state.room) {
     return (
-      <View style={styles.screen}>
-        <GameCard
-          title="Nenhuma Sala Encontrada"
-          description="Não há sala ativa de Adedonha Bíblica no momento."
-          playersTag="0 jogadores"
-          icon="account-group-outline"
-        />
-        <ExpressiveButton
-          label="Voltar ao Hub"
-          variant="primaryJumbo"
-          icon="home"
-          onPress={actions.handleExitArena}
-        />
-      </View>
+      <KeyboardAvoidingView
+        style={styles.scroll}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.screenContent}
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
+        >
+          <AdedonhaEntrySection
+            isRealtimeEnabled={state.isRealtimeEnabled}
+            error={state.error}
+            onExitArena={actions.handleExitArena}
+            onCreateRoom={actions.handleCreateRoom}
+            onJoinRoom={actions.handleJoinRoom}
+            onJoinDemoRoom={actions.handleJoinDemoRoom}
+          />
+        </ScrollView>
+      </KeyboardAvoidingView>
     );
   }
 
   const { room } = state;
 
-  const onAddCustomColumn = async () => {
-    const added = await actions.handleAddColumn(newColumnInput);
-    if (added) {
-      setNewColumnInput('');
-    }
-  };
-
   return (
-    <View style={styles.screen}>
-      <View style={styles.topBar}>
-        <ExpressiveButton
-          label="Sair"
-          variant="outlined"
-          icon="arrow-left"
-          onPress={actions.handleRequestExit}
-        />
-        <View
-          style={styles.roomBadge}
-          accessibilityRole="text"
-          accessibilityLabel={`Sala ${room.code}, Rodada ${room.currentRound} de ${room.config.totalRounds}`}
-        >
-          <MaterialCommunityIcons
-            name="access-point"
-            size={icon.sm}
-            color={color.onActionContainer}
-          />
-          <Text allowFontScaling style={styles.roomBadgeText}>
-            {`Sala ${room.code} · Rodada ${room.currentRound}/${room.config.totalRounds}`}
-          </Text>
-        </View>
-      </View>
-
-      {state.confirmingExit && (
-        <View style={styles.exitBanner} accessibilityLiveRegion="polite">
-          <Text allowFontScaling style={styles.exitTitle}>
-            Deseja sair da sala da Adedonha?
-          </Text>
-          <Text allowFontScaling style={styles.errorBannerText}>
-            A rodada continua para os outros jogadores da sala.
-          </Text>
-          <View style={styles.exitActions}>
-            <ExpressiveButton
-              label="Continuar Jogando"
-              variant="tonal"
-              onPress={actions.handleCancelExit}
-            />
-            <ExpressiveButton
-              label="Confirmar Saída"
-              variant="secondary"
-              onPress={actions.handleExitArena}
-            />
-          </View>
-        </View>
-      )}
-
-      {state.error && (
-        <View style={styles.errorBanner} accessibilityLiveRegion="assertive">
-          <MaterialCommunityIcons
-            name="alert-circle"
-            size={icon.md}
-            color={color.error}
-          />
-          <Text allowFontScaling style={styles.errorBannerText}>
-            {state.error}
-          </Text>
-        </View>
-      )}
-
-      {room.phase === 'lobby' && (
-        <View style={styles.section}>
-          <GameCard
-            title="Adedonha Bíblica · Lobby Multiplayer"
-            description={`Moderador configura as colunas temáticas e gira a Roleta Expressiva do Alfabeto.`}
-            playersTag={`${room.players.length} jogadores`}
-            icon="alphabetical-variant"
-          />
-
-          <View style={styles.rouletteBox}>
-            <Text allowFontScaling style={styles.sectionTitle}>
-              Roleta Expressiva do Alfabeto
-            </Text>
-            <Text allowFontScaling style={styles.sectionSubtitle}>
-              Toque em uma letra do anel ou sorteie automaticamente:
-            </Text>
-            <View style={styles.letterGrid}>
-              {ROULETTE_PREVIEW_LETTERS.map((letter) => {
-                const isUsed = room.usedLetters.includes(letter);
-                return (
-                  <LetterKey
-                    key={letter}
-                    letter={letter}
-                    status={isUsed ? 'miss' : 'available'}
-                    onPress={(chosen) => {
-                      void actions.handleSpinRoulette(chosen);
-                    }}
-                  />
-                );
-              })}
-            </View>
-            <ExpressiveButton
-              label="Girar Roleta Expressiva"
-              variant="primaryJumbo"
-              icon="rotate-3d-variant"
-              onPress={() => {
-                void actions.handleSpinRoulette();
-              }}
-            />
-          </View>
-
-          <View style={styles.columnsBox}>
-            <Text allowFontScaling style={styles.sectionTitle}>
-              {`Colunas Bíblicas da Rodada (${room.config.columns.length})`}
-            </Text>
-            <ExpressiveTextField
-              label="Nova Coluna Bíblica"
-              value={newColumnInput}
-              placeholder="Ex.: Milagre ou Parábola"
-              helperText="Mínimo de 2 caracteres"
-              icon="view-column-outline"
-              maxLength={40}
-              onChangeText={setNewColumnInput}
-            />
-            <ExpressiveButton
-              label="Adicionar Coluna"
-              variant="tonal"
-              icon="plus-circle-outline"
-              onPress={() => {
-                void onAddCustomColumn();
-              }}
-            />
-
-            <View style={styles.columnList}>
-              {room.config.columns.map((col, idx) => (
-                <View key={col} style={styles.columnItem}>
-                  <View style={styles.columnInfo}>
-                    <View style={styles.columnAvatar}>
-                      <Text allowFontScaling style={styles.columnAvatarText}>
-                        {idx + 1}
-                      </Text>
-                    </View>
-                    <Text allowFontScaling style={styles.columnName}>
-                      {col}
-                    </Text>
-                  </View>
-                  {room.config.columns.length > 1 && (
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={`Remover coluna ${col}`}
-                      onFocus={() => setFocusedColumn(col)}
-                      onBlur={() => setFocusedColumn(null)}
-                      style={({ pressed }) => [
-                        styles.removeColumnButton,
-                        pressed && styles.removeColumnButtonPressed,
-                        focusedColumn === col && styles.removeColumnButtonFocused,
-                      ]}
-                      onPress={() => {
-                        void actions.handleRemoveColumn(col);
-                      }}
-                    >
-                      <MaterialCommunityIcons
-                        name="trash-can-outline"
-                        size={icon.md}
-                        color={color.error}
-                      />
-                    </Pressable>
-                  )}
-                </View>
-              ))}
-            </View>
-          </View>
-        </View>
-      )}
-
-      {(room.phase === 'filling' ||
-        room.phase === 'roulette' ||
-        room.phase === 'stop_countdown') && (
-        <View style={styles.section}>
-          <View style={styles.roundHeader}>
-            <View
-              style={styles.heroLetterBadge}
-              accessibilityLiveRegion="polite"
-              accessibilityLabel={`Letra sorteada: ${room.currentLetter}`}
-            >
-              <Text allowFontScaling style={styles.heroLetterCaption}>
-                LETRA
-              </Text>
-              <Text allowFontScaling style={styles.heroLetterText}>
-                {room.currentLetter ?? '?'}
-              </Text>
-            </View>
-            <ExpressiveTimer secondsRemaining={state.secondsRemaining} />
-          </View>
-
-          <View style={styles.fieldsList}>
-            {room.config.columns.map((columnName) => (
-              <ExpressiveTextField
-                key={columnName}
-                label={columnName}
-                value={state.answers[columnName] ?? ''}
-                placeholder={`Começa com ${room.currentLetter ?? ''}...`}
-                helperText={`Digite uma resposta iniciada por ${room.currentLetter ?? ''}`}
-                errorText={state.fieldErrors[columnName] ?? undefined}
-                icon="pencil-outline"
-                maxLength={40}
-                onChangeText={(text) =>
-                  actions.handleChangeAnswer(columnName, text)
-                }
-              />
-            ))}
-          </View>
-
-          <View style={styles.actionsStack}>
-            <ExpressiveButton
-              label="ADEDONHA! (Parar Rodada)"
-              variant="primaryJumbo"
-              icon="hand-back-right"
-              disabled={!state.canTriggerAdedonha}
-              onPress={() => {
-                void actions.handleTriggerAdedonha();
-              }}
-            />
-            <ExpressiveButton
-              label="Encerrar Tempo da Rodada"
-              variant="outlined"
-              icon="timer-off-outline"
-              onPress={() => {
-                void actions.handleTimeOut();
-              }}
-            />
-          </View>
-        </View>
-      )}
-
-      {room.phase === 'tally' && (
-        <View style={styles.section}>
-          <GameCard
-            title={`Coluna ${room.currentTallyColumnIndex + 1} de ${room.config.columns.length}: ${state.currentTallyColumnName ?? ''}`}
-            description={`Apuração Assistida · Letra ${room.currentLetter ?? ''} · ${
-              room.stopTriggeredBy
-                ? `${room.stopTriggeredBy} pediu ADEDONHA!`
-                : 'Tempo esgotado'
-            }`}
-            playersTag={`Letra ${room.currentLetter ?? ''}`}
-            icon="scale-balance"
-          />
-
-          <View style={styles.submissionList}>
-            {state.currentColumnSubmissions.map((sub) => {
-              const statusLabel =
-                sub.status === 'unique'
-                  ? `Única (+${sub.points} pts)`
-                  : sub.status === 'repeated'
-                  ? `Repetida (+${sub.points} pts)`
-                  : `Inválida (${sub.points} pts)`;
-
-              const statusIcon =
-                sub.status === 'unique'
-                  ? 'star-circle'
-                  : sub.status === 'repeated'
-                  ? 'handshake'
-                  : 'close-circle';
-
-              return (
-                <View key={sub.id} style={styles.submissionItem}>
-                  <GameCard
-                    title={`${sub.playerNickname}: "${sub.answerText || '(Em branco)'}"`}
-                    description={
-                      sub.doubtCount > 0
-                        ? `${sub.doubtCount} jogador(es) levantaram dúvida sobre esta resposta`
-                        : 'Pré-classificada automaticamente pelo sistema'
-                    }
-                    playersTag={statusLabel}
-                    icon={statusIcon}
-                  />
-                  <View style={styles.judgeActions}>
-                    <ExpressiveButton
-                      label={`Levantar Dúvida · ${sub.playerNickname}`}
-                      variant="tonal"
-                      icon="hand-pointing-up"
-                      onPress={() => {
-                        void actions.handleRaiseDoubt(sub.id);
-                      }}
-                    />
-                    <ExpressiveButton
-                      label={`Validar Única (+10) · ${sub.playerNickname}`}
-                      variant="successJumbo"
-                      icon="check-decagram"
-                      onPress={() => {
-                        void actions.handleJudgeSubmission(sub.id, 'unique');
-                      }}
-                    />
-                    <ExpressiveButton
-                      label={`Marcar Repetida (+5) · ${sub.playerNickname}`}
-                      variant="secondary"
-                      icon="account-multiple-check"
-                      onPress={() => {
-                        void actions.handleJudgeSubmission(sub.id, 'repeated');
-                      }}
-                    />
-                    <ExpressiveButton
-                      label={`Invalidar (0 pts) · ${sub.playerNickname}`}
-                      variant="outlined"
-                      icon="close-octagon-outline"
-                      onPress={() => {
-                        void actions.handleJudgeSubmission(sub.id, 'invalid');
-                      }}
-                    />
-                  </View>
-                </View>
-              );
-            })}
-          </View>
-
+    <KeyboardAvoidingView
+      style={styles.scroll}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.screenContent}
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
+      >
+        <View style={styles.topBar}>
           <ExpressiveButton
-            label="Confirmar e Próxima Coluna"
-            variant="primaryJumbo"
-            icon="check-all"
-            onPress={() => {
-              void actions.handleAdvanceTallyColumn();
-            }}
+            label="Sair"
+            variant="outlined"
+            icon="arrow-left"
+            onPress={actions.handleRequestExit}
           />
-        </View>
-      )}
-
-      {(room.phase === 'round_summary' || room.phase === 'finished') && (
-        <View style={styles.section}>
-          <GameCard
-            title={
-              room.phase === 'finished'
-                ? 'Pódio Final da Adedonha Bíblica'
-                : `Resumo da Rodada ${room.currentRound}`
-            }
-            description={`Letras já sorteadas: ${room.usedLetters.join(', ')}`}
-            playersTag={`${room.players.length} jogadores`}
-            icon="trophy-award"
-          />
-
-          {state.awards.generalChampion && (
-            <GameCard
-              title={`Campeão Geral: ${state.awards.generalChampion.nickname}`}
-              description={`Mão Mais Rápida: ${state.awards.fastestHand?.nickname ?? '-'} · Vocabulário Raro: ${state.awards.rareVocabulary?.nickname ?? '-'}`}
-              playersTag={`${state.awards.generalChampion.score} pts`}
-              icon="crown"
-              highlightLeader
+          <View
+            style={styles.roomBadge}
+            accessibilityRole="text"
+            accessibilityLabel={`Sala ${room.code}, Rodada ${room.currentRound} de ${room.config.totalRounds}`}
+          >
+            <MaterialCommunityIcons
+              name="access-point"
+              size={tokens.semantic.icon.sm}
+              color={tokens.semantic.color.onActionContainer}
             />
-          )}
-
-          <View style={styles.rankingList}>
-            {state.rankedPlayers.map((player, index) => (
-              <GameCard
-                key={player.id}
-                title={`${index + 1}º · ${player.nickname}`}
-                description={`Respostas únicas: ${player.uniqueAnswersCount} · Gritos de Adedonha: ${player.stopCount}`}
-                playersTag={`${player.score} pts`}
-                icon={index === 0 ? 'medal' : 'account'}
-                highlightLeader={index === 0}
-              />
-            ))}
-          </View>
-
-          <View style={styles.actionsStack}>
-            {room.phase === 'round_summary' && (
-              <ExpressiveButton
-                label="Girar Próxima Letra"
-                variant="primaryJumbo"
-                icon="rotate-right"
-                onPress={() => {
-                  void actions.handleAdvanceToNextRound();
-                }}
-              />
-            )}
-            <ExpressiveButton
-              label="Ir para o Placar Final"
-              variant="tonal"
-              icon="podium-gold"
-              onPress={actions.handleGoToScoreboard}
-            />
+            <Text
+              allowFontScaling
+              maxFontSizeMultiplier={tokens.semantic.typography.maxScale}
+              style={styles.roomBadgeText}
+            >
+              {`PIN ${room.code} · Rodada ${room.currentRound}/${room.config.totalRounds}`}
+            </Text>
           </View>
         </View>
-      )}
-    </View>
+
+        <ConfirmModal
+          visible={state.confirmingExit}
+          title="Deseja sair da sala da Adedonha?"
+          description="A rodada continua para os outros jogadores da sala."
+          onCancel={actions.handleCancelExit}
+          onConfirm={actions.handleExitArena}
+        />
+
+        {state.error && (
+          <View style={styles.errorBanner} accessibilityLiveRegion="assertive">
+            <MaterialCommunityIcons
+              name="alert-circle"
+              size={tokens.semantic.icon.md}
+              color={tokens.semantic.color.error}
+            />
+            <Text allowFontScaling style={styles.errorBannerText}>
+              {state.error}
+            </Text>
+          </View>
+        )}
+
+        {room.phase === 'lobby' && (
+          <AdedonhaLobbySection
+            room={room}
+            currentPlayerId={state.currentPlayerId}
+            isCurrentPlayerHost={state.isCurrentPlayerHost}
+            suggestedColumns={state.suggestedColumns}
+            onSpinRoulette={actions.handleSpinRoulette}
+            onAddColumn={actions.handleAddColumn}
+            onRemoveColumn={actions.handleRemoveColumn}
+            onUpdateConfig={actions.handleUpdateConfig}
+          />
+        )}
+
+        {(room.phase === 'filling' ||
+          room.phase === 'roulette' ||
+          room.phase === 'stop_countdown') && (
+          <AdedonhaFillingSection
+            room={room}
+            answers={state.answers}
+            fieldErrors={state.fieldErrors}
+            canTriggerAdedonha={state.canTriggerAdedonha}
+            secondsRemaining={state.secondsRemaining}
+            isCurrentPlayerHost={state.isCurrentPlayerHost}
+            onChangeAnswer={actions.handleChangeAnswer}
+            onTriggerAdedonha={actions.handleTriggerAdedonha}
+            onFinalizeStopNow={actions.handleFinalizeStopNow}
+            onTimeOut={actions.handleTimeOut}
+          />
+        )}
+
+        {room.phase === 'tally' && (
+          <AdedonhaTallySection
+            room={room}
+            currentTallyColumnName={state.currentTallyColumnName}
+            submissions={state.currentColumnSubmissions}
+            isCurrentPlayerHost={state.isCurrentPlayerHost}
+            onRaiseDoubt={actions.handleRaiseDoubt}
+            onJudgeSubmission={actions.handleJudgeSubmission}
+            onAdvanceTallyColumn={actions.handleAdvanceTallyColumn}
+          />
+        )}
+
+        {(room.phase === 'round_summary' || room.phase === 'finished') && (
+          <AdedonhaSummarySection
+            room={room}
+            awards={state.awards}
+            rankedPlayers={state.rankedPlayers}
+            isCurrentPlayerHost={state.isCurrentPlayerHost}
+            onAdvanceToNextRound={actions.handleAdvanceToNextRound}
+            onGoToScoreboard={actions.handleGoToScoreboard}
+          />
+        )}
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
-  screen: {
+  scroll: {
     flex: 1,
-    backgroundColor: color.surface,
-    padding: space.md,
-    gap: space.lg,
+    backgroundColor: tokens.semantic.color.surface,
+  },
+  screenContent: {
+    padding: tokens.semantic.space.md,
+    paddingBottom: tokens.semantic.space['3xl'],
+    gap: tokens.semantic.space.lg,
+  },
+  centerScreen: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: tokens.semantic.color.surface,
+    padding: tokens.semantic.space.lg,
   },
   topBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    gap: space.sm,
+    gap: tokens.semantic.space.sm,
   },
   roomBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: space.xs,
-    paddingHorizontal: space.md,
-    paddingVertical: space.sm,
-    borderRadius: radius.full,
-    backgroundColor: color.actionContainer,
+    gap: tokens.semantic.space.xs,
+    paddingHorizontal: tokens.semantic.space.md,
+    paddingVertical: tokens.semantic.space.sm,
+    borderRadius: tokens.semantic.radius.full,
+    backgroundColor: tokens.semantic.color.actionContainer,
   },
   roomBadgeText: {
-    fontFamily: font.caption.family,
-    fontSize: font.caption.size,
-    lineHeight: font.caption.lineHeight,
-    fontWeight: font.caption.weight,
-    color: color.onActionContainer,
+    fontFamily: tokens.semantic.font.caption.family,
+    fontSize: tokens.semantic.font.caption.size,
+    lineHeight: tokens.semantic.font.caption.lineHeight,
+    fontWeight: tokens.semantic.font.caption.weight,
+    color: tokens.semantic.color.onActionContainer,
   },
   errorBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: space.sm,
-    padding: space.md,
-    borderRadius: radius.md,
-    borderWidth: border.thin,
-    borderColor: color.error,
-    backgroundColor: color.errorContainer,
-  },
-  exitBanner: {
-    backgroundColor: color.errorContainer,
-    borderColor: color.error,
-    borderWidth: border.thin,
-    borderRadius: radius.lg,
-    padding: space.md,
-    gap: space.sm,
-  },
-  exitTitle: {
-    fontFamily: font.subtitle.family,
-    fontSize: font.subtitle.size,
-    fontWeight: font.subtitle.weight,
-    lineHeight: font.subtitle.lineHeight,
-    color: color.onErrorContainer,
-  },
-  exitActions: {
-    gap: space.sm,
+    gap: tokens.semantic.space.sm,
+    padding: tokens.semantic.space.md,
+    borderRadius: tokens.semantic.radius.md,
+    borderWidth: tokens.semantic.border.thin,
+    borderColor: tokens.semantic.color.error,
+    backgroundColor: tokens.semantic.color.errorContainer,
   },
   errorBannerText: {
     flexShrink: 1,
-    fontFamily: font.body.family,
-    fontSize: font.body.size,
-    fontWeight: font.body.weight,
-    lineHeight: font.body.lineHeight,
-    color: color.onErrorContainer,
-  },
-  section: {
-    gap: space.lg,
-  },
-  sectionTitle: {
-    fontFamily: font.subtitle.family,
-    fontSize: font.subtitle.size,
-    lineHeight: font.subtitle.lineHeight,
-    fontWeight: font.subtitle.weight,
-    color: color.onSurface,
-  },
-  sectionSubtitle: {
-    fontFamily: font.body.family,
-    fontSize: font.body.size,
-    fontWeight: font.body.weight,
-    lineHeight: font.body.lineHeight,
-    color: color.onSurfaceMuted,
-  },
-  rouletteBox: {
-    padding: space.lg,
-    borderRadius: radius.xl,
-    borderWidth: border.thin,
-    borderColor: color.outline,
-    backgroundColor: color.surfaceContainer,
-    gap: space.md,
-  },
-  letterGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: space.sm,
-  },
-  columnsBox: {
-    gap: space.md,
-  },
-  columnList: {
-    gap: space.sm,
-  },
-  columnItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: color.surfaceContainer,
-    borderRadius: radius.md,
-    borderWidth: border.thin,
-    borderColor: color.outline,
-    padding: space.sm,
-    minHeight: space.container,
-  },
-  columnInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
-    flex: 1,
-  },
-  columnAvatar: {
-    width: space.xl,
-    height: space.xl,
-    borderRadius: radius.full,
-    backgroundColor: color.actionContainer,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  columnAvatarText: {
-    fontFamily: font.label.family,
-    fontSize: font.label.size,
-    fontWeight: font.label.weight,
-    lineHeight: font.label.lineHeight,
-    color: color.onActionContainer,
-  },
-  columnName: {
-    flex: 1,
-    fontFamily: font.label.family,
-    fontSize: font.label.size,
-    fontWeight: font.label.weight,
-    lineHeight: font.label.lineHeight,
-    color: color.onSurface,
-  },
-  removeColumnButton: {
-    width: space['2xl'],
-    height: space['2xl'],
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.full,
-    borderWidth: border.thin,
-    borderColor: color.transparent,
-  },
-  removeColumnButtonPressed: {
-    backgroundColor: color.errorContainer,
-  },
-  removeColumnButtonFocused: {
-    borderWidth: border.focus,
-    borderColor: color.focus,
-  },
-  roundHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: space.md,
-  },
-  heroLetterBadge: {
-    minWidth: space['3xl'],
-    minHeight: space['3xl'],
-    paddingHorizontal: space.lg,
-    paddingVertical: space.sm,
-    borderRadius: radius.xl,
-    backgroundColor: color.action,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  heroLetterCaption: {
-    fontFamily: font.caption.family,
-    fontSize: font.caption.size,
-    lineHeight: font.caption.lineHeight,
-    fontWeight: font.caption.weight,
-    color: color.onAction,
-  },
-  heroLetterText: {
-    fontFamily: font.display.family,
-    fontSize: font.display.size,
-    lineHeight: font.display.lineHeight,
-    fontWeight: font.display.weight,
-    color: color.onAction,
-  },
-  fieldsList: {
-    gap: space.md,
-  },
-  actionsStack: {
-    gap: space.sm,
-  },
-  submissionList: {
-    gap: space.lg,
-  },
-  submissionItem: {
-    gap: space.xs,
-  },
-  judgeActions: {
-    gap: space.xs,
-  },
-  rankingList: {
-    gap: space.md,
+    fontFamily: tokens.semantic.font.body.family,
+    fontSize: tokens.semantic.font.body.size,
+    fontWeight: tokens.semantic.font.body.weight,
+    lineHeight: tokens.semantic.font.body.lineHeight,
+    color: tokens.semantic.color.onErrorContainer,
   },
   title: {
-    fontFamily: font.title.family,
-    fontSize: font.title.size,
-    lineHeight: font.title.lineHeight,
-    fontWeight: font.title.weight,
-    color: color.onSurface,
+    fontFamily: tokens.semantic.font.title.family,
+    fontSize: tokens.semantic.font.title.size,
+    lineHeight: tokens.semantic.font.title.lineHeight,
+    fontWeight: tokens.semantic.font.title.weight,
+    color: tokens.semantic.color.onSurface,
     textAlign: 'center',
   },
 });

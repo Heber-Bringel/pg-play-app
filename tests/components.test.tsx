@@ -1,7 +1,9 @@
 import React from 'react';
 import renderer, { act } from 'react-test-renderer';
 import { StyleSheet } from 'react-native';
+import { ConfirmModal } from '@/view/components/confirmModal';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
+import { ExpressiveChip } from '@/view/components/expressiveChip';
 import { ExpressiveTextField } from '@/view/components/expressiveTextField';
 import { GameCard } from '@/view/components/gameCard';
 import { ExpressiveTimer } from '@/view/components/expressiveTimer';
@@ -367,6 +369,91 @@ describe('Componentes do Sistema de Design PG Play Expressive (04-componentes/)'
       expect(missPressable.props.disabled).toBe(true);
       expect(missTextStyle.textDecorationLine).toBe('line-through');
       expect(missPressable.props.accessibilityLabel).toBe('Letra Z, incorreta, já utilizada');
+    });
+  });
+
+  describe('7. ConfirmModal (Modal de Confirmação de Saída)', () => {
+    it('não renderiza conteúdo quando visible=false e dispara onCancel/onConfirm quando visible=true', () => {
+      const onCancel = jest.fn();
+      const onConfirm = jest.fn();
+
+      let hiddenTree!: renderer.ReactTestRenderer;
+      act(() => {
+        hiddenTree = renderer.create(
+          <ConfirmModal
+            visible={false}
+            title="Deseja sair?"
+            onCancel={onCancel}
+            onConfirm={onConfirm}
+          />
+        );
+      });
+      expect(hiddenTree.root.findAllByType('Text' as any)).toHaveLength(0);
+
+      let visibleTree!: renderer.ReactTestRenderer;
+      act(() => {
+        visibleTree = renderer.create(
+          <ConfirmModal
+            visible
+            title="Deseja sair da sala?"
+            description="A rodada continua para o grupo."
+            onCancel={onCancel}
+            onConfirm={onConfirm}
+          />
+        );
+      });
+
+      const cancelBtn = visibleTree.root.findByProps({
+        accessibilityLabel: 'Continuar Jogando',
+      } as any);
+      const confirmBtn = visibleTree.root.findByProps({
+        accessibilityLabel: 'Confirmar Saída',
+      } as any);
+
+      act(() => {
+        cancelBtn.props.onPress();
+        confirmBtn.props.onPress();
+      });
+
+      expect(onCancel).toHaveBeenCalledTimes(1);
+      expect(onConfirm).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('8. ExpressiveChip (Chip Semântico com Foco e Shape Morphing)', () => {
+    it('garante alvo mínimo de 48dp, foco visível e shape morphing ao pressionar', () => {
+      const onPress = jest.fn();
+      let tree!: renderer.ReactTestRenderer;
+      act(() => {
+        tree = renderer.create(
+          <ExpressiveChip
+            label="Única (+10)"
+            tone="success"
+            selected
+            onPress={onPress}
+          />
+        );
+      });
+
+      const pressable = tree.root.findByType('Pressable' as any);
+      const initialStyle = StyleSheet.flatten(pressable.props.style);
+      expect(initialStyle.minHeight).toBe(48);
+      expect(initialStyle.backgroundColor).toBe(tokens.semantic.color.success);
+      expect(initialStyle.borderRadius).toBe(tokens.semantic.radius.full);
+
+      act(() => {
+        pressable.props.onPressIn();
+        pressable.props.onFocus();
+      });
+      const activeStyle = StyleSheet.flatten(pressable.props.style);
+      expect(activeStyle.borderRadius).toBe(tokens.semantic.radius.md);
+      expect(activeStyle.borderColor).toBe(tokens.semantic.color.focus);
+      expect(activeStyle.borderWidth).toBe(tokens.semantic.border.focus);
+
+      act(() => {
+        pressable.props.onPress();
+      });
+      expect(onPress).toHaveBeenCalledTimes(1);
     });
   });
 });

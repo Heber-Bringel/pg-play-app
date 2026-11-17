@@ -1,10 +1,19 @@
 import React from 'react';
 
 export const View = (props: any) => React.createElement('View', props, props.children);
+export const Modal = (props: any) =>
+  props.visible ? React.createElement('Modal', props, props.children) : null;
+export const KeyboardAvoidingView = (props: any) => React.createElement('KeyboardAvoidingView', props, props.children);
 export const ScrollView = (props: any) => React.createElement('ScrollView', props, props.children);
 export const Text = (props: any) => React.createElement('Text', props, props.children);
 export const TextInput = (props: any) => React.createElement('TextInput', props, props.children);
 export const Pressable = (props: any) => React.createElement('Pressable', props, props.children);
+
+export const Platform = {
+  OS: 'ios',
+  select: <T,>(options: { ios?: T; android?: T; default?: T }): T | undefined =>
+    options.ios ?? options.default,
+};
 
 export const Animated = {
   View: (props: any) => React.createElement('View', props, props.children),
