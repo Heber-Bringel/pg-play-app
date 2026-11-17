@@ -23,6 +23,7 @@ module.exports = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^react-native$': '<rootDir>/tests/__mocks__/react-native.tsx',
+    '^react-native-safe-area-context$': '<rootDir>/tests/__mocks__/react-native-safe-area-context.tsx',
     '^@expo/vector-icons$': '<rootDir>/tests/__mocks__/expo-vector-icons.tsx',
     '^expo-router$': '<rootDir>/tests/__mocks__/expo-router.ts',
   },
