@@ -252,6 +252,7 @@ describe('Componentes do Sistema de Design PG Play Expressive (04-componentes/)'
       expect(container.props.accessibilityLiveRegion).toBe('assertive');
       expect(flatStyle.backgroundColor).toBe(tokens.component.timer.bgCritical);
       expect(flatStyle.borderRadius).toBe(tokens.component.timer.radiusCritical);
+      expect(flatStyle.transform).toBeDefined();
 
       const icon = tree.root.findByType('MaterialCommunityIcons' as any);
       expect(icon.props.name).toBe('alert');

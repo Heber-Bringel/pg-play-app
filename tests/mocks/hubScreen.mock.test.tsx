@@ -101,12 +101,12 @@ describe('HubScreen — Testes de Tela com Mocks de ViewModel (UC01)', () => {
     expect(actions.handleRetry).toHaveBeenCalledTimes(1);
   });
 
-  it('deve renderizar o estado vazio e restaurar filtros ao tocar em Limpar busca (RF04)', () => {
+  it('deve renderizar o estado vazio e restaurar filtros ao tocar em Limpar filtros (RF04)', () => {
     const actions = createMockActions();
     jest
       .spyOn(hubVmModule, 'useHubViewModel')
       .mockReturnValue([
-        { ...baseState, games: [], searchQuery: 'xadrez' },
+        { ...baseState, games: [] },
         actions,
       ]);
 
@@ -121,7 +121,7 @@ describe('HubScreen — Testes de Tela com Mocks de ViewModel (UC01)', () => {
     ).toBe(true);
 
     const clearBtn = tree.root.findByProps({
-      accessibilityLabel: 'Limpar busca',
+      accessibilityLabel: 'Limpar filtros',
     });
     act(() => {
       clearBtn.props.onPress();
@@ -129,7 +129,7 @@ describe('HubScreen — Testes de Tela com Mocks de ViewModel (UC01)', () => {
     expect(actions.handleClearFilters).toHaveBeenCalledTimes(1);
   });
 
-  it('deve renderizar líder, busca, chips de modalidade e cards acionando as ações corretas (RF01–RF03)', () => {
+  it('deve renderizar líder, chips de modalidade e cards acionando as ações corretas (RF01–RF03)', () => {
     const actions = createMockActions();
     jest
       .spyOn(hubVmModule, 'useHubViewModel')
@@ -144,14 +144,6 @@ describe('HubScreen — Testes de Tela com Mocks de ViewModel (UC01)', () => {
     expect(
       texts.some((t) => t.props.children === 'Líder: Tribo de Judá')
     ).toBe(true);
-
-    const searchInput = tree.root.findByProps({
-      accessibilityLabel: 'Buscar minigame',
-    });
-    act(() => {
-      searchInput.props.onChangeText('quiz');
-    });
-    expect(actions.setSearchQuery).toHaveBeenCalledWith('quiz');
 
     const onePhoneChip = tree.root.findByProps({
       accessibilityLabel: 'Filtrar por 1 Celular',
