@@ -7,7 +7,6 @@ import {
   View,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import type { GameModalityFilter } from '@/model/entities/minigame';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
 import { ExpressiveTextField } from '@/view/components/expressiveTextField';
@@ -45,40 +44,36 @@ export const HubScreen = () => {
 
   if (state.loading) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
-        <View
-          style={styles.centerScreen}
-          accessibilityRole="progressbar"
-          accessibilityLabel="Carregando Catálogo de Jogos do PG"
-        >
-          <Text allowFontScaling style={styles.loadingTitle}>
-            Carregando Hub de Jogos do PG...
-          </Text>
-        </View>
-      </SafeAreaView>
+      <View
+        style={styles.centerScreen}
+        accessibilityRole="progressbar"
+        accessibilityLabel="Carregando Catálogo de Jogos do PG"
+      >
+        <Text allowFontScaling style={styles.loadingTitle}>
+          Carregando Hub de Jogos do PG...
+        </Text>
+      </View>
     );
   }
 
   if (state.error) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
-        <View style={styles.centerScreen} accessibilityLiveRegion="assertive">
-          <GameCard
-            title="Erro ao Carregar Hub"
-            description={state.error}
-            playersTag="Erro"
-            icon="alert-circle"
-          />
-          <ExpressiveButton
-            label="Tentar Novamente"
-            variant="primary"
-            icon="refresh"
-            onPress={() => {
-              void actions.handleRetry();
-            }}
-          />
-        </View>
-      </SafeAreaView>
+      <View style={styles.centerScreen} accessibilityLiveRegion="assertive">
+        <GameCard
+          title="Erro ao Carregar Hub"
+          description={state.error}
+          playersTag="Erro"
+          icon="alert-circle"
+        />
+        <ExpressiveButton
+          label="Tentar Novamente"
+          variant="primary"
+          icon="refresh"
+          onPress={() => {
+            void actions.handleRetry();
+          }}
+        />
+      </View>
     );
   }
 
@@ -95,13 +90,12 @@ export const HubScreen = () => {
       : 'Placar do PG';
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
-      <ScrollView
-        style={styles.screen}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+    >
       <View style={styles.header}>
         <View style={styles.brandRow}>
           <View style={styles.brandBadge}>
@@ -259,16 +253,11 @@ export const HubScreen = () => {
           </View>
         )}
       </View>
-      </ScrollView>
-    </SafeAreaView>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: color.surface,
-  },
   screen: {
     flex: 1,
     backgroundColor: color.surface,
