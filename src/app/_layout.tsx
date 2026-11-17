@@ -1,6 +1,8 @@
 import React from 'react';
 import { Stack } from 'expo-router';
 import Head from 'expo-router/head';
+import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {
   useFonts,
   PlusJakartaSans_400Regular,
@@ -21,7 +23,8 @@ export const RootLayout = () => {
   });
 
   return (
-    <>
+    <SafeAreaProvider>
+      <StatusBar style="dark" />
       <Head>
         <title>PG PLAY</title>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -42,7 +45,7 @@ export const RootLayout = () => {
         `}</style>
       </Head>
       <Stack screenOptions={{ headerShown: false }} />
-    </>
+    </SafeAreaProvider>
   );
 };
 
