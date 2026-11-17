@@ -162,9 +162,20 @@ describe('useAdedonhaViewModel — Hook da Adedonha Bíblica em Sala Multiplayer
     expect(harness.getState().room?.currentRound).toBe(2);
 
     act(() => {
+      harness.getActions().handleRequestExit();
+    });
+    expect(harness.getState().confirmingExit).toBe(true);
+    act(() => {
+      harness.getActions().handleCancelExit();
+    });
+    expect(harness.getState().confirmingExit).toBe(false);
+
+    act(() => {
       harness.getActions().handleGoToScoreboard();
+      harness.getActions().handleRequestExit();
       harness.getActions().handleExitArena();
     });
+    expect(harness.getState().confirmingExit).toBe(false);
     expect(mockPush).toHaveBeenCalledWith('/scoreboard');
     expect(mockPush).toHaveBeenCalledWith('/');
 

@@ -127,14 +127,15 @@ export function useQuizViewModel(
   }, []);
 
   useEffect(() => {
-    if (phase !== 'playing') {
+    // O cronômetro pausa enquanto a confirmação de saída está aberta.
+    if (phase !== 'playing' || confirmingExit) {
       return undefined;
     }
     const timerId = setInterval(() => {
       handleTick();
     }, 1000);
     return () => clearInterval(timerId);
-  }, [phase, handleTick]);
+  }, [phase, confirmingExit, handleTick]);
 
   const handleStartTurn = useCallback(() => {
     if (!currentTeam) {

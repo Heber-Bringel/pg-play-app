@@ -146,4 +146,42 @@ describe('useScoreboardViewModel — Hook do Placar e Ranking Geral do PG (UC06)
 
     harness.unmount();
   });
+
+  it('deve exigir confirmação antes de zerar e não apontar líder em empate ou placar zerado (RF17)', async () => {
+    const useCases = new PgPlayUseCases(
+      new MemoryTeamDataSource([
+        { id: 'team-1', name: 'Tribo de Judá', score: 20 },
+        { id: 'team-2', name: 'Leões da Fé', score: 20 },
+      ]),
+      new MemoryGameCatalogDataSource()
+    );
+    const harness = createHookHarness(useCases);
+    await harness.mount();
+
+    expect(harness.getState().leaderTeam).toBeNull();
+    expect(harness.getState().confirmingReset).toBe(false);
+
+    act(() => {
+      harness.getActions().handleRequestReset();
+    });
+    expect(harness.getState().confirmingReset).toBe(true);
+
+    act(() => {
+      harness.getActions().handleCancelReset();
+    });
+    expect(harness.getState().confirmingReset).toBe(false);
+    expect(harness.getState().totalPoints).toBe(40);
+
+    act(() => {
+      harness.getActions().handleRequestReset();
+    });
+    await act(async () => {
+      await harness.getActions().handleResetScoreboard();
+    });
+    expect(harness.getState().confirmingReset).toBe(false);
+    expect(harness.getState().totalPoints).toBe(0);
+    expect(harness.getState().leaderTeam).toBeNull();
+
+    harness.unmount();
+  });
 });

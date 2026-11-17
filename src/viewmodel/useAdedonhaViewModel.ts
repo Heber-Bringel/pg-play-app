@@ -26,6 +26,7 @@ export type AdedonhaState = {
   currentColumnSubmissions: AdedonhaSubmission[];
   rankedPlayers: AdedonhaPlayer[];
   awards: AdedonhaAwards;
+  confirmingExit: boolean;
 };
 
 export type AdedonhaActions = {
@@ -46,6 +47,8 @@ export type AdedonhaActions = {
   handleAdvanceTallyColumn: () => Promise<void>;
   handleAdvanceToNextRound: () => Promise<void>;
   handleGoToScoreboard: () => void;
+  handleRequestExit: () => void;
+  handleCancelExit: () => void;
   handleExitArena: () => void;
   handleRetry: () => Promise<void>;
 };
@@ -58,6 +61,7 @@ export function useAdedonhaViewModel(
   const [room, setRoom] = useState<AdedonhaRoom | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [confirmingExit, setConfirmingExit] = useState<boolean>(false);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [secondsRemaining, setSecondsRemaining] = useState<number>(90);
 
@@ -311,7 +315,16 @@ export function useAdedonhaViewModel(
     router.push('/scoreboard');
   }, [router]);
 
+  const handleRequestExit = useCallback((): void => {
+    setConfirmingExit(true);
+  }, []);
+
+  const handleCancelExit = useCallback((): void => {
+    setConfirmingExit(false);
+  }, []);
+
   const handleExitArena = useCallback((): void => {
+    setConfirmingExit(false);
     router.push('/');
   }, [router]);
 
@@ -379,6 +392,7 @@ export function useAdedonhaViewModel(
     currentColumnSubmissions,
     rankedPlayers,
     awards,
+    confirmingExit,
   };
 
   const actions: AdedonhaActions = {
@@ -394,6 +408,8 @@ export function useAdedonhaViewModel(
     handleAdvanceTallyColumn,
     handleAdvanceToNextRound,
     handleGoToScoreboard,
+    handleRequestExit,
+    handleCancelExit,
     handleExitArena,
     handleRetry,
   };

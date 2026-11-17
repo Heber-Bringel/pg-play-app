@@ -7,6 +7,8 @@ import type { ScoreboardActions, ScoreboardState } from '@/viewmodel/useScoreboa
 
 const createMockActions = (): ScoreboardActions => ({
   handleAwardBonus: jest.fn(async () => {}),
+  handleRequestReset: jest.fn(),
+  handleCancelReset: jest.fn(),
   handleResetScoreboard: jest.fn(async () => {}),
   handleChooseAnotherGame: jest.fn(),
   handleRetry: jest.fn(async () => {}),
@@ -21,6 +23,7 @@ const baseState: ScoreboardState = {
   totalPoints: 60,
   loading: false,
   error: null,
+  confirmingReset: false,
 };
 
 describe('ScoreboardScreen — Testes de Tela com Mocks de ViewModel (UC06)', () => {
@@ -119,6 +122,32 @@ describe('ScoreboardScreen — Testes de Tela com Mocks de ViewModel (UC06)', ()
 
     expect(actions.handleAwardBonus).toHaveBeenCalledWith('t1');
     expect(actions.handleChooseAnotherGame).toHaveBeenCalledTimes(1);
+    expect(actions.handleRequestReset).toHaveBeenCalledTimes(1);
+    expect(actions.handleResetScoreboard).not.toHaveBeenCalled();
+  });
+
+  it('deve pedir confirmação antes de zerar o placar e permitir cancelar (RF17)', () => {
+    const actions = createMockActions();
+    jest
+      .spyOn(scoreboardVmModule, 'useScoreboardViewModel')
+      .mockReturnValue([{ ...baseState, confirmingReset: true }, actions]);
+
+    let tree!: renderer.ReactTestRenderer;
+    act(() => {
+      tree = renderer.create(<ScoreboardScreen />);
+    });
+
+    const cancelBtn = tree.root.findByProps({ accessibilityLabel: 'Cancelar' } as any);
+    const confirmBtn = tree.root.findByProps({
+      accessibilityLabel: 'Confirmar e Zerar',
+    } as any);
+
+    act(() => {
+      cancelBtn.props.onPress();
+      confirmBtn.props.onPress();
+    });
+
+    expect(actions.handleCancelReset).toHaveBeenCalledTimes(1);
     expect(actions.handleResetScoreboard).toHaveBeenCalledTimes(1);
   });
 });

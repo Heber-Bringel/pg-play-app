@@ -354,12 +354,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: space.sm,
     marginBottom: space.sm,
   },
   headerInfo: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
     alignItems: 'center',
     gap: space.xs,
+    flexShrink: 1,
   },
   badgePill: {
     backgroundColor: color.surfaceContainer,
