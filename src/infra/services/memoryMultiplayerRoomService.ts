@@ -126,11 +126,14 @@ function cloneRoom(room: AdedonhaRoom): AdedonhaRoom {
 export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
   private rooms: Map<string, AdedonhaRoom> = new Map();
   private activeRoomId: string;
+  private localPlayerIdByRoom: Map<string, string> = new Map();
+  private listeners: Map<string, Set<(room: AdedonhaRoom) => void>> = new Map();
 
   constructor(initialRoom?: AdedonhaRoom) {
     const seedRoom = initialRoom ? cloneRoom(initialRoom) : createDefaultRoom();
     this.rooms.set(seedRoom.id, seedRoom);
     this.activeRoomId = seedRoom.id;
+    this.localPlayerIdByRoom.set(seedRoom.id, seedRoom.hostId);
   }
 
   private resolveRoom(roomId?: string): AdedonhaRoom {
@@ -140,6 +143,39 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
       throw new DataSourceError('Sala multiplayer não encontrada.');
     }
     return room;
+  }
+
+  private saveAndNotify(room: AdedonhaRoom): AdedonhaRoom {
+    this.rooms.set(room.id, room);
+    const snapshot = cloneRoom(room);
+    const roomListeners = this.listeners.get(room.id);
+    if (roomListeners) {
+      roomListeners.forEach((listener) => listener(cloneRoom(snapshot)));
+    }
+    return snapshot;
+  }
+
+  async getLocalPlayerId(roomId?: string): Promise<string | null> {
+    const targetId = roomId ?? this.activeRoomId;
+    return this.localPlayerIdByRoom.get(targetId) ?? null;
+  }
+
+  subscribeToRoom(
+    roomId: string,
+    onRoomUpdated: (room: AdedonhaRoom) => void
+  ): () => void {
+    const listeners = this.listeners.get(roomId) ?? new Set();
+    listeners.add(onRoomUpdated);
+    this.listeners.set(roomId, listeners);
+
+    return () => {
+      const current = this.listeners.get(roomId);
+      if (!current) return;
+      current.delete(onRoomUpdated);
+      if (current.size === 0) {
+        this.listeners.delete(roomId);
+      }
+    };
   }
 
   async getAdedonhaRoom(roomId?: string): Promise<AdedonhaRoom> {
@@ -199,9 +235,9 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
         ],
         submissions: [],
       };
-      this.rooms.set(id, room);
       this.activeRoomId = id;
-      return cloneRoom(room);
+      this.localPlayerIdByRoom.set(id, room.hostId);
+      return this.saveAndNotify(room);
     } catch (err: unknown) {
       if (err instanceof DataSourceError) throw err;
       throw new DataSourceError('Não foi possível criar a sala de Adedonha Bíblica.');
@@ -217,9 +253,19 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
       throw new DataSourceError('Código de sala não encontrado.');
     }
 
+    const cleanNick = nickname.trim();
+    const existingPlayer = found.players.find(
+      (p) => p.nickname.toLowerCase() === cleanNick.toLowerCase()
+    );
+    if (existingPlayer) {
+      this.activeRoomId = found.id;
+      this.localPlayerIdByRoom.set(found.id, existingPlayer.id);
+      return cloneRoom(found);
+    }
+
     const newPlayer: AdedonhaPlayer = {
       id: `player-${found.players.length + 1}`,
-      nickname: nickname.trim(),
+      nickname: cleanNick,
       isHost: false,
       score: 0,
       stopCount: 0,
@@ -230,9 +276,9 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
       ...found,
       players: [...found.players, newPlayer],
     };
-    this.rooms.set(found.id, updated);
     this.activeRoomId = found.id;
-    return cloneRoom(updated);
+    this.localPlayerIdByRoom.set(found.id, newPlayer.id);
+    return this.saveAndNotify(updated);
   }
 
   async updateAdedonhaColumns(
@@ -247,8 +293,7 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
         columns: [...columns],
       },
     };
-    this.rooms.set(room.id, updated);
-    return cloneRoom(updated);
+    return this.saveAndNotify(updated);
   }
 
   async updateAdedonhaConfig(
@@ -263,8 +308,7 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
         ...partialConfig,
       },
     };
-    this.rooms.set(room.id, updated);
-    return cloneRoom(updated);
+    return this.saveAndNotify(updated);
   }
 
   async spinAlphabetRoulette(
@@ -286,8 +330,7 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
       stopTriggeredBy: null,
       submissions: [],
     };
-    this.rooms.set(room.id, updated);
-    return cloneRoom(updated);
+    return this.saveAndNotify(updated);
   }
 
   async openRoundFilling(roomId: string): Promise<AdedonhaRoom> {
@@ -296,8 +339,7 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
       ...room,
       phase: 'filling',
     };
-    this.rooms.set(room.id, updated);
-    return cloneRoom(updated);
+    return this.saveAndNotify(updated);
   }
 
   async submitPlayerAnswers(
@@ -375,8 +417,7 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
       ...room,
       submissions: allSubmissions,
     };
-    this.rooms.set(room.id, updated);
-    return cloneRoom(updated);
+    return this.saveAndNotify(updated);
   }
 
   async triggerAdedonhaStop(
@@ -399,8 +440,7 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
       stopTriggeredBy: player.nickname,
       players: updatedPlayers,
     };
-    this.rooms.set(room.id, updated);
-    return cloneRoom(updated);
+    return this.saveAndNotify(updated);
   }
 
   async startTallyPhase(
@@ -420,8 +460,7 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
       submissions: classifiedSubmissions.map((s) => ({ ...s })),
       players: recalculatedPlayers,
     };
-    this.rooms.set(room.id, updated);
-    return cloneRoom(updated);
+    return this.saveAndNotify(updated);
   }
 
   async raiseDoubt(roomId: string, submissionId: string): Promise<AdedonhaRoom> {
@@ -439,8 +478,7 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
       ...room,
       submissions: updatedSubmissions,
     };
-    this.rooms.set(room.id, updated);
-    return cloneRoom(updated);
+    return this.saveAndNotify(updated);
   }
 
   async judgeSubmission(
@@ -469,8 +507,7 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
       submissions: updatedSubmissions,
       players: updatedPlayers,
     };
-    this.rooms.set(room.id, updated);
-    return cloneRoom(updated);
+    return this.saveAndNotify(updated);
   }
 
   async advanceTallyColumn(roomId: string): Promise<AdedonhaRoom> {
@@ -491,8 +528,7 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
       ...room,
       phase: isLastRound ? 'finished' : 'round_summary',
     };
-    this.rooms.set(room.id, updated);
-    return cloneRoom(updated);
+    return this.saveAndNotify(updated);
   }
 
   async advanceToNextRound(roomId: string): Promise<AdedonhaRoom> {
@@ -502,8 +538,7 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
         ...room,
         phase: 'finished',
       };
-      this.rooms.set(room.id, finished);
-      return cloneRoom(finished);
+      return this.saveAndNotify(finished);
     }
 
     const updated: AdedonhaRoom = {
@@ -514,8 +549,7 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
       currentTallyColumnIndex: 0,
       stopTriggeredBy: null,
     };
-    this.rooms.set(room.id, updated);
-    return cloneRoom(updated);
+    return this.saveAndNotify(updated);
   }
 
   private recalculatePlayersScore(
