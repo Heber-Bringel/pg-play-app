@@ -35,6 +35,7 @@ const primitive = {
     neutral800: '#2B2930',
     neutral900: '#1D1B20',
     neutral950: '#141218',
+    scrim: 'rgba(20, 18, 24, 0.55)',
     transparent: 'transparent',
   },
   space: {
@@ -81,6 +82,7 @@ export function createTokens(mode: ThemeMode = 'light') {
     focus: isDark ? primitive.color.gold400 : primitive.color.coral700,
     disabledBg: isDark ? primitive.color.neutral800 : primitive.color.neutral200,
     disabledText: primitive.color.neutral600,
+    scrim: primitive.color.scrim,
     transparent: primitive.color.transparent,
   };
 

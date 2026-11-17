@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { ConfirmModal } from '@/view/components/confirmModal';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
 import { GameCard } from '@/view/components/gameCard';
 import { LetterKey } from '@/view/components/letterKey';
@@ -122,25 +123,13 @@ export const ForcaScreen = () => {
         </View>
       </View>
 
-      {state.confirmingExit && (
-        <View style={styles.exitBanner} accessibilityLiveRegion="polite">
-          <Text allowFontScaling style={styles.exitTitle}>
-            Deseja encerrar a partida do Jogo da Forca?
-          </Text>
-          <View style={styles.exitActions}>
-            <ExpressiveButton
-              label="Continuar Jogando"
-              variant="tonal"
-              onPress={actions.handleCancelExit}
-            />
-            <ExpressiveButton
-              label="Confirmar Saída"
-              variant="secondary"
-              onPress={actions.handleConfirmExit}
-            />
-          </View>
-        </View>
-      )}
+      <ConfirmModal
+        visible={state.confirmingExit}
+        title="Deseja encerrar a partida do Jogo da Forca?"
+        description="O progresso desta palavra será perdido se você sair agora."
+        onCancel={actions.handleCancelExit}
+        onConfirm={actions.handleConfirmExit}
+      />
 
       {state.phase === 'pass-turn' && (
         <View style={styles.contentSection}>
@@ -331,24 +320,6 @@ const styles = StyleSheet.create({
     fontSize: font.label.size,
     fontWeight: font.label.weight,
     lineHeight: font.label.lineHeight,
-  },
-  exitBanner: {
-    backgroundColor: color.errorContainer,
-    padding: space.md,
-    borderRadius: radius.lg,
-    gap: space.sm,
-    borderWidth: border.thin,
-    borderColor: color.error,
-  },
-  exitTitle: {
-    fontFamily: font.subtitle.family,
-    fontSize: font.subtitle.size,
-    fontWeight: font.subtitle.weight,
-    lineHeight: font.subtitle.lineHeight,
-    color: color.onErrorContainer,
-  },
-  exitActions: {
-    gap: space.sm,
   },
   contentSection: {
     gap: space.md,

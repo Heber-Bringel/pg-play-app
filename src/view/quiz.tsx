@@ -6,6 +6,7 @@ import {
   View,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { ConfirmModal } from '@/view/components/confirmModal';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
 import { ExpressiveTimer } from '@/view/components/expressiveTimer';
 import { GameCard } from '@/view/components/gameCard';
@@ -122,25 +123,13 @@ export const QuizScreen = () => {
             </View>
           </View>
 
-          {state.confirmingExit && (
-            <View style={styles.exitBanner} accessibilityLiveRegion="polite">
-              <Text allowFontScaling style={styles.exitTitle}>
-                Deseja encerrar a partida do Quiz Relâmpago?
-              </Text>
-              <View style={styles.exitActions}>
-                <ExpressiveButton
-                  label="Continuar Jogando"
-                  variant="tonal"
-                  onPress={actions.handleCancelExit}
-                />
-                <ExpressiveButton
-                  label="Confirmar Saída"
-                  variant="secondary"
-                  onPress={actions.handleConfirmExit}
-                />
-              </View>
-            </View>
-          )}
+          <ConfirmModal
+            visible={state.confirmingExit}
+            title="Deseja encerrar a partida do Quiz Relâmpago?"
+            description="O progresso desta pergunta será perdido se você sair agora."
+            onCancel={actions.handleCancelExit}
+            onConfirm={actions.handleConfirmExit}
+          />
 
           <View style={styles.passTurnContent}>
             <View style={styles.passTurnCard}>
@@ -211,25 +200,13 @@ export const QuizScreen = () => {
           </View>
         </View>
 
-        {state.confirmingExit && (
-          <View style={styles.exitBanner} accessibilityLiveRegion="polite">
-            <Text allowFontScaling style={styles.exitTitle}>
-              Deseja encerrar a partida do Quiz Relâmpago?
-            </Text>
-            <View style={styles.exitActions}>
-              <ExpressiveButton
-                label="Continuar Jogando"
-                variant="tonal"
-                onPress={actions.handleCancelExit}
-              />
-              <ExpressiveButton
-                label="Confirmar Saída"
-                variant="secondary"
-                onPress={actions.handleConfirmExit}
-              />
-            </View>
-          </View>
-        )}
+        <ConfirmModal
+          visible={state.confirmingExit}
+          title="Deseja encerrar a partida do Quiz Relâmpago?"
+          description="O progresso desta rodada será perdido se você sair agora."
+          onCancel={actions.handleCancelExit}
+          onConfirm={actions.handleConfirmExit}
+        />
 
         <View style={styles.timerWrapper}>
           <ExpressiveTimer secondsRemaining={state.secondsRemaining} />
@@ -522,24 +499,6 @@ const styles = StyleSheet.create({
     backgroundColor: color.highlight,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  exitBanner: {
-    backgroundColor: color.errorContainer,
-    borderColor: color.error,
-    borderWidth: border.thin,
-    borderRadius: radius.lg,
-    padding: space.md,
-    gap: space.sm,
-  },
-  exitTitle: {
-    fontFamily: font.subtitle.family,
-    fontSize: font.subtitle.size,
-    fontWeight: font.subtitle.weight,
-    lineHeight: font.subtitle.lineHeight,
-    color: color.onErrorContainer,
-  },
-  exitActions: {
-    gap: space.sm,
   },
 });
 
