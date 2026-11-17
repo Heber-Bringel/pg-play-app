@@ -205,7 +205,7 @@ export function useQuizViewModel(
 
   const handleConfirmExit = useCallback(() => {
     setConfirmingExit(false);
-    router.replace('/scoreboard');
+    router.replace('/');
   }, [router]);
 
   const handleGoToScoreboard = useCallback(() => {
