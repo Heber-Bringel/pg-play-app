@@ -1,8 +1,9 @@
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import { Stack } from 'expo-router';
 import Head from 'expo-router/head';
 import { StatusBar } from 'expo-status-bar';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import {
   useFonts,
   PlusJakartaSans_400Regular,
@@ -11,6 +12,7 @@ import {
   PlusJakartaSans_700Bold,
   PlusJakartaSans_800ExtraBold,
 } from '@expo-google-fonts/plus-jakarta-sans';
+import { color } from '@/view/theme';
 
 export const RootLayout = () => {
   const [fontsLoaded] = useFonts({
@@ -44,9 +46,23 @@ export const RootLayout = () => {
           }
         `}</style>
       </Head>
-      <Stack screenOptions={{ headerShown: false }} />
+      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: color.surface },
+          }}
+        />
+      </SafeAreaView>
     </SafeAreaProvider>
   );
 };
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: color.surface,
+  },
+});
 
 export default RootLayout;
