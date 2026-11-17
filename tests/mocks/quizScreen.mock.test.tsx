@@ -121,10 +121,17 @@ describe('QuizScreen — Testes de Tela com Mocks de ViewModel (UC04)', () => {
     });
     expect(stayBtn).toBeDefined();
 
+    const confirmExitBtn = tree.root.findByProps({
+      accessibilityLabel: 'Confirmar Saída',
+    });
+    expect(confirmExitBtn).toBeDefined();
+
     act(() => {
       stayBtn.props.onPress();
+      confirmExitBtn.props.onPress();
     });
     expect(actions.handleCancelExit).toHaveBeenCalled();
+    expect(actions.handleConfirmExit).toHaveBeenCalled();
   });
 
   it('deve renderizar a fase pass-turn com nome da equipe e botão Estou Pronto!', () => {
