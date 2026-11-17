@@ -7,12 +7,17 @@ import type {
 
 export interface IAdedonhaUseCases {
   getSuggestedColumns(): string[];
+  getLocalPlayerId(roomId?: string): Promise<string | null>;
   getRoom(roomId?: string): Promise<AdedonhaRoom>;
   createRoom(
     hostNickname: string,
     initialColumns?: string[]
   ): Promise<AdedonhaRoom>;
   joinRoom(code: string, nickname: string): Promise<AdedonhaRoom>;
+  subscribeToRoom(
+    roomId: string,
+    onRoomUpdated: (room: AdedonhaRoom) => void
+  ): () => void;
   addColumn(roomId: string, columnName: string): Promise<AdedonhaRoom>;
   removeColumn(roomId: string, columnName: string): Promise<AdedonhaRoom>;
   updateConfig(
@@ -38,6 +43,17 @@ export interface IAdedonhaUseCases {
     playerId: string,
     answers: Record<string, string>
   ): Promise<AdedonhaRoom>;
+  submitAnswers(
+    roomId: string,
+    playerId: string,
+    answers: Record<string, string>
+  ): Promise<AdedonhaRoom>;
+  startStopCountdown(
+    roomId: string,
+    playerId: string,
+    answers: Record<string, string>
+  ): Promise<AdedonhaRoom>;
+  finalizeStopCountdown(roomId: string): Promise<AdedonhaRoom>;
   finishRoundByTimeOut(
     roomId: string,
     playerId: string,

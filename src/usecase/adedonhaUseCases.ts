@@ -43,6 +43,17 @@ export class AdedonhaUseCases implements IAdedonhaUseCases {
     return [...SUGGESTED_BIBLICAL_COLUMNS];
   }
 
+  async getLocalPlayerId(roomId?: string): Promise<string | null> {
+    return this.roomService.getLocalPlayerId(roomId);
+  }
+
+  subscribeToRoom(
+    roomId: string,
+    onRoomUpdated: (room: AdedonhaRoom) => void
+  ): () => void {
+    return this.roomService.subscribeToRoom(roomId, onRoomUpdated);
+  }
+
   async getRoom(roomId?: string): Promise<AdedonhaRoom> {
     return this.roomService.getAdedonhaRoom(roomId);
   }
@@ -232,12 +243,10 @@ export class AdedonhaUseCases implements IAdedonhaUseCases {
     });
   }
 
-  async triggerAdedonha(
-    roomId: string,
-    playerId: string,
+  private validateStopAnswers(
+    room: AdedonhaRoom,
     answers: Record<string, string>
-  ): Promise<AdedonhaRoom> {
-    const room = await this.roomService.getAdedonhaRoom(roomId);
+  ): void {
     if (!room.currentLetter) {
       throw new ValidationError(
         'Sorteie uma letra na Roleta Expressiva antes de acionar ADEDONHA!'
@@ -259,6 +268,51 @@ export class AdedonhaUseCases implements IAdedonhaUseCases {
         throw new ValidationError(`${column}: ${initialError}`);
       }
     }
+  }
+
+  async submitAnswers(
+    roomId: string,
+    playerId: string,
+    answers: Record<string, string>
+  ): Promise<AdedonhaRoom> {
+    const room = await this.roomService.getAdedonhaRoom(roomId);
+    if (!room.currentLetter) {
+      throw new ValidationError('Nenhuma rodada ativa para enviar respostas.');
+    }
+    return this.roomService.submitPlayerAnswers(room.id, playerId, answers);
+  }
+
+  async startStopCountdown(
+    roomId: string,
+    playerId: string,
+    answers: Record<string, string>
+  ): Promise<AdedonhaRoom> {
+    const room = await this.roomService.getAdedonhaRoom(roomId);
+    this.validateStopAnswers(room, answers);
+    await this.roomService.submitPlayerAnswers(room.id, playerId, answers);
+    return this.roomService.triggerAdedonhaStop(room.id, playerId);
+  }
+
+  async finalizeStopCountdown(roomId: string): Promise<AdedonhaRoom> {
+    const room = await this.roomService.getAdedonhaRoom(roomId);
+    if (!room.currentLetter) {
+      throw new ValidationError('Nenhuma rodada em andamento para apurar.');
+    }
+    const classified = this.classifySubmissions(
+      room.submissions,
+      room.currentRound,
+      room.currentLetter
+    );
+    return this.roomService.startTallyPhase(room.id, classified);
+  }
+
+  async triggerAdedonha(
+    roomId: string,
+    playerId: string,
+    answers: Record<string, string>
+  ): Promise<AdedonhaRoom> {
+    const room = await this.roomService.getAdedonhaRoom(roomId);
+    this.validateStopAnswers(room, answers);
 
     await this.roomService.submitPlayerAnswers(room.id, playerId, answers);
     const stoppedRoom = await this.roomService.triggerAdedonhaStop(
