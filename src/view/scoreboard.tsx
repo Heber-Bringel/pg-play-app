@@ -208,9 +208,6 @@ const styles = StyleSheet.create({
     color: color.onErrorContainer,
   },
   resetActions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'flex-end',
     gap: space.sm,
   },
   list: {

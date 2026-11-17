@@ -341,16 +341,14 @@ const styles = StyleSheet.create({
     borderColor: color.error,
   },
   exitTitle: {
-    fontFamily: font.title.family,
-    fontSize: font.title.size,
-    fontWeight: font.title.weight,
-    lineHeight: font.title.lineHeight,
+    fontFamily: font.subtitle.family,
+    fontSize: font.subtitle.size,
+    fontWeight: font.subtitle.weight,
+    lineHeight: font.subtitle.lineHeight,
     color: color.onErrorContainer,
   },
   exitActions: {
-    flexDirection: 'row',
     gap: space.sm,
-    justifyContent: 'flex-end',
   },
   contentSection: {
     gap: space.md,

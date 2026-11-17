@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
 import { ExpressiveTimer } from '@/view/components/expressiveTimer';
 import { GameCard } from '@/view/components/gameCard';
@@ -66,7 +66,11 @@ export const MimicaScreen = () => {
   const teamScore = state.currentTeam?.score ?? 0;
 
   return (
-    <View style={styles.screen}>
+    <ScrollView
+      style={styles.scroll}
+      contentContainerStyle={styles.screen}
+      keyboardShouldPersistTaps="handled"
+    >
       <View style={styles.topBar}>
         <ExpressiveButton
           label="Sair"
@@ -101,11 +105,21 @@ export const MimicaScreen = () => {
         </View>
       )}
 
-      <View style={styles.teamHeader} accessibilityLiveRegion="polite">
-        <Text allowFontScaling style={styles.teamLabel}>
-          {`Vez da Equipe: ${teamName}`}
-        </Text>
-        <Text allowFontScaling style={styles.scoreLabel}>
+      <View
+        style={styles.teamHeader}
+        accessible
+        accessibilityLabel={`Vez da equipe ${teamName}, ${teamScore} pontos`}
+        accessibilityLiveRegion="polite"
+      >
+        <View style={styles.teamInfo}>
+          <Text allowFontScaling style={styles.teamCaption}>
+            Vez da equipe
+          </Text>
+          <Text allowFontScaling numberOfLines={2} style={styles.teamLabel}>
+            {teamName}
+          </Text>
+        </View>
+        <Text allowFontScaling numberOfLines={1} style={styles.scoreLabel}>
           {`${teamScore} pts`}
         </Text>
       </View>
@@ -113,8 +127,8 @@ export const MimicaScreen = () => {
       {state.phase === 'pass-turn' && (
         <View style={styles.phaseContainer}>
           <GameCard
-            title={`Vez da Equipe ${teamName}`}
-            description="Passe o celular ao representante da vez. A palavra secreta só aparecerá após tocar no botão abaixo!"
+            title="Passe o celular ao representante"
+            description="A palavra secreta só aparecerá após tocar no botão abaixo!"
             playersTag={`${state.turnDurationSeconds}s por turno`}
             icon="drama-masks"
           />
@@ -217,13 +231,17 @@ export const MimicaScreen = () => {
           />
         </View>
       )}
-    </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
-  screen: {
+  scroll: {
     flex: 1,
+    backgroundColor: color.surface,
+  },
+  screen: {
+    flexGrow: 1,
     backgroundColor: color.surface,
     padding: space.md,
     gap: space.md,
@@ -263,18 +281,27 @@ const styles = StyleSheet.create({
     color: color.onErrorContainer,
   },
   exitActions: {
-    flexDirection: 'row',
     gap: space.sm,
-    flexWrap: 'wrap',
   },
   teamHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: space.md,
     backgroundColor: color.actionContainer,
     paddingHorizontal: space.md,
     paddingVertical: space.sm,
     borderRadius: radius.lg,
+  },
+  teamInfo: {
+    flex: 1,
+  },
+  teamCaption: {
+    fontFamily: font.caption.family,
+    fontSize: font.caption.size,
+    fontWeight: font.caption.weight,
+    lineHeight: font.caption.lineHeight,
+    color: color.onActionContainer,
   },
   teamLabel: {
     fontFamily: font.subtitle.family,
@@ -282,7 +309,6 @@ const styles = StyleSheet.create({
     fontWeight: font.subtitle.weight,
     lineHeight: font.subtitle.lineHeight,
     color: color.onActionContainer,
-    flexShrink: 1,
   },
   scoreLabel: {
     fontFamily: font.title.family,
@@ -290,6 +316,7 @@ const styles = StyleSheet.create({
     fontWeight: font.title.weight,
     lineHeight: font.title.lineHeight,
     color: color.onActionContainer,
+    flexShrink: 0,
   },
   phaseContainer: {
     flex: 1,

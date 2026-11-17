@@ -96,7 +96,7 @@ export const AdedonhaScreen = () => {
           label="Sair"
           variant="outlined"
           icon="arrow-left"
-          onPress={actions.handleExitArena}
+          onPress={actions.handleRequestExit}
         />
         <View
           style={styles.roomBadge}
@@ -113,6 +113,29 @@ export const AdedonhaScreen = () => {
           </Text>
         </View>
       </View>
+
+      {state.confirmingExit && (
+        <View style={styles.exitBanner} accessibilityLiveRegion="polite">
+          <Text allowFontScaling style={styles.exitTitle}>
+            Deseja sair da sala da Adedonha?
+          </Text>
+          <Text allowFontScaling style={styles.errorBannerText}>
+            A rodada continua para os outros jogadores da sala.
+          </Text>
+          <View style={styles.exitActions}>
+            <ExpressiveButton
+              label="Continuar Jogando"
+              variant="tonal"
+              onPress={actions.handleCancelExit}
+            />
+            <ExpressiveButton
+              label="Confirmar Saída"
+              variant="secondary"
+              onPress={actions.handleExitArena}
+            />
+          </View>
+        </View>
+      )}
 
       {state.error && (
         <View style={styles.errorBanner} accessibilityLiveRegion="assertive">
@@ -482,8 +505,26 @@ const styles = StyleSheet.create({
     borderColor: color.error,
     backgroundColor: color.errorContainer,
   },
+  exitBanner: {
+    backgroundColor: color.errorContainer,
+    borderColor: color.error,
+    borderWidth: border.thin,
+    borderRadius: radius.lg,
+    padding: space.md,
+    gap: space.sm,
+  },
+  exitTitle: {
+    fontFamily: font.subtitle.family,
+    fontSize: font.subtitle.size,
+    fontWeight: font.subtitle.weight,
+    lineHeight: font.subtitle.lineHeight,
+    color: color.onErrorContainer,
+  },
+  exitActions: {
+    gap: space.sm,
+  },
   errorBannerText: {
-    flex: 1,
+    flexShrink: 1,
     fontFamily: font.body.family,
     fontSize: font.body.size,
     lineHeight: font.body.lineHeight,
