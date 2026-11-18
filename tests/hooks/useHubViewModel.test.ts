@@ -110,11 +110,17 @@ describe('useHubViewModel — Hook do Hub de Jogos (UC01)', () => {
     const cidadeDorme = harness
       .getState()
       .games.find((g) => g.id === 'cidade-dorme')!;
+    const unavailableGame = { ...cidadeDorme, available: false };
+
+    act(() => {
+      harness.getActions().handleSelectGame(unavailableGame);
+    });
+    expect(mockPush).not.toHaveBeenCalled();
 
     act(() => {
       harness.getActions().handleSelectGame(cidadeDorme);
     });
-    expect(mockPush).not.toHaveBeenCalled();
+    expect(mockPush).toHaveBeenCalledWith('/cidade-dorme');
 
     act(() => {
       harness.getActions().handleSelectGame(mimica);
