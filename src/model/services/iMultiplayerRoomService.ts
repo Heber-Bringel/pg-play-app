@@ -3,6 +3,8 @@ import type {
   AdedonhaRoom,
   AdedonhaSubmission,
   AdedonhaTallyVerdict,
+  CidadeDormeConfig,
+  CidadeDormeRoom,
 } from '@/model/entities/multiplayerSession';
 
 export interface IMultiplayerRoomService {
@@ -48,5 +50,17 @@ export interface IMultiplayerRoomService {
   subscribeToRoom(
     roomId: string,
     onRoomUpdated: (room: AdedonhaRoom) => void
+  ): () => void;
+  getCidadeDormeRoom(roomId?: string): Promise<CidadeDormeRoom>;
+  createCidadeDormeRoom(hostNickname: string): Promise<CidadeDormeRoom>;
+  joinCidadeDormeRoom(code: string, nickname: string): Promise<CidadeDormeRoom>;
+  updateCidadeDormeConfig(
+    roomId: string,
+    partialConfig: Partial<CidadeDormeConfig>
+  ): Promise<CidadeDormeRoom>;
+  saveCidadeDormeRoom(room: CidadeDormeRoom): Promise<CidadeDormeRoom>;
+  subscribeToCidadeDormeRoom(
+    roomId: string,
+    onRoomUpdated: (room: CidadeDormeRoom) => void
   ): () => void;
 }

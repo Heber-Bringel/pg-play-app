@@ -69,3 +69,90 @@ export type AdedonhaRoom = {
   players: AdedonhaPlayer[];
   submissions: AdedonhaSubmission[];
 };
+
+export type CidadeDormeRole = 'cidadao' | 'assassino' | 'anjo' | 'detetive';
+
+export type CidadeDormeAlignment = 'cidade' | 'infiltrados';
+
+export type CidadeDormeVoiceProfile = 'masculina' | 'feminina';
+
+export type CidadeDormePhase =
+  | 'lobby'
+  | 'role_reveal'
+  | 'night_assassin'
+  | 'night_angel'
+  | 'night_detective'
+  | 'day_debate'
+  | 'day_voting'
+  | 'vote_result'
+  | 'finished';
+
+export type CidadeDormeDayDebateDuration = 60 | 120 | 180;
+
+export type CidadeDormeNightTurnDuration = 15 | 20;
+
+export type CidadeDormeAssassinCount = 1 | 2 | 3;
+
+export type CidadeDormeConfig = {
+  narratorVoice: CidadeDormeVoiceProfile;
+  assassinCount: CidadeDormeAssassinCount;
+  dayDebateSeconds: CidadeDormeDayDebateDuration;
+  nightTurnSeconds: CidadeDormeNightTurnDuration;
+  revealRoleOnDeath: boolean;
+};
+
+export type CidadeDormeDetectiveVerdict = {
+  targetPlayerId: string;
+  targetNickname: string;
+  isAssassin: boolean;
+  roundNumber: number;
+};
+
+export type CidadeDormeDawnReport = {
+  roundNumber: number;
+  attackedPlayerId: string | null;
+  attackedNickname: string | null;
+  savedByAngel: boolean;
+  eliminatedPlayerId: string | null;
+  eliminatedNickname: string | null;
+  eliminatedRole: CidadeDormeRole | null;
+};
+
+export type CidadeDormeVoteReport = {
+  roundNumber: number;
+  eliminatedPlayerId: string | null;
+  eliminatedNickname: string | null;
+  eliminatedRole: CidadeDormeRole | null;
+  tieOrSkipped: boolean;
+  voteCounts: Record<string, number>;
+  skipCount: number;
+};
+
+export type CidadeDormePlayer = {
+  id: string;
+  nickname: string;
+  isHost: boolean;
+  isAlive: boolean;
+  isReady: boolean;
+  role: CidadeDormeRole;
+  hasVoted: boolean;
+};
+
+export type CidadeDormeRoom = {
+  id: string;
+  code: string;
+  gameType: 'cidade-dorme';
+  hostId: string;
+  phase: CidadeDormePhase;
+  config: CidadeDormeConfig;
+  currentRound: number;
+  narratorCaption: string;
+  players: CidadeDormePlayer[];
+  nightTargetId: string | null;
+  nightProtectedId: string | null;
+  detectiveVerdict: CidadeDormeDetectiveVerdict | null;
+  votesByPlayerId: Record<string, string>;
+  dawnReport: CidadeDormeDawnReport | null;
+  voteReport: CidadeDormeVoteReport | null;
+  winner: CidadeDormeAlignment | null;
+};
