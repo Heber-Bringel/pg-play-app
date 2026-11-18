@@ -65,11 +65,11 @@ const DEFAULT_MINIGAMES: Minigame[] = [
     description:
       'Dedução social com papéis secretos e narrador por áudio conduzindo Noite e Dia.',
     modality: 'Multi-Celular',
-    playersTag: 'Multi-Celular · Em breve',
+    playersTag: 'Multi-Celular · 5–16 jogadores',
     route: '/cidade-dorme',
     icon: 'weather-night',
     themes: ['misterio', 'blefe', 'narrador', 'multiplayer', 'papeis', 'sala'],
-    available: false,
+    available: true,
   },
 ];
 

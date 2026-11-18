@@ -10,6 +10,8 @@ import type {
   AdedonhaSubmissionStatus,
   AdedonhaTallyVerdict,
   AdedonhaTotalRounds,
+  CidadeDormeConfig,
+  CidadeDormeRoom,
 } from '@/model/entities/multiplayerSession';
 import { AuthError, DataSourceError } from '@/model/errors';
 import type { IMultiplayerRoomService } from '@/model/services/iMultiplayerRoomService';
@@ -137,8 +139,9 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
       throw new AuthError('Não foi possível verificar a sessão do jogador.');
     }
     if (sessionData.session?.user?.id) {
-      this.cachedUserId = sessionData.session.user.id;
-      return this.cachedUserId;
+      const userId = sessionData.session.user.id;
+      this.cachedUserId = userId;
+      return userId;
     }
 
     const { data: anonData, error: anonError } =
@@ -149,8 +152,9 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
       );
     }
 
-    this.cachedUserId = anonData.user.id;
-    return this.cachedUserId;
+    const userId = anonData.user.id;
+    this.cachedUserId = userId;
+    return userId;
   }
 
   private wrapError(err: unknown, fallbackMessage: string): never {
@@ -967,5 +971,382 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
     } catch (err: unknown) {
       return this.wrapError(err, 'Falha ao iniciar próxima rodada.');
     }
+  }
+
+  private mapRowToCidadeDormeRoom(row: {
+    id: string;
+    code: string;
+    host_id: string;
+    phase: string;
+    current_round: number;
+    narrator_caption?: string | null;
+    config: Record<string, unknown> | null;
+  }): CidadeDormeRoom {
+    const raw = (row.config ?? {}) as Partial<CidadeDormeRoom> & {
+      config?: CidadeDormeConfig;
+    };
+    const defaultCfg: CidadeDormeConfig = {
+      narratorVoice: 'masculina',
+      assassinCount: 1,
+      dayDebateSeconds: 120,
+      nightTurnSeconds: 15,
+      revealRoleOnDeath: true,
+    };
+    return {
+      id: row.id,
+      code: row.code,
+      gameType: 'cidade-dorme',
+      hostId: row.host_id,
+      phase: (row.phase || raw.phase || 'lobby') as CidadeDormeRoom['phase'],
+      config: {
+        ...defaultCfg,
+        ...(raw.config ?? {}),
+      },
+      currentRound: row.current_round ?? raw.currentRound ?? 1,
+      narratorCaption:
+        row.narrator_caption ??
+        raw.narratorCaption ??
+        'Sala pronta no Lobby.',
+      players: Array.isArray(raw.players)
+        ? raw.players.map((p) => ({ ...p }))
+        : [],
+      nightTargetId: raw.nightTargetId ?? null,
+      nightProtectedId: raw.nightProtectedId ?? null,
+      detectiveVerdict: raw.detectiveVerdict
+        ? { ...raw.detectiveVerdict }
+        : null,
+      votesByPlayerId: raw.votesByPlayerId ? { ...raw.votesByPlayerId } : {},
+      dawnReport: raw.dawnReport ? { ...raw.dawnReport } : null,
+      voteReport: raw.voteReport
+        ? {
+            ...raw.voteReport,
+            voteCounts: { ...raw.voteReport.voteCounts },
+          }
+        : null,
+      winner: raw.winner ?? null,
+    };
+  }
+
+  async getCidadeDormeRoom(roomId?: string): Promise<CidadeDormeRoom> {
+    this.ensureCredentials();
+    if (this.delegateService) {
+      try {
+        return await this.delegateService.getCidadeDormeRoom(roomId);
+      } catch (err: unknown) {
+        return this.wrapError(
+          err,
+          'Falha ao sincronizar sala de Cidade Dorme no Supabase.'
+        );
+      }
+    }
+
+    const targetId = roomId ?? this.activeRoomId;
+    if (!targetId) {
+      throw new DataSourceError(
+        'Nenhuma sala de Cidade Dorme ativa. Crie uma sala ou informe o PIN.'
+      );
+    }
+
+    try {
+      const client = this.getClient();
+      await this.ensureAuthenticatedUserId();
+      const { data, error } = await client
+        .from('rooms')
+        .select(
+          'id, code, host_id, phase, current_round, narrator_caption, config'
+        )
+        .eq('id', targetId)
+        .single();
+
+      if (error || !data) {
+        throw new DataSourceError(
+          'Sala de Cidade Dorme não encontrada no Supabase.'
+        );
+      }
+      this.activeRoomId = targetId;
+      return this.mapRowToCidadeDormeRoom(
+        data as {
+          id: string;
+          code: string;
+          host_id: string;
+          phase: string;
+          current_round: number;
+          narrator_caption?: string | null;
+          config: Record<string, unknown> | null;
+        }
+      );
+    } catch (err: unknown) {
+      return this.wrapError(
+        err,
+        'Falha ao sincronizar sala de Cidade Dorme no Supabase.'
+      );
+    }
+  }
+
+  async createCidadeDormeRoom(hostNickname: string): Promise<CidadeDormeRoom> {
+    this.ensureCredentials();
+    if (this.delegateService) {
+      try {
+        return await this.delegateService.createCidadeDormeRoom(hostNickname);
+      } catch (err: unknown) {
+        return this.wrapError(
+          err,
+          'Não foi possível criar sala de Cidade Dorme no Supabase.'
+        );
+      }
+    }
+
+    try {
+      const client = this.getClient();
+      const userId = await this.ensureAuthenticatedUserId();
+      const code = generatePinCode();
+      const initialConfig: CidadeDormeConfig = {
+        narratorVoice: 'masculina',
+        assassinCount: 1,
+        dayDebateSeconds: 120,
+        nightTurnSeconds: 15,
+        revealRoleOnDeath: true,
+      };
+      const initialPlayers: CidadeDormeRoom['players'] = [
+        {
+          id: userId,
+          nickname: hostNickname.trim(),
+          isHost: true,
+          isAlive: true,
+          isReady: false,
+          role: 'detetive',
+          hasVoted: false,
+        },
+      ];
+      const storedPayload = {
+        config: initialConfig,
+        players: initialPlayers,
+        narratorCaption:
+          'Sala criada! Escolha a voz do Narrador e aguarde os jogadores.',
+        nightTargetId: null,
+        nightProtectedId: null,
+        detectiveVerdict: null,
+        votesByPlayerId: {},
+        dawnReport: null,
+        voteReport: null,
+        winner: null,
+      };
+
+      const { data: created, error } = await client
+        .from('rooms')
+        .insert({
+          code,
+          game_type: 'cidade-dorme',
+          host_id: userId,
+          status: 'lobby',
+          phase: 'lobby',
+          current_round: 1,
+          narrator_caption: storedPayload.narratorCaption,
+          config: storedPayload,
+        })
+        .select('id')
+        .single();
+
+      if (error || !created) {
+        throw new DataSourceError(
+          'Não foi possível criar a sala de Cidade Dorme no Supabase.'
+        );
+      }
+
+      const roomId = (created as { id: string }).id;
+      this.activeRoomId = roomId;
+      return await this.getCidadeDormeRoom(roomId);
+    } catch (err: unknown) {
+      return this.wrapError(
+        err,
+        'Não foi possível criar sala de Cidade Dorme no Supabase.'
+      );
+    }
+  }
+
+  async joinCidadeDormeRoom(
+    code: string,
+    nickname: string
+  ): Promise<CidadeDormeRoom> {
+    this.ensureCredentials();
+    if (this.delegateService) {
+      try {
+        return await this.delegateService.joinCidadeDormeRoom(code, nickname);
+      } catch (err: unknown) {
+        return this.wrapError(
+          err,
+          'Não foi possível entrar na sala de Cidade Dorme.'
+        );
+      }
+    }
+
+    try {
+      const client = this.getClient();
+      const userId = await this.ensureAuthenticatedUserId();
+      const normalizedCode = code.trim().toUpperCase();
+
+      const { data: roomData, error } = await client
+        .from('rooms')
+        .select(
+          'id, code, host_id, phase, current_round, narrator_caption, config'
+        )
+        .eq('code', normalizedCode)
+        .eq('game_type', 'cidade-dorme')
+        .single();
+
+      if (error || !roomData) {
+        throw new DataSourceError(
+          'Código de sala do Cidade Dorme não encontrado.'
+        );
+      }
+
+      const currentRoom = this.mapRowToCidadeDormeRoom(
+        roomData as {
+          id: string;
+          code: string;
+          host_id: string;
+          phase: string;
+          current_round: number;
+          narrator_caption?: string | null;
+          config: Record<string, unknown> | null;
+        }
+      );
+
+      const exists = currentRoom.players.some(
+        (p) =>
+          p.id === userId ||
+          p.nickname.toLowerCase() === nickname.trim().toLowerCase()
+      );
+      const nextPlayers = exists
+        ? currentRoom.players
+        : [
+            ...currentRoom.players,
+            {
+              id: userId,
+              nickname: nickname.trim(),
+              isHost: currentRoom.hostId === userId,
+              isAlive: true,
+              isReady: false,
+              role: 'cidadao' as const,
+              hasVoted: false,
+            },
+          ];
+
+      return await this.saveCidadeDormeRoom({
+        ...currentRoom,
+        players: nextPlayers,
+      });
+    } catch (err: unknown) {
+      return this.wrapError(
+        err,
+        'Não foi possível entrar na sala de Cidade Dorme.'
+      );
+    }
+  }
+
+  async updateCidadeDormeConfig(
+    roomId: string,
+    partialConfig: Partial<CidadeDormeConfig>
+  ): Promise<CidadeDormeRoom> {
+    this.ensureCredentials();
+    if (this.delegateService) {
+      return this.delegateService.updateCidadeDormeConfig(roomId, partialConfig);
+    }
+
+    const current = await this.getCidadeDormeRoom(roomId);
+    return this.saveCidadeDormeRoom({
+      ...current,
+      config: {
+        ...current.config,
+        ...partialConfig,
+      },
+    });
+  }
+
+  async saveCidadeDormeRoom(room: CidadeDormeRoom): Promise<CidadeDormeRoom> {
+    this.ensureCredentials();
+    if (this.delegateService) {
+      return this.delegateService.saveCidadeDormeRoom(room);
+    }
+
+    try {
+      const client = this.getClient();
+      const storedPayload = {
+        config: room.config,
+        players: room.players,
+        narratorCaption: room.narratorCaption,
+        nightTargetId: room.nightTargetId,
+        nightProtectedId: room.nightProtectedId,
+        detectiveVerdict: room.detectiveVerdict,
+        votesByPlayerId: room.votesByPlayerId,
+        dawnReport: room.dawnReport,
+        voteReport: room.voteReport,
+        winner: room.winner,
+      };
+
+      const { error } = await client
+        .from('rooms')
+        .update({
+          phase: room.phase,
+          status: room.phase === 'finished' ? 'finished' : 'playing',
+          current_round: room.currentRound,
+          narrator_caption: room.narratorCaption,
+          config: storedPayload,
+        })
+        .eq('id', room.id);
+
+      if (error) {
+        throw new DataSourceError(
+          'Falha ao salvar o estado da sala de Cidade Dorme.'
+        );
+      }
+      this.activeRoomId = room.id;
+      return await this.getCidadeDormeRoom(room.id);
+    } catch (err: unknown) {
+      return this.wrapError(
+        err,
+        'Falha ao salvar o estado da sala de Cidade Dorme.'
+      );
+    }
+  }
+
+  subscribeToCidadeDormeRoom(
+    roomId: string,
+    onRoomUpdated: (room: CidadeDormeRoom) => void
+  ): () => void {
+    this.ensureCredentials();
+    if (this.delegateService) {
+      return this.delegateService.subscribeToCidadeDormeRoom(
+        roomId,
+        onRoomUpdated
+      );
+    }
+
+    const client = this.getClient();
+    const refresh = () => {
+      void this.getCidadeDormeRoom(roomId)
+        .then((snapshot) => onRoomUpdated(snapshot))
+        .catch(() => {
+          // Ignora falhas transitórias de rede em background.
+        });
+    };
+
+    const channel = client
+      .channel(`cidade-dorme-room-${roomId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'rooms',
+          filter: `id=eq.${roomId}`,
+        },
+        refresh
+      )
+      .subscribe();
+
+    return () => {
+      void client.removeChannel(channel);
+    };
   }
 }
