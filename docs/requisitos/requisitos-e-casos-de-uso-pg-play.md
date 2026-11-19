@@ -4,7 +4,7 @@
 **Disciplinas:** Interação Humano-Computador (IHC) e Programação para Dispositivos Móveis (PDM)  
 **Instituição:** IFPI Campus Piripiri  
 **Equipe:** Héber Bringel, Douglas Leone, Mikaelle Barroso e Roger Pierre  
-**Versão do Documento:** 1.1.0  
+**Versão do Documento:** 1.2.0 (novas dinâmicas UC09–UC11, RF32–RF40, RNF12; busca no Hub adiada)  
 
 ---
 
@@ -13,6 +13,8 @@
 Este documento formaliza os **Requisitos Funcionais (RF)**, os **Requisitos Não Funcionais (RNF)** e os **Casos de Uso (UC)** do aplicativo móvel **PG PLAY**, alinhados com a arquitetura de componentes (`src/`), o sistema de design **PG Play Expressive** (`design-system/`) e as especificações dos jogos (`docs/jogos/`).
 
 O **PG PLAY** é um aplicativo voltado para dinâmicas presenciais em Pequenos Grupos (PGs) de jovens e adultos, oferecendo tanto jogos rápidos em **1 celular compartilhado** (**Mímica Expressiva**, **Quiz Relâmpago** e **Jogo da Forca**) quanto jogos em **Sala Multiplayer** cada participante no próprio aparelho ([**Cidade Dorme**](../jogos/cidade-dorme.md) e [**Adedonha Bíblica**](../jogos/adedonha-biblica.md)).
+
+A versão 1.2.0 acrescenta duas novas dinâmicas em 1 celular, [**Quem Sou Eu?**](../jogos/quem-sou-eu.md) e [**Complete o Versículo**](../jogos/complete-o-versiculo.md), e o [**Termômetro de Pedidos**](../jogos/termometro-de-pedidos.md), um momento de pedidos de oração com tempo de fala por pessoa, sem pontuação, usado para fechar o encontro.
 
 ---
 
@@ -23,6 +25,7 @@ O **PG PLAY** é um aplicativo voltado para dinâmicas presenciais em Pequenos G
 | **Líder / Moderador (Anfitrião)** | Participante responsável por conduzir o momento de dinâmica no encontro: configura equipes ou cria a Sala Multiplayer, define parâmetros da partida (voz do narrador no *Cidade Dorme*, colunas bíblicas na *Adedonha Bíblica*), valida dúvidas de apuração e gerencia o placar geral — podendo também jogar ativamente nas modalidades multiplayer. |
 | **Jogador / Equipe da Vez** | Participante individual (no modo Sala Multiplayer) ou representante de equipe (no modo 1 Celular) que interage diretamente com a arena do jogo sob contagem regressiva, turnos noturnos/diurnos ou controle de tentativas. |
 | **Narrador do App (Sistema)** | Agente automatizado de áudio (com opção de voz masculina ou feminina clonada dos líderes) que conduz as fases de *A Noite* e *O Dia* no jogo [**Cidade Dorme**](../jogos/cidade-dorme.md) para que todos os humanos possam jogar. |
+| **Participante do Momento de Pedidos** | Pessoa do encontro que, no [**Termômetro de Pedidos**](../jogos/termometro-de-pedidos.md), recebe sua vez de falar, pode compartilhar um pedido de oração dentro do tempo ou pular a vez. |
 
 ---
 
@@ -92,6 +95,20 @@ O **PG PLAY** é um aplicativo voltado para dinâmicas presenciais em Pequenos G
 | **RF22** | Validar letra inicial e acionar "ADEDONHA!" | O sistema deve validar em tempo real se as respostas digitadas por cada jogador começam com a letra sorteada e habilitar o botão Jumbo *"ADEDONHA!"* assim que o jogador preencher todas as colunas, disparando a contagem final de encerramento para toda a sala. | Alta | [`docs/jogos/adedonha-biblica.md`](../jogos/adedonha-biblica.md) |
 | **RF23** | Apurar respostas pelo Moderador com botão "Levantar Dúvida ✋" | Na apuração da *Adedonha Bíblica*, o sistema deve pré-classificar respostas únicas (`+10 pts`), repetidas (`+5 pts`) e vazias/inválidas (`0 pts`), permitindo aos jogadores acionar *"Levantar Dúvida ✋"* e ao Moderador validar, unificar repetidas ou invalidar respostas coluna por coluna. | Alta | [`docs/jogos/adedonha-biblica.md`](../jogos/adedonha-biblica.md) |
 
+### 3.7. Novas Dinâmicas em 1 Celular: Quem Sou Eu?, Complete o Versículo e Termômetro de Pedidos
+
+| Código | Requisito | Descrição Detalhada | Prioridade | Origem no Projeto |
+| :--- | :--- | :--- | :---: | :--- |
+| **RF32** | Exibir carta no modo testa em Quem Sou Eu? | No *Quem Sou Eu?*, após a passagem de turno e uma contagem de `3` segundos, o sistema deve exibir uma carta de conteúdo **genérico por tema** (ex.: famosos, animais, filmes, profissões; **não bíblico**) em tipografia *Display* de alto impacto, legível pela equipe enquanto o representante segura o celular na testa. | Média | [`docs/jogos/quem-sou-eu.md`](../jogos/quem-sou-eu.md) |
+| **RF33** | Registrar acerto ou passe por inclinação ou botão | O sistema deve registrar **acerto** quando o celular for inclinado para baixo e **passe** quando for inclinado para cima, ignorando novos gestos por `1 s` após cada registro, e oferecer botões Jumbo equivalentes, com opção de desativar o gesto. | Média | [`docs/jogos/quem-sou-eu.md`](../jogos/quem-sou-eu.md) |
+| **RF34** | Pontuar e resumir o turno no Quem Sou Eu? | O sistema deve somar `+10 pts` por acerto, não descontar pontos no passe e, ao zerar o cronômetro, exibir o resumo do turno com as cartas acertadas e passadas. | Média | [`docs/jogos/quem-sou-eu.md`](../jogos/quem-sou-eu.md) |
+| **RF35** | Exibir passagem bíblica com lacunas | No *Complete o Versículo*, o sistema deve exibir uma passagem famosa com `1` a `2` lacunas numeradas em palavras-chave, mantendo a referência oculta, e oferecer um campo de resposta por lacuna e o botão *"Ver Dica"* (primeira letra e número de letras). | Média | [`docs/jogos/complete-o-versiculo.md`](../jogos/complete-o-versiculo.md) |
+| **RF36** | Conferir respostas e revelar a referência | Ao tocar em *"Conferir"* ou ao fim do tempo, o sistema deve validar cada lacuna sem diferenciar maiúsculas e ignorando acentos, revelar as palavras corretas, o versículo completo, a referência e a tradução, e permitir ao Líder *"Aceitar mesmo assim"* uma resposta equivalente. | Média | [`docs/jogos/complete-o-versiculo.md`](../jogos/complete-o-versiculo.md) |
+| **RF37** | Pontuar lacunas no Complete o Versículo | O sistema deve somar `+10 pts` por lacuna correta, `+5 pts` quando a dica tiver sido usada e `0 pts` para lacuna errada ou vazia. | Média | [`docs/jogos/complete-o-versiculo.md`](../jogos/complete-o-versiculo.md) |
+| **RF38** | Configurar o momento de pedidos | No *Termômetro de Pedidos*, o sistema deve permitir ao Líder definir os participantes (equipes, nomes digitados ou modo livre sem nomes), o tempo de fala por pessoa (`1`, `2` ou `3 min`) e a ordem (lista ou sorteio). | Média | [`docs/jogos/termometro-de-pedidos.md`](../jogos/termometro-de-pedidos.md) |
+| **RF39** | Conduzir a vez de fala com o termômetro | O sistema deve mostrar de quem é a vez e um termômetro que enche com o tempo de fala, iniciado apenas quando a pessoa tocar em *"Começar a falar"*, sinalizando o fim do tempo **sem interromper a fala**, e oferecer *"Próximo"*, *"Pular minha vez"* e *"Pausar"*. | Média | [`docs/jogos/termometro-de-pedidos.md`](../jogos/termometro-de-pedidos.md) |
+| **RF40** | Encerrar o momento sem pontuação | Ao fim da roda, o sistema deve exibir um resumo apenas com números (quantos falaram e quantos pularam, sem nomes), oferecer a tela *"Momento de Oração"* sem cronômetro e encerrar voltando ao Hub, **sem alterar o placar** do encontro. | Média | [`docs/jogos/termometro-de-pedidos.md`](../jogos/termometro-de-pedidos.md) |
+
 ---
 
 ## 4. Requisitos Não Funcionais (RNF)
@@ -109,6 +126,7 @@ O **PG PLAY** é um aplicativo voltado para dinâmicas presenciais em Pequenos G
 | **RNF09** | Acessibilidade Visual e Vestibular | Escala dinâmica de fonte e redução de movimento | Textos devem suportar `allowFontScaling` até `200%` (com `maxFontSizeMultiplier={1.5}` em botões/cronômetro) e respeitar `prefers-reduced-motion`, desativando pulsações e giros longos da roleta quando ativo. | `06-acessibilidade.md`, [`adedonha-biblica.md`](../jogos/adedonha-biblica.md) |
 | **RNF10** | Manutenibilidade | Arquitetura estrita baseada em Design Tokens | Nenhum componente ou tela pode conter valores hexadecimais, tamanhos ou raios literais (*magic numbers*) no `StyleSheet`; 100% das propriedades visuais devem referenciar `src/theme/tokens.ts`. | `design-system/README.md`, `07-teste-com-ia.md` |
 | **RNF11** | Segurança e Anti-Trapaça (Multiplayer) | Isolamento de estado secreto e cadência da noite | No *Cidade Dorme*, cada aparelho deve receber apenas seu próprio papel secreto (e veredito do Detetive), e os turnos noturnos devem respeitar janela mínima de tempo para impedir dedução pela velocidade do toque. O Anfitrião configura a sala apenas no Lobby; depois da distribuição dos papéis, ele é um jogador como os demais e não pode ver papéis, ações noturnas ou o veredito do Detetive de outros jogadores. | [`docs/jogos/cidade-dorme.md`](../jogos/cidade-dorme.md) |
+| **RNF12** | Privacidade | Dinâmicas pessoais sem registro de conteúdo | O *Termômetro de Pedidos* não deve gravar áudio, registrar o texto dos pedidos nem enviar dados para a rede; a lista de nomes existe apenas em memória durante o momento e é descartada ao encerrar. | [`docs/jogos/termometro-de-pedidos.md`](../jogos/termometro-de-pedidos.md) |
 
 ---
 
@@ -128,6 +146,7 @@ Fluxo de relacionamento entre os atores e os casos de uso do **PG PLAY**:
 |         |---> (UC06: Consultar e Gerenciar Placar do PG)                          |
 |         |---> (UC07: Jogar Partida de Cidade Dorme) <----- [Narrador por Áudio]   |
 |         |---> (UC08: Configurar e Apurar Adedonha Bíblica)                        |
+|         |---> (UC11: Conduzir Termômetro de Pedidos) <--- [Participante]          |
 |                                                                                   |
 |  [Jogador / Equipe da Vez]                                                        |
 |         |---> (UC03: Jogar Rodada de Mímica Expressiva)                           |
@@ -135,6 +154,8 @@ Fluxo de relacionamento entre os atores e os casos de uso do **PG PLAY**:
 |         |---> (UC05: Jogar Rodada do Jogo da Forca)                               |
 |         |---> (UC07: Jogar Partida de Cidade Dorme)                               |
 |         |---> (UC08: Jogar Rodada de Adedonha Bíblica)                            |
+|         |---> (UC09: Jogar Rodada de Quem Sou Eu?)                                |
+|         |---> (UC10: Jogar Rodada de Complete o Versículo)                        |
 +-----------------------------------------------------------------------------------+
 ```
 
@@ -267,6 +288,66 @@ Fluxo de relacionamento entre os atores e os casos de uso do **PG PLAY**:
 
 ---
 
+#### UC09 — Jogar Rodada de Quem Sou Eu?
+* **Ator Principal:** Jogador / Equipe da Vez
+* **Referência Detalhada:** [`docs/jogos/quem-sou-eu.md`](../jogos/quem-sou-eu.md)
+* **Objetivo:** Fazer o representante adivinhar o maior número de cartas temáticas (conteúdo genérico, não bíblico) a partir das dicas da equipe, com o celular na testa, antes que o cronômetro zere.
+* **Pré-condições:** Ao menos `2` equipes cadastradas (UC01); jogo escolhido no Hub (UC02); pacotes temáticos de cartas e parâmetros definidos (**RF28**, **RF29**).
+* **Fluxo Principal:**
+    1. O sistema exibe a tela de passagem de turno com a equipe da vez e o botão *"Estou Pronto!"* (**RF09**, **RF24**).
+    2. O representante toca em *"Estou Pronto!"*, posiciona o celular na testa durante a contagem de `3` segundos e o sistema exibe a primeira carta e o *Cronômetro Expressivo* (**RF10**, **RF32**).
+    3. A equipe dá dicas sem dizer o nome; ao adivinhar, o representante inclina o celular para baixo e o sistema registra o acerto (`+10 pts`) e mostra a próxima carta (**RF33**, **RF34**).
+    4. Ao zerar o cronômetro, o sistema exibe o resumo do turno e passa a vez à próxima equipe (volta ao passo 1) (**RF34**).
+    5. Concluídas as rodadas configuradas, o sistema exibe o resumo da partida e envia os pontos ao placar (**RF31**).
+* **Fluxos Alternativos:**
+    * **FA01 — Passar a carta:** o representante inclina o celular para cima ou toca em *"Passar"*; o sistema mostra a próxima carta sem pontuar (**RF33**).
+    * **FA02 — Gesto desativado:** com o gesto desligado nos parâmetros, acerto e passe são feitos apenas pelos botões Jumbo (**RF33**).
+    * **FA03 — Banco esgotado:** o sistema exibe o card de conclusão com *"Ir para o Placar Final"* (**RF12**, **RF30**).
+    * **FA04 — Sair da partida:** o Líder toca em *"Sair"* e confirma (**RF11**).
+* **Pós-condições:** Pontos das equipes atualizados no placar acumulado do PG.
+
+---
+
+#### UC10 — Jogar Rodada de Complete o Versículo
+* **Ator Principal:** Jogador / Equipe da Vez
+* **Referência Detalhada:** [`docs/jogos/complete-o-versiculo.md`](../jogos/complete-o-versiculo.md)
+* **Objetivo:** Completar as lacunas de passagens bíblicas famosas dentro do tempo e conhecer a referência de cada uma.
+* **Pré-condições:** Ao menos `2` equipes cadastradas (UC01); jogo escolhido no Hub (UC02); pacotes de passagens e parâmetros definidos (**RF28**, **RF29**).
+* **Fluxo Principal:**
+    1. O sistema exibe a tela de passagem de turno com a equipe da vez, *"Passagem N de M"* e o botão *"Estou Pronto!"* (**RF09**, **RF24**).
+    2. Após o toque, o sistema exibe a passagem com as lacunas numeradas, um campo de resposta por lacuna e o *Cronômetro Expressivo* (**RF10**, **RF35**).
+    3. A equipe digita as respostas e toca em *"Conferir"*; o sistema valida cada lacuna ignorando acentos e maiúsculas, revela as palavras corretas, o versículo completo, a referência e a tradução (**RF36**), e soma os pontos (**RF37**).
+    4. O jogador toca em *"Próxima Passagem"*, passando a vez à equipe seguinte (volta ao passo 1).
+    5. Concluídas as passagens configuradas, o sistema exibe o resumo da partida e envia os pontos ao placar (**RF31**).
+* **Fluxos Alternativos:**
+    * **FA01 — Usar dica:** a equipe toca em *"Ver Dica"*; o sistema mostra a primeira letra e o número de letras de cada lacuna, e cada lacuna correta passa a valer `+5 pts` (**RF35**, **RF37**).
+    * **FA02 — Tempo esgotado:** o cronômetro chega a `00:00`; o sistema confere as respostas como estão e revela as corretas (**RF36**).
+    * **FA03 — Resposta equivalente:** o Líder toca em *"Aceitar mesmo assim"* numa lacuna marcada como errada (sinônimo ou outra tradução) e ela passa a contar como correta (**RF36**).
+    * **FA04 — Banco esgotado:** o sistema exibe o card de conclusão com *"Ir para o Placar Final"* (**RF12**, **RF30**).
+    * **FA05 — Sair da partida:** o Líder toca em *"Sair"* e confirma (**RF11**).
+* **Pós-condições:** Pontos das equipes atualizados no placar acumulado do PG.
+
+---
+
+#### UC11 — Conduzir Termômetro de Pedidos
+* **Atores:** Líder / Moderador do PG e Participantes do Momento de Pedidos
+* **Referência Detalhada:** [`docs/jogos/termometro-de-pedidos.md`](../jogos/termometro-de-pedidos.md)
+* **Objetivo:** Fechar o encontro com um momento de pedidos de oração organizado, em que cada pessoa tem um tempo de fala, sem pontuação e sem registro do que foi compartilhado.
+* **Pré-condições:** Dinâmica escolhida no Hub (UC02).
+* **Fluxo Principal:**
+    1. O Líder define os participantes, o tempo de fala por pessoa e a ordem, e toca em *"Começar"* (**RF38**).
+    2. O sistema mostra a vez da pessoa e o termômetro vazio; a pessoa toca em *"Começar a falar"* e o termômetro passa a encher (**RF39**).
+    3. Ao fim do tempo, o sistema sinaliza *"Tempo concluído"* sem interromper; a pessoa conclui e toca em *"Próximo"* (**RF39**).
+    4. Os passos 2 e 3 se repetem até todos terem tido sua vez.
+    5. O sistema mostra o resumo apenas com números, oferece o *"Momento de Oração"* e, em *"Encerrar Encontro"*, descarta a lista de nomes e volta ao Hub (**RF40**, **RNF12**).
+* **Fluxos Alternativos:**
+    * **FA01 — Pular a vez:** a pessoa toca em *"Pular minha vez"* e a vez passa à próxima, contando apenas no resumo anônimo (**RF39**).
+    * **FA02 — Pausar:** o Líder toca em *"Pausar"* para o grupo orar ou comentar no meio da roda; o termômetro para até *"Continuar"* (**RF39**).
+    * **FA03 — Modo livre:** sem nomes cadastrados, a tela mostra *"Próxima pessoa"* a cada vez (**RF38**).
+* **Pós-condições:** Placar do encontro inalterado e nenhum dado do momento armazenado ou enviado.
+
+---
+
 ## 6. Matriz de Rastreabilidade (Requisitos × Componentes × Casos de Uso)
 
 | Caso de Uso | Requisitos Funcionais Associados | Requisitos Não Funcionais Críticos | Componentes React Native Envolvidos (`src/components/`) |
@@ -279,3 +360,6 @@ Fluxo de relacionamento entre os atores e os casos de uso do **PG PLAY**:
 | **UC06 — Consultar e Gerenciar Placar** | RF16, RF17 | RNF04, RNF05, RNF07, RNF08, RNF10 | `GameCard`, `ExpressiveButton` |
 | **UC07 — Jogar Cidade Dorme** | RF18, RF19, RF20 | RNF03, RNF05, RNF06, RNF08, RNF11 | `GameCard`, `ExpressiveButton`, `ExpressiveTimer`, `QuizOption` |
 | **UC08 — Jogar Adedonha Bíblica** | RF21, RF22, RF23 | RNF03, RNF06, RNF07, RNF09, RNF10 | `LetterKey` / `AlphabetRoulette`, `ExpressiveTextField`, `ExpressiveTimer`, `ExpressiveButton`, `GameCard` |
+| **UC09 — Jogar Quem Sou Eu?** | RF09, RF10, RF11, RF12, RF24, RF28, RF29, RF30, RF31, RF32, RF33, RF34 | RNF02, RNF04, RNF06, RNF07, RNF09 | `GameCard`, `ExpressiveTimer`, `ExpressiveButton`, `ExpressiveChip` |
+| **UC10 — Jogar Complete o Versículo** | RF09, RF10, RF11, RF12, RF24, RF28, RF29, RF30, RF31, RF35, RF36, RF37 | RNF04, RNF06, RNF07, RNF08, RNF09 | `GameCard`, `ExpressiveTextField`, `ExpressiveTimer`, `ExpressiveButton`, `ExpressiveChip` |
+| **UC11 — Conduzir Termômetro de Pedidos** | RF38, RF39, RF40 | RNF03, RNF06, RNF07, RNF08, RNF09, RNF12 | `GameCard`, `ExpressiveTimer` (variante termômetro), `ExpressiveButton`, `ExpressiveChip`, `ExpressiveTextField` |
