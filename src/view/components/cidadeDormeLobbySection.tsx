@@ -238,6 +238,32 @@ export const CidadeDormeLobbySection = ({
               Parâmetros da Partida
             </Text>
 
+            {!isCurrentPlayerHost && (
+              <View
+                style={styles.guestNoticeBanner}
+                accessibilityRole="text"
+                accessibilityLabel="Somente o moderador altera os parâmetros da sala."
+              >
+                <MaterialCommunityIcons
+                  name="information-outline"
+                  size={tokens.semantic.icon.md}
+                  color={tokens.semantic.color.onActionContainer}
+                />
+                <View style={styles.guestNoticeContent}>
+                  <Text allowFontScaling style={styles.guestNoticeTitle}>
+                    Somente o moderador altera os parâmetros da sala.
+                  </Text>
+                  <Text allowFontScaling style={styles.guestNoticeSummary}>
+                    {`Configuração atual: ${room.config.assassinCount} Assassino(s) · Debate ${room.config.dayDebateSeconds}s · Noite ${room.config.nightTurnSeconds}s · ${
+                      room.config.revealRoleOnDeath
+                        ? 'Revela papel ao eliminar'
+                        : 'Papel oculto ao eliminar (Modo Difícil)'
+                    }`}
+                  </Text>
+                </View>
+              </View>
+            )}
+
             <Text allowFontScaling style={styles.sectionSubtitle}>
               Quantidade de Assassinos infiltrados
             </Text>
@@ -445,6 +471,31 @@ const styles = StyleSheet.create({
     fontFamily: tokens.semantic.font.body.family,
     fontSize: tokens.semantic.font.body.size,
     lineHeight: tokens.semantic.font.body.lineHeight,
+    color: tokens.semantic.color.onActionContainer,
+  },
+  guestNoticeBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: tokens.semantic.space.sm,
+    padding: tokens.semantic.space.md,
+    borderRadius: tokens.semantic.radius.lg,
+    backgroundColor: tokens.semantic.color.actionContainer,
+  },
+  guestNoticeContent: {
+    flex: 1,
+    gap: tokens.semantic.space.xs,
+  },
+  guestNoticeTitle: {
+    fontFamily: tokens.semantic.font.label.family,
+    fontSize: tokens.semantic.font.label.size,
+    lineHeight: tokens.semantic.font.label.lineHeight,
+    fontWeight: tokens.semantic.font.label.weight,
+    color: tokens.semantic.color.onActionContainer,
+  },
+  guestNoticeSummary: {
+    fontFamily: tokens.semantic.font.caption.family,
+    fontSize: tokens.semantic.font.caption.size,
+    lineHeight: tokens.semantic.font.caption.lineHeight,
     color: tokens.semantic.color.onActionContainer,
   },
 });

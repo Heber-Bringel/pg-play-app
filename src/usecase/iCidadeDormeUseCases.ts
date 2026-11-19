@@ -1,5 +1,6 @@
 import type {
   CidadeDormeConfig,
+  CidadeDormePhase,
   CidadeDormeRole,
   CidadeDormeRoom,
   CidadeDormeVoiceProfile,
@@ -40,18 +41,25 @@ export interface ICidadeDormeUseCases {
   ): Promise<CidadeDormeRoom>;
   submitAssassinTarget(
     roomId: string,
+    actorPlayerId: string,
     targetPlayerId: string
   ): Promise<CidadeDormeRoom>;
   submitAngelProtection(
     roomId: string,
+    actorPlayerId: string,
     protectedPlayerId: string | null
   ): Promise<CidadeDormeRoom>;
   submitDetectiveInvestigation(
     roomId: string,
+    actorPlayerId: string,
     suspectPlayerId: string | null
   ): Promise<CidadeDormeRoom>;
   advanceToDawn(roomId: string): Promise<CidadeDormeRoom>;
-  autoAdvanceNightTurn(roomId: string): Promise<CidadeDormeRoom>;
+  autoAdvanceNightTurn(
+    roomId: string,
+    expectedPhase?: CidadeDormePhase,
+    expectedRound?: number
+  ): Promise<CidadeDormeRoom>;
   startVotingPhase(roomId: string): Promise<CidadeDormeRoom>;
   castVote(
     roomId: string,

@@ -9,10 +9,8 @@ import type {
 import { ExpressiveButton } from '@/view/components/expressiveButton';
 import { ExpressiveTimer } from '@/view/components/expressiveTimer';
 import { GameCard } from '@/view/components/gameCard';
-import { QuizOption } from '@/view/components/quizOption';
+import { SelectableOptionItem } from '@/view/components/selectableOptionItem';
 import { tokens } from '@/view/theme';
-
-const OPTION_KEYS: Array<'A' | 'B' | 'C' | 'D'> = ['A', 'B', 'C', 'D'];
 
 const ROLE_LABELS: Record<CidadeDormeRole, string> = {
   cidadao: 'Cidadão',
@@ -51,9 +49,16 @@ export const CidadeDormeDaySection = ({
   onExitArena,
 }: CidadeDormeDaySectionProps) => {
   const alivePlayers = room.players.filter((p) => p.isAlive);
+  const votingCandidates = alivePlayers.filter(
+    (player) => !currentPlayer || player.id !== currentPlayer.id
+  );
   const isAlive = Boolean(currentPlayer?.isAlive);
   const hasVoted = Boolean(currentPlayer?.hasVoted);
-  const totalVotesCast = Object.keys(room.votesByPlayerId).length;
+  const votedPlayersCount = room.players.filter((p) => p.hasVoted).length;
+  const totalVotesCast = Math.max(
+    votedPlayersCount,
+    Object.keys(room.votesByPlayerId).length
+  );
 
   const dawnTitle = room.dawnReport?.savedByAngel
     ? 'Boletim do Amanhecer · O Anjo Salvou a Vítima!'
@@ -120,7 +125,7 @@ export const CidadeDormeDaySection = ({
             title={dawnTitle}
             description={dawnDescription}
             playersTag={`${alivePlayers.length} vivos · Debate Presencial`}
-            icon="weather-night"
+            icon="weather-sunny"
           />
 
           <View style={styles.cardBox}>
@@ -162,7 +167,7 @@ export const CidadeDormeDaySection = ({
             title="Fase 3 · Votação Secreta da Cidade"
             description="Vote em quem você acredita ser o Assassino ou escolha Abster-se / Pular Voto."
             playersTag={`Votos registrados: ${totalVotesCast}/${alivePlayers.length}`}
-            icon="weather-night"
+            icon="vote-outline"
           />
 
           {isAlive ? (
@@ -172,26 +177,21 @@ export const CidadeDormeDaySection = ({
               </Text>
 
               <View style={styles.optionsList}>
-                {alivePlayers.map((player, index) => (
-                  <QuizOption
+                {votingCandidates.map((player, index) => (
+                  <SelectableOptionItem
                     key={player.id}
-                    letter={OPTION_KEYS[index % OPTION_KEYS.length]}
-                    text={player.nickname}
-                    status={
-                      selectedVoteTargetId === player.id
-                        ? 'selected'
-                        : 'default'
-                    }
+                    index={index + 1}
+                    label={player.nickname}
+                    selected={selectedVoteTargetId === player.id}
                     onPress={() => onSelectVoteTarget(player.id)}
                   />
                 ))}
 
-                <QuizOption
-                  letter="D"
-                  text="Abster-se / Pular Voto"
-                  status={
-                    selectedVoteTargetId === 'skip' ? 'selected' : 'default'
-                  }
+                <SelectableOptionItem
+                  icon="hand-back-left-outline"
+                  label="Abster-se / Pular Voto"
+                  accessibilityLabel="Abster-se / Pular Voto"
+                  selected={selectedVoteTargetId === 'skip'}
                   onPress={() => onSelectVoteTarget('skip')}
                 />
               </View>
@@ -372,7 +372,7 @@ export const CidadeDormeDaySection = ({
                       ]}
                     >
                       <Text allowFontScaling style={styles.rolePillText}>
-                        {ROLE_LABELS[player.role]}
+                        {player.role ? ROLE_LABELS[player.role] : 'Cidadão'}
                       </Text>
                     </View>
                   </View>

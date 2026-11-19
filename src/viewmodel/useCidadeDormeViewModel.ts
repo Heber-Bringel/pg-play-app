@@ -6,15 +6,18 @@ import {
 } from '@/di/container';
 import type {
   CidadeDormeConfig,
+  CidadeDormePhase,
   CidadeDormePlayer,
   CidadeDormeRole,
   CidadeDormeRoom,
 } from '@/model/entities/multiplayerSession';
-import { DomainError } from '@/model/errors';
+import { DataSourceError, DomainError } from '@/model/errors';
 import type {
   CidadeDormeRoleMetadata,
   ICidadeDormeUseCases,
 } from '@/usecase/iCidadeDormeUseCases';
+
+const CONNECTION_TIMEOUT_MS = 10_000;
 
 export type CidadeDormeState = {
   room: CidadeDormeRoom | null;
@@ -25,6 +28,7 @@ export type CidadeDormeState = {
   isRealtimeEnabled: boolean;
   isNightPhase: boolean;
   isRoleVisible: boolean;
+  hasSubmittedNightAction: boolean;
   selectedNightTargetId: string | null;
   selectedVoteTargetId: string | null;
   secondsRemaining: number;
@@ -52,7 +56,10 @@ export type CidadeDormeActions = {
     suspectPlayerId?: string | null
   ) => Promise<void>;
   handleAdvanceToDawn: () => Promise<void>;
-  handleAutoAdvanceNightTurn: () => Promise<void>;
+  handleAutoAdvanceNightTurn: (
+    expectedPhase?: CidadeDormePhase,
+    expectedRound?: number
+  ) => Promise<void>;
   handleStartVotingPhase: () => Promise<void>;
   handleSelectVoteTarget: (targetIdOrSkip: string) => void;
   handleCastVote: (targetIdOrSkip?: string) => Promise<void>;
@@ -83,6 +90,16 @@ function getPhaseDurationSeconds(room: CidadeDormeRoom): number {
   return room.config.nightTurnSeconds;
 }
 
+function computeSecondsRemaining(room: CidadeDormeRoom): number {
+  if (room.phaseEndsAt) {
+    const endsAtMs = Date.parse(room.phaseEndsAt);
+    if (!Number.isNaN(endsAtMs)) {
+      return Math.max(0, Math.ceil((endsAtMs - Date.now()) / 1000));
+    }
+  }
+  return getPhaseDurationSeconds(room);
+}
+
 export function useCidadeDormeViewModel(
   useCase: ICidadeDormeUseCases = cidadeDormeUseCases
 ): [CidadeDormeState, CidadeDormeActions] {
@@ -91,6 +108,8 @@ export function useCidadeDormeViewModel(
   const [room, setRoom] = useState<CidadeDormeRoom | null>(null);
   const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
   const [isRoleVisible, setIsRoleVisible] = useState<boolean>(false);
+  const [hasSubmittedNightAction, setHasSubmittedNightAction] =
+    useState<boolean>(false);
   const [selectedNightTargetId, setSelectedNightTargetId] = useState<
     string | null
   >(null);
@@ -104,18 +123,67 @@ export function useCidadeDormeViewModel(
 
   const lastPhaseKeyRef = useRef<string | null>(null);
   const lastSpokenKeyRef = useRef<string | null>(null);
+  const autoAdvancedPhaseKeyRef = useRef<string | null>(null);
+  const activeTimeoutsRef = useRef<Set<ReturnType<typeof setTimeout>>>(
+    new Set()
+  );
+  const isMountedRef = useRef<boolean>(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    const timeouts = activeTimeoutsRef.current;
+    return () => {
+      isMountedRef.current = false;
+      timeouts.forEach((id) => clearTimeout(id));
+      timeouts.clear();
+    };
+  }, []);
+
+  const runWithConnectionTimeout = useCallback(
+    <T,>(operation: Promise<T>): Promise<T> => {
+      return new Promise<T>((resolve, reject) => {
+        const timeoutId = setTimeout(() => {
+          activeTimeoutsRef.current.delete(timeoutId);
+          reject(
+            new DataSourceError(
+              'Tempo limite de conexão excedido (10s). Verifique sua rede e tente novamente.'
+            )
+          );
+        }, CONNECTION_TIMEOUT_MS);
+        activeTimeoutsRef.current.add(timeoutId);
+
+        operation.then(
+          (result) => {
+            clearTimeout(timeoutId);
+            activeTimeoutsRef.current.delete(timeoutId);
+            resolve(result);
+          },
+          (err: unknown) => {
+            clearTimeout(timeoutId);
+            activeTimeoutsRef.current.delete(timeoutId);
+            reject(err);
+          }
+        );
+      });
+    },
+    []
+  );
 
   const syncPhaseTimerAndSelection = useCallback(
     (nextRoom: CidadeDormeRoom) => {
-      const phaseKey = `${nextRoom.currentRound}:${nextRoom.phase}`;
+      const phaseKey = `${nextRoom.id}:${nextRoom.currentRound}:${nextRoom.phase}`;
       if (lastPhaseKeyRef.current !== phaseKey) {
         lastPhaseKeyRef.current = phaseKey;
+        autoAdvancedPhaseKeyRef.current = null;
         setSelectedNightTargetId(null);
         setSelectedVoteTargetId(null);
-        setSecondsRemaining(getPhaseDurationSeconds(nextRoom));
+        setHasSubmittedNightAction(false);
+        setSecondsRemaining(computeSecondsRemaining(nextRoom));
         if (nextRoom.phase !== 'role_reveal') {
           setIsRoleVisible(false);
         }
+      } else if (nextRoom.phaseEndsAt) {
+        setSecondsRemaining(computeSecondsRemaining(nextRoom));
       }
     },
     []
@@ -179,10 +247,14 @@ export function useCidadeDormeViewModel(
       setLoading(true);
       setError(null);
       try {
-        const created = await useCase.createRoom(hostNickname);
+        const created = await runWithConnectionTimeout(
+          useCase.createRoom(hostNickname)
+        );
+        if (!isMountedRef.current) return false;
         await applyRoomState(created);
         return true;
       } catch (err: unknown) {
+        if (!isMountedRef.current) return false;
         if (err instanceof DomainError) {
           setError(err.message);
         } else {
@@ -190,10 +262,12 @@ export function useCidadeDormeViewModel(
         }
         return false;
       } finally {
-        setLoading(false);
+        if (isMountedRef.current) {
+          setLoading(false);
+        }
       }
     },
-    [applyRoomState, useCase]
+    [applyRoomState, runWithConnectionTimeout, useCase]
   );
 
   const handleJoinRoom = useCallback(
@@ -201,10 +275,14 @@ export function useCidadeDormeViewModel(
       setLoading(true);
       setError(null);
       try {
-        const joined = await useCase.joinRoom(code, nickname);
+        const joined = await runWithConnectionTimeout(
+          useCase.joinRoom(code, nickname)
+        );
+        if (!isMountedRef.current) return false;
         await applyRoomState(joined);
         return true;
       } catch (err: unknown) {
+        if (!isMountedRef.current) return false;
         if (err instanceof DomainError) {
           setError(err.message);
         } else {
@@ -212,10 +290,12 @@ export function useCidadeDormeViewModel(
         }
         return false;
       } finally {
-        setLoading(false);
+        if (isMountedRef.current) {
+          setLoading(false);
+        }
       }
     },
-    [applyRoomState, useCase]
+    [applyRoomState, runWithConnectionTimeout, useCase]
   );
 
   const handleRemovePlayer = useCallback(
@@ -316,7 +396,12 @@ export function useCidadeDormeViewModel(
       const chosen = targetPlayerId ?? selectedNightTargetId ?? '';
       try {
         setError(null);
-        const updated = await useCase.submitAssassinTarget(room.id, chosen);
+        const updated = await useCase.submitAssassinTarget(
+          room.id,
+          activePlayerId,
+          chosen
+        );
+        setHasSubmittedNightAction(true);
         syncPhaseTimerAndSelection(updated);
         setRoom(updated);
       } catch (err: unknown) {
@@ -327,7 +412,7 @@ export function useCidadeDormeViewModel(
         }
       }
     },
-    [room, selectedNightTargetId, syncPhaseTimerAndSelection, useCase]
+    [activePlayerId, room, selectedNightTargetId, syncPhaseTimerAndSelection, useCase]
   );
 
   const handleConfirmAngelProtection = useCallback(
@@ -339,7 +424,12 @@ export function useCidadeDormeViewModel(
           : selectedNightTargetId;
       try {
         setError(null);
-        const updated = await useCase.submitAngelProtection(room.id, chosen);
+        const updated = await useCase.submitAngelProtection(
+          room.id,
+          activePlayerId,
+          chosen
+        );
+        setHasSubmittedNightAction(true);
         syncPhaseTimerAndSelection(updated);
         setRoom(updated);
       } catch (err: unknown) {
@@ -350,7 +440,7 @@ export function useCidadeDormeViewModel(
         }
       }
     },
-    [room, selectedNightTargetId, syncPhaseTimerAndSelection, useCase]
+    [activePlayerId, room, selectedNightTargetId, syncPhaseTimerAndSelection, useCase]
   );
 
   const handleConfirmDetectiveInvestigation = useCallback(
@@ -362,8 +452,10 @@ export function useCidadeDormeViewModel(
         setError(null);
         const updated = await useCase.submitDetectiveInvestigation(
           room.id,
+          activePlayerId,
           chosen
         );
+        setHasSubmittedNightAction(true);
         setRoom(updated);
       } catch (err: unknown) {
         if (err instanceof DomainError) {
@@ -373,7 +465,7 @@ export function useCidadeDormeViewModel(
         }
       }
     },
-    [room, selectedNightTargetId, useCase]
+    [activePlayerId, room, selectedNightTargetId, useCase]
   );
 
   const handleAdvanceToDawn = useCallback(async (): Promise<void> => {
@@ -392,21 +484,31 @@ export function useCidadeDormeViewModel(
     }
   }, [room, syncPhaseTimerAndSelection, useCase]);
 
-  const handleAutoAdvanceNightTurn = useCallback(async (): Promise<void> => {
-    if (!room) return;
-    try {
-      setError(null);
-      const updated = await useCase.autoAdvanceNightTurn(room.id);
-      syncPhaseTimerAndSelection(updated);
-      setRoom(updated);
-    } catch (err: unknown) {
-      if (err instanceof DomainError) {
-        setError(err.message);
-      } else {
-        setError('Não foi possível avançar o turno da noite.');
+  const handleAutoAdvanceNightTurn = useCallback(
+    async (
+      expectedPhase?: CidadeDormePhase,
+      expectedRound?: number
+    ): Promise<void> => {
+      if (!room) return;
+      try {
+        setError(null);
+        const updated = await useCase.autoAdvanceNightTurn(
+          room.id,
+          expectedPhase,
+          expectedRound
+        );
+        syncPhaseTimerAndSelection(updated);
+        setRoom(updated);
+      } catch (err: unknown) {
+        if (err instanceof DomainError) {
+          setError(err.message);
+        } else {
+          setError('Não foi possível avançar o turno da noite.');
+        }
       }
-    }
-  }, [room, syncPhaseTimerAndSelection, useCase]);
+    },
+    [room, syncPhaseTimerAndSelection, useCase]
+  );
 
   const handleStartVotingPhase = useCallback(async (): Promise<void> => {
     if (!room) return;
@@ -456,7 +558,9 @@ export function useCidadeDormeViewModel(
     if (!room) return;
     try {
       setError(null);
-      const hasVotes = Object.keys(room.votesByPlayerId).length > 0;
+      const hasVotes =
+        room.players.some((p) => p.hasVoted) ||
+        Object.keys(room.votesByPlayerId).length > 0;
       if (!hasVotes && selectedVoteTargetId) {
         await useCase.castVote(room.id, activePlayerId, selectedVoteTargetId);
       }
@@ -511,25 +615,52 @@ export function useCidadeDormeViewModel(
     }
   }, [room, syncPhaseTimerAndSelection, useCase]);
 
-  // Cronômetro regressivo para turnos da Noite e Debate do Dia (RF10)
+  // Cronômetro regressivo sincronizado com phaseEndsAt para turnos da Noite e Debate do Dia (RF10)
   useEffect(() => {
     if (!room) return;
     const isTimedPhase =
       isPhaseNight(room.phase) || room.phase === 'day_debate';
     if (!isTimedPhase) return;
 
-    const timerId = setInterval(() => {
-      setSecondsRemaining((prev) => {
-        if (prev <= 1) {
-          clearInterval(timerId);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+    const updateCountdown = () => {
+      if (room.phaseEndsAt) {
+        setSecondsRemaining(computeSecondsRemaining(room));
+        return;
+      }
+      setSecondsRemaining((prev) => (prev <= 1 ? 0 : prev - 1));
+    };
 
+    if (room.phaseEndsAt) {
+      updateCountdown();
+    }
+
+    const timerId = setInterval(updateCountdown, 1000);
     return () => clearInterval(timerId);
   }, [room]);
+
+  // Avanço automático único da Noite no aparelho do Anfitrião quando o tempo chega a 00:00 (RF19 / RNF11)
+  useEffect(() => {
+    if (
+      !room ||
+      !isCurrentPlayerHost ||
+      !isPhaseNight(room.phase) ||
+      secondsRemaining > 0
+    ) {
+      return;
+    }
+
+    const phaseKey = `${room.id}:${room.currentRound}:${room.phase}`;
+    if (autoAdvancedPhaseKeyRef.current === phaseKey) {
+      return;
+    }
+    autoAdvancedPhaseKeyRef.current = phaseKey;
+    void handleAutoAdvanceNightTurn(room.phase, room.currentRound);
+  }, [
+    handleAutoAdvanceNightTurn,
+    isCurrentPlayerHost,
+    room,
+    secondsRemaining,
+  ]);
 
   const handleRequestExit = useCallback((): void => {
     setConfirmingExit(true);
@@ -542,6 +673,8 @@ export function useCidadeDormeViewModel(
   const handleExitArena = useCallback((): void => {
     setConfirmingExit(false);
     lastSpokenKeyRef.current = null;
+    lastPhaseKeyRef.current = null;
+    autoAdvancedPhaseKeyRef.current = null;
     void useCase.stopNarratorAudio().catch(() => {
       // Falha transitória ao parar o áudio não impede retorno ao Hub.
     });
@@ -554,6 +687,7 @@ export function useCidadeDormeViewModel(
     setCurrentPlayerId(null);
     setError(null);
     setIsRoleVisible(false);
+    setHasSubmittedNightAction(false);
     setSelectedNightTargetId(null);
     setSelectedVoteTargetId(null);
     router.replace('/');
@@ -584,7 +718,7 @@ export function useCidadeDormeViewModel(
     ? room.players.find((p) => p.id === activePlayerId) ?? null
     : null;
 
-  const currentRoleMeta: CidadeDormeRoleMetadata | null = currentPlayer
+  const currentRoleMeta: CidadeDormeRoleMetadata | null = currentPlayer?.role
     ? useCase.getRoleMetadata(currentPlayer.role)
     : null;
 
@@ -599,6 +733,7 @@ export function useCidadeDormeViewModel(
     isRealtimeEnabled: isSupabaseMultiplayerEnabled,
     isNightPhase,
     isRoleVisible,
+    hasSubmittedNightAction,
     selectedNightTargetId,
     selectedVoteTargetId,
     secondsRemaining,

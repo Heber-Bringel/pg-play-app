@@ -4,11 +4,18 @@ import type {
   AdedonhaRoom,
   AdedonhaSubmission,
   AdedonhaTallyVerdict,
+  CidadeDormeActionKind,
+  CidadeDormeActionRecord,
+  CidadeDormeAlignment,
   CidadeDormeConfig,
+  CidadeDormeDawnReport,
+  CidadeDormeDetectiveVerdict,
   CidadeDormePlayer,
+  CidadeDormeRole,
   CidadeDormeRoom,
+  CidadeDormeVoteReport,
 } from '@/model/entities/multiplayerSession';
-import { DataSourceError } from '@/model/errors';
+import { DataSourceError, ValidationError } from '@/model/errors';
 import type { IMultiplayerRoomService } from '@/model/services/iMultiplayerRoomService';
 
 export const DEFAULT_ADEDONHA_COLUMNS: string[] = [
@@ -202,9 +209,11 @@ function createDefaultCidadeDormeRoom(): CidadeDormeRoom {
       revealRoleOnDeath: true,
     },
     currentRound: 1,
+    phaseEndsAt: null,
     narratorCaption:
       'Sala pronta no Lobby. Configure a voz do Narrador e inicie quando todos estiverem na roda.',
     players: createDefaultCidadeDormePlayers(),
+    allyAssassinIds: [],
     nightTargetId: null,
     nightProtectedId: null,
     detectiveVerdict: null,
@@ -220,6 +229,7 @@ function cloneCidadeDormeRoom(room: CidadeDormeRoom): CidadeDormeRoom {
     ...room,
     config: { ...room.config },
     players: room.players.map((p) => ({ ...p })),
+    allyAssassinIds: room.allyAssassinIds ? [...room.allyAssassinIds] : [],
     detectiveVerdict: room.detectiveVerdict
       ? { ...room.detectiveVerdict }
       : null,
@@ -245,6 +255,18 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
     string,
     Set<(room: CidadeDormeRoom) => void>
   > = new Map();
+  private cidadeDormeRolesByRoom: Map<string, Map<string, CidadeDormeRole>> =
+    new Map();
+  private cidadeDormeVerdictsByRoom: Map<
+    string,
+    Map<string, CidadeDormeDetectiveVerdict>
+  > = new Map();
+  private cidadeDormeActionsByRoom: Map<
+    string,
+    Map<string, CidadeDormeActionRecord>
+  > = new Map();
+  private cidadeDormeLocks: Map<string, Promise<void>> = new Map();
+  private cidadeDormeActionCounter = 0;
   private playerIdCounter = 100;
 
   constructor(
@@ -262,6 +284,13 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
     this.cidadeDormeRooms.set(seedCidadeDorme.id, seedCidadeDorme);
     this.activeCidadeDormeRoomId = seedCidadeDorme.id;
     this.localPlayerIdByRoom.set(seedCidadeDorme.id, seedCidadeDorme.hostId);
+    const seedRoles = new Map<string, CidadeDormeRole>();
+    for (const p of seedCidadeDorme.players) {
+      if (p.role) {
+        seedRoles.set(p.id, p.role);
+      }
+    }
+    this.cidadeDormeRolesByRoom.set(seedCidadeDorme.id, seedRoles);
   }
 
   private resolveRoom(roomId?: string): AdedonhaRoom {
@@ -712,6 +741,24 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
     });
   }
 
+  private async withCidadeDormeLock<T>(
+    roomId: string,
+    task: () => Promise<T> | T
+  ): Promise<T> {
+    const prev = this.cidadeDormeLocks.get(roomId) ?? Promise.resolve();
+    let release!: () => void;
+    const next = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    this.cidadeDormeLocks.set(roomId, prev.then(() => next));
+    await prev;
+    try {
+      return await task();
+    } finally {
+      release();
+    }
+  }
+
   private resolveCidadeDormeRoom(roomId?: string): CidadeDormeRoom {
     const targetId = roomId ?? this.activeCidadeDormeRoomId;
     const room = this.cidadeDormeRooms.get(targetId);
@@ -721,27 +768,152 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
     return room;
   }
 
-  private saveAndNotifyCidadeDorme(room: CidadeDormeRoom): CidadeDormeRoom {
+  private getSecretRoleMap(room: CidadeDormeRoom): Map<string, CidadeDormeRole> {
+    let map = this.cidadeDormeRolesByRoom.get(room.id);
+    if (!map) {
+      map = new Map<string, CidadeDormeRole>();
+      for (const player of room.players) {
+        if (player.role) {
+          map.set(player.id, player.role);
+        }
+      }
+      this.cidadeDormeRolesByRoom.set(room.id, map);
+    }
+    return map;
+  }
+
+  private evaluateWinnerFromSecretRoles(
+    players: CidadeDormePlayer[],
+    roleMap: Map<string, CidadeDormeRole>
+  ): CidadeDormeAlignment | null {
+    const alivePlayers = players.filter((p) => p.isAlive);
+    const aliveAssassins = alivePlayers.filter(
+      (p) => (roleMap.get(p.id) ?? p.role) === 'assassino'
+    ).length;
+    const aliveInnocents = alivePlayers.length - aliveAssassins;
+
+    if (aliveAssassins === 0) {
+      return 'cidade';
+    }
+    if (aliveAssassins >= aliveInnocents) {
+      return 'infiltrados';
+    }
+    return null;
+  }
+
+  private recordCidadeDormeAction(
+    roomId: string,
+    roundNumber: number,
+    playerId: string,
+    kind: CidadeDormeActionKind,
+    targetId: string | null
+  ): CidadeDormeActionRecord {
+    let actionMap = this.cidadeDormeActionsByRoom.get(roomId);
+    if (!actionMap) {
+      actionMap = new Map<string, CidadeDormeActionRecord>();
+      this.cidadeDormeActionsByRoom.set(roomId, actionMap);
+    }
+    const key = `${roundNumber}:${playerId}:${kind}`;
+    actionMap.delete(key);
+    this.cidadeDormeActionCounter += 1;
+    const record: CidadeDormeActionRecord = {
+      id: `cd-act-${this.cidadeDormeActionCounter}`,
+      roomId,
+      roundNumber,
+      playerId,
+      kind,
+      targetId,
+      createdAt: new Date().toISOString(),
+    };
+    actionMap.set(key, record);
+    return record;
+  }
+
+  private buildFilteredCidadeDormeSnapshot(
+    room: CidadeDormeRoom,
+    viewerPlayerId?: string
+  ): CidadeDormeRoom {
+    const effectiveViewerId =
+      viewerPlayerId ?? this.localPlayerIdByRoom.get(room.id) ?? room.hostId;
+    const roleMap = this.getSecretRoleMap(room);
+    const viewerRole = roleMap.get(effectiveViewerId) ?? null;
+    const isFinished = room.phase === 'finished';
+
+    const filteredPlayers: CidadeDormePlayer[] = room.players.map((p) => {
+      const actualRole = roleMap.get(p.id) ?? p.role ?? null;
+      const canReveal =
+        isFinished ||
+        p.id === effectiveViewerId ||
+        (!p.isAlive && room.config.revealRoleOnDeath);
+      return {
+        ...p,
+        role: canReveal ? actualRole : null,
+      };
+    });
+
+    const allyAssassinIds =
+      viewerRole === 'assassino'
+        ? room.players
+            .filter(
+              (p) =>
+                p.id !== effectiveViewerId &&
+                (roleMap.get(p.id) ?? p.role) === 'assassino'
+            )
+            .map((p) => p.id)
+        : [];
+
+    const rawVerdict =
+      this.cidadeDormeVerdictsByRoom.get(room.id)?.get(effectiveViewerId) ??
+      null;
+    const detectiveVerdict =
+      viewerRole === 'detetive' &&
+      rawVerdict &&
+      rawVerdict.roundNumber === room.currentRound
+        ? { ...rawVerdict }
+        : null;
+
+    const cloned = cloneCidadeDormeRoom(room);
+    return {
+      ...cloned,
+      players: filteredPlayers,
+      allyAssassinIds,
+      nightTargetId: null,
+      nightProtectedId: null,
+      detectiveVerdict,
+      votesByPlayerId: {},
+    };
+  }
+
+  private saveAndNotifyCidadeDorme(
+    room: CidadeDormeRoom,
+    viewerPlayerId?: string
+  ): CidadeDormeRoom {
     this.cidadeDormeRooms.set(room.id, room);
-    const snapshot = cloneCidadeDormeRoom(room);
+    const localSnapshot = this.buildFilteredCidadeDormeSnapshot(room);
     const roomListeners = this.cidadeDormeListeners.get(room.id);
     if (roomListeners) {
       roomListeners.forEach((listener) =>
-        listener(cloneCidadeDormeRoom(snapshot))
+        listener(cloneCidadeDormeRoom(localSnapshot))
       );
     }
-    return snapshot;
+    return viewerPlayerId
+      ? this.buildFilteredCidadeDormeSnapshot(room, viewerPlayerId)
+      : localSnapshot;
   }
 
-  async getCidadeDormeRoom(roomId?: string): Promise<CidadeDormeRoom> {
+  async getCidadeDormeRoom(
+    roomId?: string,
+    viewerPlayerId?: string
+  ): Promise<CidadeDormeRoom> {
     const room = this.resolveCidadeDormeRoom(roomId);
-    return cloneCidadeDormeRoom(room);
+    return this.buildFilteredCidadeDormeSnapshot(room, viewerPlayerId);
   }
 
   async createCidadeDormeRoom(hostNickname: string): Promise<CidadeDormeRoom> {
     try {
       const id = `room-cd-${Date.now()}`;
       const code = `CD${String(this.cidadeDormeRooms.size + 1000).slice(-4)}`;
+      const players = createDefaultCidadeDormePlayers(hostNickname.trim());
       const room: CidadeDormeRoom = {
         id,
         code,
@@ -756,9 +928,11 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
           revealRoleOnDeath: true,
         },
         currentRound: 1,
+        phaseEndsAt: null,
         narratorCaption:
           'Sala criada! Escolha a voz do Narrador e aguarde os jogadores entrarem na roda.',
-        players: createDefaultCidadeDormePlayers(hostNickname.trim()),
+        players,
+        allyAssassinIds: [],
         nightTargetId: null,
         nightProtectedId: null,
         detectiveVerdict: null,
@@ -767,6 +941,13 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
         voteReport: null,
         winner: null,
       };
+      const roleMap = new Map<string, CidadeDormeRole>();
+      for (const player of players) {
+        if (player.role) {
+          roleMap.set(player.id, player.role);
+        }
+      }
+      this.cidadeDormeRolesByRoom.set(id, roleMap);
       this.activeCidadeDormeRoomId = id;
       this.localPlayerIdByRoom.set(id, room.hostId);
       return this.saveAndNotifyCidadeDorme(room);
@@ -795,7 +976,7 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
     if (existing) {
       this.activeCidadeDormeRoomId = found.id;
       this.localPlayerIdByRoom.set(found.id, existing.id);
-      return cloneCidadeDormeRoom(found);
+      return this.buildFilteredCidadeDormeSnapshot(found, existing.id);
     }
 
     this.playerIdCounter += 1;
@@ -809,13 +990,16 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
       hasVoted: false,
     };
 
+    const roleMap = this.getSecretRoleMap(found);
+    roleMap.set(newPlayer.id, 'cidadao');
+
     const updated: CidadeDormeRoom = {
       ...found,
       players: [...found.players, newPlayer],
     };
     this.activeCidadeDormeRoomId = found.id;
     this.localPlayerIdByRoom.set(found.id, newPlayer.id);
-    return this.saveAndNotifyCidadeDorme(updated);
+    return this.saveAndNotifyCidadeDorme(updated, newPlayer.id);
   }
 
   async leaveCidadeDormeRoom(roomId: string, playerId: string): Promise<void> {
@@ -825,6 +1009,8 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
       this.localPlayerIdByRoom.delete(roomId);
     }
     if (room.phase === 'lobby' && playerId !== room.hostId) {
+      const roleMap = this.cidadeDormeRolesByRoom.get(roomId);
+      roleMap?.delete(playerId);
       const updated: CidadeDormeRoom = {
         ...room,
         players: room.players.filter((p) => p.id !== playerId),
@@ -837,20 +1023,484 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
     roomId: string,
     partialConfig: Partial<CidadeDormeConfig>
   ): Promise<CidadeDormeRoom> {
-    const room = this.resolveCidadeDormeRoom(roomId);
-    const updated: CidadeDormeRoom = {
-      ...room,
-      config: {
-        ...room.config,
-        ...partialConfig,
-      },
-    };
-    return this.saveAndNotifyCidadeDorme(updated);
+    return this.withCidadeDormeLock(roomId, () => {
+      const room = this.resolveCidadeDormeRoom(roomId);
+      const updated: CidadeDormeRoom = {
+        ...room,
+        config: {
+          ...room.config,
+          ...partialConfig,
+        },
+      };
+      return this.saveAndNotifyCidadeDorme(updated);
+    });
   }
 
   async saveCidadeDormeRoom(room: CidadeDormeRoom): Promise<CidadeDormeRoom> {
-    this.resolveCidadeDormeRoom(room.id);
-    return this.saveAndNotifyCidadeDorme(cloneCidadeDormeRoom(room));
+    return this.withCidadeDormeLock(room.id, () => {
+      const current = this.resolveCidadeDormeRoom(room.id);
+      const roleMap = this.getSecretRoleMap(current);
+      for (const player of room.players) {
+        if (player.role) {
+          roleMap.set(player.id, player.role);
+        }
+      }
+
+      const mergedPlayers: CidadeDormePlayer[] = room.players.map((p) => ({
+        ...p,
+        role: p.role ?? roleMap.get(p.id) ?? null,
+      }));
+
+      const currentLocalId = this.localPlayerIdByRoom.get(room.id);
+      if (
+        currentLocalId &&
+        !mergedPlayers.some((p) => p.id === currentLocalId)
+      ) {
+        this.localPlayerIdByRoom.set(room.id, room.hostId);
+      }
+
+      if (
+        room.phase === 'day_voting' &&
+        mergedPlayers.every((p) => !p.hasVoted) &&
+        Object.keys(room.votesByPlayerId).length === 0
+      ) {
+        const actionMap = this.cidadeDormeActionsByRoom.get(room.id);
+        if (actionMap) {
+          for (const [key, act] of actionMap.entries()) {
+            if (act.roundNumber === room.currentRound && act.kind === 'vote') {
+              actionMap.delete(key);
+            }
+          }
+        }
+      }
+
+      const mergedRoom: CidadeDormeRoom = {
+        ...cloneCidadeDormeRoom(room),
+        phaseEndsAt: room.phaseEndsAt ?? null,
+        players: mergedPlayers,
+      };
+      return this.saveAndNotifyCidadeDorme(mergedRoom);
+    });
+  }
+
+  async startCidadeDormeMatch(
+    roomId: string,
+    assignedRolesByPlayerId: Record<string, CidadeDormeRole>,
+    narratorCaption: string
+  ): Promise<CidadeDormeRoom> {
+    return this.withCidadeDormeLock(roomId, () => {
+      const room = this.resolveCidadeDormeRoom(roomId);
+      const roleMap = new Map<string, CidadeDormeRole>();
+      const updatedPlayers: CidadeDormePlayer[] = room.players.map((p) => {
+        const assigned = assignedRolesByPlayerId[p.id] ?? 'cidadao';
+        roleMap.set(p.id, assigned);
+        return {
+          ...p,
+          isAlive: true,
+          isReady: false,
+          hasVoted: false,
+          role: assigned,
+        };
+      });
+
+      this.cidadeDormeRolesByRoom.set(room.id, roleMap);
+      this.cidadeDormeVerdictsByRoom.delete(room.id);
+      this.cidadeDormeActionsByRoom.delete(room.id);
+
+      const updated: CidadeDormeRoom = {
+        ...room,
+        phase: 'role_reveal',
+        currentRound: 1,
+        phaseEndsAt: null,
+        narratorCaption,
+        players: updatedPlayers,
+        nightTargetId: null,
+        nightProtectedId: null,
+        detectiveVerdict: null,
+        votesByPlayerId: {},
+        dawnReport: null,
+        voteReport: null,
+        winner: null,
+      };
+
+      return this.saveAndNotifyCidadeDorme(updated);
+    });
+  }
+
+  async markCidadeDormePlayerReady(
+    roomId: string,
+    playerId: string,
+    options?: {
+      markCompanionsReady?: boolean;
+      nightTurnEndsAt?: string | null;
+      nightCaption?: string;
+    }
+  ): Promise<CidadeDormeRoom> {
+    return this.withCidadeDormeLock(roomId, () => {
+      const room = this.resolveCidadeDormeRoom(roomId);
+      const target = room.players.find((p) => p.id === playerId);
+      if (!target) {
+        throw new ValidationError('Jogador não encontrado na sala.');
+      }
+
+      const existingAction = this.cidadeDormeActionsByRoom
+        .get(room.id)
+        ?.get(`${room.currentRound}:${playerId}:ready`);
+
+      if (room.phase !== 'role_reveal') {
+        if (existingAction && target.isReady) {
+          return this.buildFilteredCidadeDormeSnapshot(room, playerId);
+        }
+        throw new ValidationError(
+          'A confirmação de papel só pode ocorrer na fase de revelação.'
+        );
+      }
+
+      const markAll = Boolean(options?.markCompanionsReady);
+      const updatedPlayers = room.players.map((p) => {
+        if (markAll || p.id === playerId) {
+          this.recordCidadeDormeAction(
+            room.id,
+            room.currentRound,
+            p.id,
+            'ready',
+            null
+          );
+          return { ...p, isReady: true };
+        }
+        return { ...p };
+      });
+
+      const allReady = updatedPlayers.every((p) => p.isReady);
+      if (!allReady) {
+        const partialRoom: CidadeDormeRoom = {
+          ...room,
+          players: updatedPlayers,
+        };
+        return this.saveAndNotifyCidadeDorme(partialRoom, playerId);
+      }
+
+      const nightCaption =
+        options?.nightCaption ??
+        'A cidade dorme... Todos fecham os olhos. Assassino, acorde e escolha sua vítima.';
+      const nightRoom: CidadeDormeRoom = {
+        ...room,
+        phase: 'night_assassin',
+        phaseEndsAt: options?.nightTurnEndsAt ?? null,
+        narratorCaption: nightCaption,
+        players: updatedPlayers,
+        nightTargetId: null,
+        nightProtectedId: null,
+        detectiveVerdict: null,
+      };
+      return this.saveAndNotifyCidadeDorme(nightRoom, playerId);
+    });
+  }
+
+  async submitCidadeDormeNightAction(
+    roomId: string,
+    actorPlayerId: string,
+    kind: 'night_assassin' | 'night_angel' | 'night_detective',
+    targetPlayerId: string | null
+  ): Promise<CidadeDormeRoom> {
+    return this.withCidadeDormeLock(roomId, () => {
+      const room = this.resolveCidadeDormeRoom(roomId);
+      const roleMap = this.getSecretRoleMap(room);
+      this.recordCidadeDormeAction(
+        room.id,
+        room.currentRound,
+        actorPlayerId,
+        kind,
+        targetPlayerId
+      );
+
+      let nextRoom: CidadeDormeRoom = { ...room };
+
+      if (kind === 'night_detective' && targetPlayerId) {
+        const suspect = room.players.find((p) => p.id === targetPlayerId);
+        if (suspect) {
+          const suspectRole = roleMap.get(suspect.id) ?? suspect.role;
+          const verdict: CidadeDormeDetectiveVerdict = {
+            targetPlayerId: suspect.id,
+            targetNickname: suspect.nickname,
+            isAssassin: suspectRole === 'assassino',
+            roundNumber: room.currentRound,
+          };
+          let verdictsForRoom = this.cidadeDormeVerdictsByRoom.get(room.id);
+          if (!verdictsForRoom) {
+            verdictsForRoom = new Map<string, CidadeDormeDetectiveVerdict>();
+            this.cidadeDormeVerdictsByRoom.set(room.id, verdictsForRoom);
+          }
+          verdictsForRoom.set(actorPlayerId, verdict);
+          nextRoom = {
+            ...nextRoom,
+            detectiveVerdict: verdict,
+          };
+        }
+      }
+
+      return this.saveAndNotifyCidadeDorme(nextRoom, actorPlayerId);
+    });
+  }
+
+  async submitCidadeDormeVote(
+    roomId: string,
+    voterPlayerId: string,
+    targetPlayerIdOrSkip: string
+  ): Promise<CidadeDormeRoom> {
+    return this.withCidadeDormeLock(roomId, () => {
+      const room = this.resolveCidadeDormeRoom(roomId);
+      if (room.phase !== 'day_voting') {
+        throw new ValidationError('A sala não está em fase de votação.');
+      }
+      const voter = room.players.find((p) => p.id === voterPlayerId);
+      if (!voter) {
+        throw new ValidationError('Jogador votante não encontrado na sala.');
+      }
+      if (!voter.isAlive) {
+        throw new ValidationError(
+          'Você foi eliminado e está no Modo Espectador — acompanhe em silêncio.'
+        );
+      }
+
+      this.recordCidadeDormeAction(
+        room.id,
+        room.currentRound,
+        voterPlayerId,
+        'vote',
+        targetPlayerIdOrSkip
+      );
+
+      const updatedPlayers = room.players.map((p) =>
+        p.id === voterPlayerId ? { ...p, hasVoted: true } : { ...p }
+      );
+      const updatedVotes = {
+        ...room.votesByPlayerId,
+        [voterPlayerId]: targetPlayerIdOrSkip,
+      };
+
+      const updated: CidadeDormeRoom = {
+        ...room,
+        players: updatedPlayers,
+        votesByPlayerId: updatedVotes,
+      };
+      return this.saveAndNotifyCidadeDorme(updated, voterPlayerId);
+    });
+  }
+
+  async resolveCidadeDormeDawn(
+    roomId: string,
+    options?: {
+      debateEndsAt?: string | null;
+    }
+  ): Promise<CidadeDormeRoom> {
+    return this.withCidadeDormeLock(roomId, () => {
+      const room = this.resolveCidadeDormeRoom(roomId);
+      if (room.phase !== 'night_detective') {
+        throw new ValidationError(
+          'O amanhecer só ocorre após a conclusão dos turnos da noite.'
+        );
+      }
+
+      const roleMap = this.getSecretRoleMap(room);
+      const actions = Array.from(
+        this.cidadeDormeActionsByRoom.get(room.id)?.values() ?? []
+      ).filter((a) => a.roundNumber === room.currentRound);
+
+      const assassinActions = actions.filter((a) => a.kind === 'night_assassin');
+      const angelActions = actions.filter((a) => a.kind === 'night_angel');
+
+      const nightTargetId =
+        assassinActions.length > 0
+          ? assassinActions[assassinActions.length - 1].targetId
+          : room.nightTargetId;
+      const nightProtectedId =
+        angelActions.length > 0
+          ? angelActions[angelActions.length - 1].targetId
+          : room.nightProtectedId;
+
+      const attacked = nightTargetId
+        ? room.players.find((p) => p.id === nightTargetId) ?? null
+        : null;
+      const savedByAngel = Boolean(
+        attacked && nightProtectedId && attacked.id === nightProtectedId
+      );
+
+      const updatedPlayers = room.players.map((p) => {
+        if (!savedByAngel && attacked && p.id === attacked.id) {
+          return { ...p, isAlive: false, hasVoted: false };
+        }
+        return { ...p, hasVoted: false };
+      });
+
+      const attackedRole = attacked
+        ? roleMap.get(attacked.id) ?? attacked.role ?? null
+        : null;
+
+      const dawnReport: CidadeDormeDawnReport = {
+        roundNumber: room.currentRound,
+        attackedPlayerId: attacked?.id ?? null,
+        attackedNickname: attacked?.nickname ?? null,
+        savedByAngel,
+        eliminatedPlayerId: savedByAngel ? null : (attacked?.id ?? null),
+        eliminatedNickname: savedByAngel ? null : (attacked?.nickname ?? null),
+        eliminatedRole:
+          !savedByAngel && attacked && room.config.revealRoleOnDeath
+            ? attackedRole
+            : null,
+      };
+
+      const winner = this.evaluateWinnerFromSecretRoles(
+        updatedPlayers,
+        roleMap
+      );
+      let caption: string;
+
+      if (winner === 'infiltrados') {
+        caption = attacked
+          ? `A cidade acorda! Triste notícia na cidade: ${attacked.nickname} foi eliminado durante a noite. Os Assassinos atingiram a paridade e venceram a partida!`
+          : 'A cidade acorda! Os Assassinos atingiram a paridade numérica e venceram a partida!';
+      } else if (winner === 'cidade') {
+        caption =
+          'A cidade acorda! Todos os Assassinos foram neutralizados. Vitória da Cidade!';
+      } else if (savedByAngel) {
+        caption =
+          'A cidade acorda! Todos podem abrir os olhos. A madrugada foi tensa, mas o Anjo protegeu a vítima a tempo! Ninguém foi eliminado!';
+      } else if (attacked) {
+        caption = `A cidade acorda! Todos podem abrir os olhos. Triste notícia na cidade: ${attacked.nickname} foi eliminado durante a noite.`;
+      } else {
+        caption =
+          'A cidade acorda! Todos podem abrir os olhos. Ninguém foi eliminado durante a noite.';
+      }
+
+      const updated: CidadeDormeRoom = {
+        ...room,
+        phase: winner ? 'finished' : 'day_debate',
+        phaseEndsAt: winner ? null : (options?.debateEndsAt ?? null),
+        narratorCaption: caption,
+        players: updatedPlayers,
+        nightTargetId: null,
+        nightProtectedId: null,
+        dawnReport,
+        voteReport: null,
+        votesByPlayerId: {},
+        winner,
+      };
+      return this.saveAndNotifyCidadeDorme(updated);
+    });
+  }
+
+  async tallyCidadeDormeVotes(roomId: string): Promise<CidadeDormeRoom> {
+    return this.withCidadeDormeLock(roomId, () => {
+      const room = this.resolveCidadeDormeRoom(roomId);
+      if (room.phase !== 'day_voting') {
+        throw new ValidationError(
+          'A apuração só pode ser realizada durante a fase de votação.'
+        );
+      }
+
+      const roleMap = this.getSecretRoleMap(room);
+      const voteActions = Array.from(
+        this.cidadeDormeActionsByRoom.get(room.id)?.values() ?? []
+      ).filter((a) => a.roundNumber === room.currentRound && a.kind === 'vote');
+
+      const voteEntries: Array<[string, string]> =
+        voteActions.length > 0
+          ? voteActions.map((a) => [a.playerId, a.targetId ?? 'skip'])
+          : Object.entries(room.votesByPlayerId);
+
+      if (voteEntries.length === 0) {
+        throw new ValidationError(
+          'Registre pelo menos um voto antes de apurar a votação.'
+        );
+      }
+
+      const voteCounts: Record<string, number> = {};
+      let skipCount = 0;
+
+      for (const [, targetId] of voteEntries) {
+        if (targetId === 'skip') {
+          skipCount += 1;
+        } else {
+          voteCounts[targetId] = (voteCounts[targetId] ?? 0) + 1;
+        }
+      }
+
+      let maxVotes = 0;
+      let leaders: string[] = [];
+      for (const [candidateId, count] of Object.entries(voteCounts)) {
+        if (count > maxVotes) {
+          maxVotes = count;
+          leaders = [candidateId];
+        } else if (count === maxVotes && count > 0) {
+          leaders.push(candidateId);
+        }
+      }
+
+      const tieOrSkipped =
+        maxVotes === 0 || leaders.length !== 1 || skipCount >= maxVotes;
+
+      const eliminatedPlayer = !tieOrSkipped
+        ? room.players.find((p) => p.id === leaders[0]) ?? null
+        : null;
+
+      const updatedPlayers = room.players.map((p) => {
+        if (eliminatedPlayer && p.id === eliminatedPlayer.id) {
+          return { ...p, isAlive: false };
+        }
+        return { ...p };
+      });
+
+      const eliminatedRole = eliminatedPlayer
+        ? roleMap.get(eliminatedPlayer.id) ?? eliminatedPlayer.role ?? null
+        : null;
+
+      const voteReport: CidadeDormeVoteReport = {
+        roundNumber: room.currentRound,
+        eliminatedPlayerId: eliminatedPlayer?.id ?? null,
+        eliminatedNickname: eliminatedPlayer?.nickname ?? null,
+        eliminatedRole:
+          eliminatedPlayer && room.config.revealRoleOnDeath
+            ? eliminatedRole
+            : null,
+        tieOrSkipped,
+        voteCounts,
+        skipCount,
+      };
+
+      const winner = this.evaluateWinnerFromSecretRoles(
+        updatedPlayers,
+        roleMap
+      );
+      let caption: string;
+
+      if (winner === 'cidade') {
+        caption = eliminatedPlayer
+          ? `A cidade votou e eliminou ${eliminatedPlayer.nickname}! Todos os Assassinos foram descobertos: Vitória da Cidade!`
+          : 'Todos os Assassinos foram descobertos: Vitória da Cidade!';
+      } else if (winner === 'infiltrados') {
+        caption = eliminatedPlayer
+          ? `A cidade eliminou ${eliminatedPlayer.nickname}, e os Assassinos atingiram paridade numérica: Vitória dos Assassinos!`
+          : 'Os Assassinos atingiram paridade numérica com os inocentes: Vitória dos Assassinos!';
+      } else if (tieOrSkipped || !eliminatedPlayer) {
+        caption =
+          'A cidade não chegou a um consenso na votação. Ninguém foi eliminado hoje!';
+      } else {
+        caption = `A cidade decidiu por maioria simples: ${eliminatedPlayer.nickname} foi eliminado na votação!`;
+      }
+
+      const updated: CidadeDormeRoom = {
+        ...room,
+        phase: winner ? 'finished' : 'vote_result',
+        phaseEndsAt: null,
+        narratorCaption: caption,
+        players: updatedPlayers,
+        voteReport,
+        votesByPlayerId: {},
+        winner,
+      };
+      return this.saveAndNotifyCidadeDorme(updated);
+    });
   }
 
   subscribeToCidadeDormeRoom(

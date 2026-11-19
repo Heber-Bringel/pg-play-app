@@ -166,6 +166,7 @@ create table public.rooms (
   phase varchar(30) not null default 'waiting',
   config jsonb not null default '{}'::jsonb,
   current_round int not null default 1,
+  phase_ends_at timestamptz,
   current_letter char(1),
   narrator_caption text,
   created_at timestamptz not null default now()
@@ -180,6 +181,7 @@ create table public.room_players (
   is_host boolean not null default false,
   is_alive boolean not null default true,
   is_ready boolean not null default false,
+  has_voted boolean not null default false,
   score int not null default 0,
   unique (room_id, user_id)
 );
@@ -193,7 +195,19 @@ create table public.cidade_dorme_secrets (
   primary key (room_id, user_id)
 );
 
--- 4. Respostas e Apuração da Adedonha Bíblica (RF22 e RF23)
+-- 4. Ações Atômicas do Cidade Dorme (Issues #38, #40 e #42)
+create table public.cidade_dorme_actions (
+  id uuid primary key default gen_random_uuid(),
+  room_id uuid not null references public.rooms(id) on delete cascade,
+  round_number int not null,
+  user_id uuid not null,
+  kind varchar(30) not null check (kind in ('ready', 'night_assassin', 'night_angel', 'night_detective', 'vote')),
+  target_id text,
+  created_at timestamptz not null default now(),
+  unique (room_id, round_number, user_id, kind)
+);
+
+-- 5. Respostas e Apuração da Adedonha Bíblica (RF22 e RF23)
 create table public.adedonha_submissions (
   id uuid primary key default gen_random_uuid(),
   room_id uuid not null references public.rooms(id) on delete cascade,
@@ -210,14 +224,30 @@ create table public.adedonha_submissions (
 alter table public.rooms enable row level security;
 alter table public.room_players enable row level security;
 alter table public.cidade_dorme_secrets enable row level security;
+alter table public.cidade_dorme_actions enable row level security;
 alter table public.adedonha_submissions enable row level security;
 
--- Política crítica RNF11: Cada jogador só pode ler o SEU PRÓPRIO papel secreto!
+-- Política crítica RNF11: Cada jogador só pode ler o SEU PRÓPRIO papel secreto (ou todos após o término)!
 create policy "Jogador lê apenas seu próprio papel secreto"
   on public.cidade_dorme_secrets
   for select
+  using (
+    auth.uid() = user_id
+    or exists (
+      select 1 from public.rooms r where r.id = room_id and r.phase = 'finished'
+    )
+  );
+
+-- Política crítica RNF11: Cada jogador lê e grava apenas suas próprias ações individuais
+create policy "Autor lê apenas suas próprias ações no Cidade Dorme"
+  on public.cidade_dorme_actions
+  for select
   using (auth.uid() = user_id);
 ```
+
+> **Migrações versionadas e RPCs `security definer`**:
+> Os scripts idempotentes completos (incluindo as funções atômicas `cidade_dorme_start_match`, `cidade_dorme_mark_ready`, `cidade_dorme_submit_night_action`, `cidade_dorme_cast_vote`, `cidade_dorme_resolve_dawn` e `cidade_dorme_tally_votes`) ficam versionados em `supabase/migrations/001_cidade_dorme_actions.sql` e `supabase/migrations/002_cidade_dorme_rnf11_rls.sql`.
+> Nenhum papel de jogador vivo, alvo noturno, proteção do Anjo, veredito do Detetive ou voto individual deve ser gravado no JSONB público `rooms.config`.
 
 ---
 

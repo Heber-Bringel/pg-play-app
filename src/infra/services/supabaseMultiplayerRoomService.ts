@@ -10,7 +10,10 @@ import type {
   AdedonhaSubmissionStatus,
   AdedonhaTallyVerdict,
   AdedonhaTotalRounds,
+  CidadeDormeActionKind,
   CidadeDormeConfig,
+  CidadeDormeDetectiveVerdict,
+  CidadeDormeRole,
   CidadeDormeRoom,
 } from '@/model/entities/multiplayerSession';
 import { AuthError, DataSourceError, ValidationError } from '@/model/errors';
@@ -50,7 +53,27 @@ type DbRoomPlayerRow = {
   user_id: string;
   nickname: string;
   is_host: boolean;
+  is_alive?: boolean;
+  is_ready?: boolean;
+  has_voted?: boolean;
   score: number;
+};
+
+type DbCidadeDormeSecretRow = {
+  room_id: string;
+  user_id: string;
+  secret_role: CidadeDormeRole;
+  detective_verdict: CidadeDormeDetectiveVerdict | null;
+};
+
+type DbCidadeDormeActionRow = {
+  id?: string;
+  room_id: string;
+  round_number: number;
+  user_id: string;
+  kind: CidadeDormeActionKind;
+  target_id: string | null;
+  created_at?: string;
 };
 
 type DbSubmissionRow = {
@@ -1115,14 +1138,30 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
       host_id: string;
       phase: string;
       current_round: number;
+      phase_ends_at?: string | null;
       narrator_caption?: string | null;
       config: Record<string, unknown> | null;
     },
-    playerRows: DbRoomPlayerRow[] = []
+    playerRows: DbRoomPlayerRow[] = [],
+    secretRows: DbCidadeDormeSecretRow[] = [],
+    actionRows: DbCidadeDormeActionRow[] = [],
+    viewerId: string | null = null,
+    allyAssassinIdsFromRpc: string[] = []
   ): CidadeDormeRoom {
     const raw = (row.config ?? {}) as Partial<CidadeDormeRoom> & {
       config?: CidadeDormeConfig;
+      removedPlayerIds?: unknown;
     };
+    const removedPlayerIdSet = new Set(
+      Array.isArray(raw.removedPlayerIds)
+        ? raw.removedPlayerIds.filter(
+            (id): id is string => typeof id === 'string'
+          )
+        : []
+    );
+    const activePlayerRows = playerRows.filter(
+      (pRow) => !removedPlayerIdSet.has(pRow.user_id)
+    );
     const defaultCfg: CidadeDormeConfig = {
       narratorVoice: 'masculina',
       assassinCount: 1,
@@ -1131,55 +1170,120 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
       revealRoleOnDeath: true,
     };
 
-    const storedPlayers = Array.isArray(raw.players)
-      ? raw.players.map((p) => ({ ...p }))
-      : [];
-    const storedById = new Map(storedPlayers.map((p) => [p.id, p]));
+    const resolvedConfig: CidadeDormeConfig = {
+      ...defaultCfg,
+      ...(raw.config ?? {}),
+    };
+    const phase = (row.phase || raw.phase || 'lobby') as CidadeDormeRoom['phase'];
+    const currentRound = row.current_round ?? raw.currentRound ?? 1;
+    const isFinished = phase === 'finished';
 
-    let mergedPlayers: CidadeDormeRoom['players'];
-    if (playerRows.length > 0) {
-      mergedPlayers = playerRows.map((pRow) => {
-        const existingMeta = storedById.get(pRow.user_id);
-        return {
-          id: pRow.user_id,
-          nickname: pRow.nickname,
-          isHost: pRow.is_host || pRow.user_id === row.host_id,
-          isAlive: existingMeta?.isAlive ?? true,
-          isReady: existingMeta?.isReady ?? false,
-          role:
-            existingMeta?.role ??
-            (pRow.is_host || pRow.user_id === row.host_id
-              ? 'detetive'
-              : 'cidadao'),
-          hasVoted: existingMeta?.hasVoted ?? false,
-        };
-      });
-    } else {
-      mergedPlayers = storedPlayers;
+    const secretByUserId = new Map(secretRows.map((s) => [s.user_id, s]));
+    const readyUserIds = new Set(
+      actionRows
+        .filter((a) => a.round_number === currentRound && a.kind === 'ready')
+        .map((a) => a.user_id)
+    );
+    const votedUserIds = new Set(
+      actionRows
+        .filter((a) => a.round_number === currentRound && a.kind === 'vote')
+        .map((a) => a.user_id)
+    );
+
+    const revealedDeadRoles = new Map<string, CidadeDormeRole>();
+    if (resolvedConfig.revealRoleOnDeath) {
+      if (raw.dawnReport?.eliminatedPlayerId && raw.dawnReport.eliminatedRole) {
+        revealedDeadRoles.set(
+          raw.dawnReport.eliminatedPlayerId,
+          raw.dawnReport.eliminatedRole
+        );
+      }
+      if (raw.voteReport?.eliminatedPlayerId && raw.voteReport.eliminatedRole) {
+        revealedDeadRoles.set(
+          raw.voteReport.eliminatedPlayerId,
+          raw.voteReport.eliminatedRole
+        );
+      }
     }
+
+    const mergedPlayers: CidadeDormeRoom['players'] = activePlayerRows.map(
+      (pRow) => {
+      const isAlive = pRow.is_alive ?? true;
+      const isReady =
+        Boolean(pRow.is_ready) ||
+        (phase === 'role_reveal' && readyUserIds.has(pRow.user_id));
+      const hasVoted =
+        Boolean(pRow.has_voted) ||
+        (phase === 'day_voting' && votedUserIds.has(pRow.user_id));
+
+      const secret = secretByUserId.get(pRow.user_id);
+      const canSeeRole =
+        isFinished ||
+        (viewerId !== null && pRow.user_id === viewerId) ||
+        (!isAlive && resolvedConfig.revealRoleOnDeath);
+
+      const resolvedRole: CidadeDormeRole | null = canSeeRole
+        ? secret?.secret_role ?? revealedDeadRoles.get(pRow.user_id) ?? null
+        : null;
+
+      return {
+        id: pRow.user_id,
+        nickname: pRow.nickname,
+        isHost: pRow.is_host || pRow.user_id === row.host_id,
+        isAlive,
+        isReady,
+        role: resolvedRole,
+        hasVoted,
+      };
+    });
+
+    const viewerSecret = viewerId ? secretByUserId.get(viewerId) : undefined;
+    const isViewerAssassin = viewerSecret?.secret_role === 'assassino';
+    const isViewerDetective = viewerSecret?.secret_role === 'detetive';
+
+    const allyAssassinSet = new Set<string>();
+    if (isViewerAssassin) {
+      for (const allyId of allyAssassinIdsFromRpc) {
+        if (allyId !== viewerId) {
+          allyAssassinSet.add(allyId);
+        }
+      }
+      for (const secret of secretRows) {
+        if (secret.secret_role === 'assassino' && secret.user_id !== viewerId) {
+          allyAssassinSet.add(secret.user_id);
+        }
+      }
+    }
+
+    const rawVerdict = isViewerDetective
+      ? viewerSecret?.detective_verdict ?? null
+      : null;
+    const detectiveVerdict =
+      rawVerdict && rawVerdict.roundNumber === currentRound
+        ? { ...rawVerdict }
+        : null;
 
     return {
       id: row.id,
       code: row.code,
       gameType: 'cidade-dorme',
       hostId: row.host_id,
-      phase: (row.phase || raw.phase || 'lobby') as CidadeDormeRoom['phase'],
-      config: {
-        ...defaultCfg,
-        ...(raw.config ?? {}),
-      },
-      currentRound: row.current_round ?? raw.currentRound ?? 1,
+      phase,
+      config: resolvedConfig,
+      currentRound,
+      phaseEndsAt:
+        row.phase_ends_at ??
+        (typeof raw.phaseEndsAt === 'string' ? raw.phaseEndsAt : null),
       narratorCaption:
         row.narrator_caption ??
         raw.narratorCaption ??
         'Sala pronta no Lobby.',
       players: mergedPlayers,
-      nightTargetId: raw.nightTargetId ?? null,
-      nightProtectedId: raw.nightProtectedId ?? null,
-      detectiveVerdict: raw.detectiveVerdict
-        ? { ...raw.detectiveVerdict }
-        : null,
-      votesByPlayerId: raw.votesByPlayerId ? { ...raw.votesByPlayerId } : {},
+      allyAssassinIds: Array.from(allyAssassinSet),
+      nightTargetId: null,
+      nightProtectedId: null,
+      detectiveVerdict,
+      votesByPlayerId: {},
       dawnReport: raw.dawnReport ? { ...raw.dawnReport } : null,
       voteReport: raw.voteReport
         ? {
@@ -1191,11 +1295,60 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
     };
   }
 
-  async getCidadeDormeRoom(roomId?: string): Promise<CidadeDormeRoom> {
+  private notifyCidadeDormeRoomBroadcast(roomId: string): void {
+    try {
+      const channel = this.activeChannels.get(`cidade-dorme-room-${roomId}`) as
+        | {
+            send?: (payload: {
+              type: 'broadcast';
+              event: string;
+              payload: Record<string, unknown>;
+            }) => unknown;
+          }
+        | undefined;
+      if (channel && typeof channel.send === 'function') {
+        void channel.send({
+          type: 'broadcast',
+          event: 'room_updated',
+          payload: { roomId },
+        });
+      }
+    } catch {
+      // Falha transitória no broadcast não bloqueia a persistência via Postgres Changes.
+    }
+  }
+
+  private async invokeCidadeDormeRpc(
+    fnName: string,
+    params: Record<string, unknown>,
+    fallbackMessage: string
+  ): Promise<void> {
+    const client = this.getClient();
+    if (typeof client.rpc !== 'function') {
+      throw new DataSourceError(
+        `Função RPC ${fnName} não configurada no cliente Supabase.`
+      );
+    }
+    const { error } = await client.rpc(fnName, params);
+    if (error) {
+      if (error.code === 'P0001') {
+        throw new ValidationError(error.message || fallbackMessage);
+      }
+      throw new DataSourceError(error.message || fallbackMessage);
+    }
+  }
+
+  async getCidadeDormeRoom(
+    roomId?: string,
+    viewerPlayerId?: string
+  ): Promise<CidadeDormeRoom> {
     this.ensureCredentials();
     if (this.delegateService) {
       try {
-        return await this.delegateService.getCidadeDormeRoom(roomId);
+        return await this.delegateService.getCidadeDormeRoom(
+          roomId,
+          viewerPlayerId
+        );
       } catch (err: unknown) {
         return this.wrapError(
           err,
@@ -1213,11 +1366,13 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
 
     try {
       const client = this.getClient();
-      await this.ensureAuthenticatedUserId();
+      const authenticatedUserId = await this.ensureAuthenticatedUserId();
+      const effectiveViewerId = viewerPlayerId ?? authenticatedUserId;
+
       const { data, error } = await client
         .from('rooms')
         .select(
-          'id, code, host_id, phase, current_round, narrator_caption, config'
+          'id, code, host_id, phase, current_round, phase_ends_at, narrator_caption, config'
         )
         .eq('id', targetId)
         .single();
@@ -1230,13 +1385,44 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
 
       const { data: playersData, error: playersError } = await client
         .from('room_players')
-        .select('id, room_id, user_id, nickname, is_host, score')
+        .select(
+          'id, room_id, user_id, nickname, is_host, is_alive, is_ready, has_voted, score'
+        )
         .eq('room_id', targetId);
 
       if (playersError) {
         throw new DataSourceError(
           'Erro ao carregar jogadores da sala de Cidade Dorme.'
         );
+      }
+
+      const { data: secretsData } = await client
+        .from('cidade_dorme_secrets')
+        .select('room_id, user_id, secret_role, detective_verdict')
+        .eq('room_id', targetId);
+
+      const { data: actionsData } = await client
+        .from('cidade_dorme_actions')
+        .select('id, room_id, round_number, user_id, kind, target_id, created_at')
+        .eq('room_id', targetId);
+
+      const secretRows = (secretsData ?? []) as DbCidadeDormeSecretRow[];
+      const viewerSecret = secretRows.find((s) => s.user_id === effectiveViewerId);
+
+      let allyAssassinsFromRpc: string[] = [];
+      if (
+        viewerSecret?.secret_role === 'assassino' &&
+        typeof client.rpc === 'function'
+      ) {
+        const { data: allyData, error: allyError } = await client.rpc(
+          'cidade_dorme_get_ally_assassins',
+          { p_room_id: targetId }
+        );
+        if (!allyError && Array.isArray(allyData)) {
+          allyAssassinsFromRpc = allyData.filter(
+            (item): item is string => typeof item === 'string'
+          );
+        }
       }
 
       this.activeRoomId = targetId;
@@ -1247,10 +1433,15 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
           host_id: string;
           phase: string;
           current_round: number;
+          phase_ends_at?: string | null;
           narrator_caption?: string | null;
           config: Record<string, unknown> | null;
         },
-        (playersData ?? []) as DbRoomPlayerRow[]
+        (playersData ?? []) as DbRoomPlayerRow[],
+        secretRows,
+        (actionsData ?? []) as DbCidadeDormeActionRow[],
+        effectiveViewerId,
+        allyAssassinsFromRpc
       );
     } catch (err: unknown) {
       return this.wrapError(
@@ -1285,26 +1476,11 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
         nightTurnSeconds: 15,
         revealRoleOnDeath: true,
       };
-      const initialPlayers: CidadeDormeRoom['players'] = [
-        {
-          id: userId,
-          nickname: cleanHost,
-          isHost: true,
-          isAlive: true,
-          isReady: false,
-          role: 'detetive',
-          hasVoted: false,
-        },
-      ];
       const storedPayload = {
         config: initialConfig,
-        players: initialPlayers,
+        phaseEndsAt: null,
         narratorCaption:
           'Sala criada! Escolha a voz do Narrador e aguarde os jogadores.',
-        nightTargetId: null,
-        nightProtectedId: null,
-        detectiveVerdict: null,
-        votesByPlayerId: {},
         dawnReport: null,
         voteReport: null,
         winner: null,
@@ -1319,6 +1495,7 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
           status: 'lobby',
           phase: 'lobby',
           current_round: 1,
+          phase_ends_at: null,
           narrator_caption: storedPayload.narratorCaption,
           config: storedPayload,
         })
@@ -1339,6 +1516,7 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
         is_host: true,
         is_alive: true,
         is_ready: false,
+        has_voted: false,
         score: 0,
       });
 
@@ -1417,10 +1595,19 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
       }
 
       const existingRows = (playersData ?? []) as DbRoomPlayerRow[];
+      const rawRoomConfig = (targetRoom.config ?? {}) as Record<string, unknown>;
+      const prevRemovedIds = Array.isArray(rawRoomConfig.removedPlayerIds)
+        ? rawRoomConfig.removedPlayerIds.filter(
+            (id): id is string => typeof id === 'string'
+          )
+        : [];
+      const removedIdSet = new Set(prevRemovedIds);
+
       const sameUserRow = existingRows.find((p) => p.user_id === userId);
       const duplicateNickRow = existingRows.find(
         (p) =>
           p.user_id !== userId &&
+          !removedIdSet.has(p.user_id) &&
           p.nickname.trim().toLowerCase() === cleanNickname.toLowerCase()
       );
 
@@ -1455,6 +1642,7 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
           is_host: targetRoom.host_id === userId,
           is_alive: true,
           is_ready: false,
+          has_voted: false,
           score: 0,
         });
 
@@ -1465,8 +1653,23 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
         }
       }
 
+      if (removedIdSet.has(userId)) {
+        const nextRemovedIds = prevRemovedIds.filter((id) => id !== userId);
+        await client
+          .from('rooms')
+          .update({
+            config: {
+              ...rawRoomConfig,
+              removedPlayerIds: nextRemovedIds,
+            },
+          })
+          .eq('id', targetRoom.id);
+      }
+
       this.activeRoomId = targetRoom.id;
-      return await this.getCidadeDormeRoom(targetRoom.id);
+      const snapshot = await this.getCidadeDormeRoom(targetRoom.id);
+      this.notifyCidadeDormeRoomBroadcast(targetRoom.id);
+      return snapshot;
     } catch (err: unknown) {
       return this.wrapError(
         err,
@@ -1489,19 +1692,44 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
       const client = this.getClient();
       const { data: roomData } = await client
         .from('rooms')
-        .select('id, host_id, phase')
+        .select('id, host_id, phase, config')
         .eq('id', roomId)
         .single();
 
       const row = roomData as
-        | { id: string; host_id: string; phase: string }
+        | {
+            id: string;
+            host_id: string;
+            phase: string;
+            config?: Record<string, unknown> | null;
+          }
         | null;
       if (row && row.phase === 'lobby' && row.host_id !== playerId) {
+        const prevCfg = row.config ?? {};
+        const prevRemoved = Array.isArray(prevCfg.removedPlayerIds)
+          ? prevCfg.removedPlayerIds.filter(
+              (id): id is string => typeof id === 'string'
+            )
+          : [];
+        if (!prevRemoved.includes(playerId)) {
+          await client
+            .from('rooms')
+            .update({
+              config: {
+                ...prevCfg,
+                removedPlayerIds: [...prevRemoved, playerId],
+              },
+            })
+            .eq('id', roomId);
+        }
+
         await client
           .from('room_players')
           .delete()
           .eq('room_id', roomId)
           .eq('user_id', playerId);
+
+        this.notifyCidadeDormeRoomBroadcast(roomId);
       }
     } catch {
       // Saída em best-effort: não bloqueia o retorno do jogador ao Hub.
@@ -1542,18 +1770,49 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
           ? 'finished'
           : 'playing';
 
-      const storedPayload = {
+      const [{ data: existingRoomRow }, { data: existingPlayerRows }] =
+        await Promise.all([
+          client.from('rooms').select('config').eq('id', room.id).single(),
+          client
+            .from('room_players')
+            .select('user_id')
+            .eq('room_id', room.id),
+        ]);
+
+      const keepPlayerIds = new Set(room.players.map((p) => p.id));
+      const existingConfig =
+        ((existingRoomRow as { config?: Record<string, unknown> | null } | null)
+          ?.config ?? {}) as Record<string, unknown>;
+      const prevRemovedIds = Array.isArray(existingConfig.removedPlayerIds)
+        ? existingConfig.removedPlayerIds.filter(
+            (id): id is string =>
+              typeof id === 'string' && !keepPlayerIds.has(id)
+          )
+        : [];
+      const removedSet = new Set(prevRemovedIds);
+
+      const playerRowsToDelete: string[] = [];
+      for (const existingRow of (existingPlayerRows ?? []) as Array<{
+        user_id: string;
+      }>) {
+        if (!keepPlayerIds.has(existingRow.user_id)) {
+          removedSet.add(existingRow.user_id);
+          playerRowsToDelete.push(existingRow.user_id);
+        }
+      }
+
+      // RNF11: Nunca gravar papéis, alvos noturnos, proteção, veredito ou votos individuais em rooms.config
+      const storedPayload: Record<string, unknown> = {
         config: room.config,
-        players: room.players,
+        phaseEndsAt: room.phaseEndsAt ?? null,
         narratorCaption: room.narratorCaption,
-        nightTargetId: room.nightTargetId,
-        nightProtectedId: room.nightProtectedId,
-        detectiveVerdict: room.detectiveVerdict,
-        votesByPlayerId: room.votesByPlayerId,
         dawnReport: room.dawnReport,
         voteReport: room.voteReport,
         winner: room.winner,
       };
+      if (removedSet.size > 0) {
+        storedPayload.removedPlayerIds = Array.from(removedSet);
+      }
 
       const { error } = await client
         .from('rooms')
@@ -1561,6 +1820,7 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
           phase: room.phase,
           status: nextStatus,
           current_round: room.currentRound,
+          phase_ends_at: room.phaseEndsAt ?? null,
           narrator_caption: room.narratorCaption,
           config: storedPayload,
         })
@@ -1571,13 +1831,239 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
           'Falha ao salvar o estado da sala de Cidade Dorme.'
         );
       }
+
+      for (const removedUserId of playerRowsToDelete) {
+        await client
+          .from('room_players')
+          .delete()
+          .eq('room_id', room.id)
+          .eq('user_id', removedUserId);
+      }
+
+      for (const player of room.players) {
+        await client
+          .from('room_players')
+          .update({
+            is_alive: player.isAlive,
+            is_ready: player.isReady,
+            has_voted: player.hasVoted,
+          })
+          .eq('room_id', room.id)
+          .eq('user_id', player.id);
+      }
+
       this.activeRoomId = room.id;
-      return await this.getCidadeDormeRoom(room.id);
+      const snapshot = await this.getCidadeDormeRoom(room.id);
+      this.notifyCidadeDormeRoomBroadcast(room.id);
+      return snapshot;
     } catch (err: unknown) {
       return this.wrapError(
         err,
         'Falha ao salvar o estado da sala de Cidade Dorme.'
       );
+    }
+  }
+
+  async startCidadeDormeMatch(
+    roomId: string,
+    assignedRolesByPlayerId: Record<string, CidadeDormeRole>,
+    narratorCaption: string
+  ): Promise<CidadeDormeRoom> {
+    this.ensureCredentials();
+    if (this.delegateService) {
+      return this.delegateService.startCidadeDormeMatch(
+        roomId,
+        assignedRolesByPlayerId,
+        narratorCaption
+      );
+    }
+
+    try {
+      await this.ensureAuthenticatedUserId();
+      await this.invokeCidadeDormeRpc(
+        'cidade_dorme_start_match',
+        {
+          p_room_id: roomId,
+          p_assigned_roles: assignedRolesByPlayerId,
+          p_narrator_caption: narratorCaption,
+        },
+        'Não foi possível distribuir os papéis da partida.'
+      );
+      this.activeRoomId = roomId;
+      const snapshot = await this.getCidadeDormeRoom(roomId);
+      this.notifyCidadeDormeRoomBroadcast(roomId);
+      return snapshot;
+    } catch (err: unknown) {
+      return this.wrapError(
+        err,
+        'Não foi possível distribuir os papéis da partida.'
+      );
+    }
+  }
+
+  async markCidadeDormePlayerReady(
+    roomId: string,
+    playerId: string,
+    options?: {
+      markCompanionsReady?: boolean;
+      nightTurnEndsAt?: string | null;
+      nightCaption?: string;
+    }
+  ): Promise<CidadeDormeRoom> {
+    this.ensureCredentials();
+    if (this.delegateService) {
+      return this.delegateService.markCidadeDormePlayerReady(
+        roomId,
+        playerId,
+        options
+      );
+    }
+
+    try {
+      await this.ensureAuthenticatedUserId();
+      await this.invokeCidadeDormeRpc(
+        'cidade_dorme_mark_ready',
+        {
+          p_room_id: roomId,
+          p_mark_all: Boolean(options?.markCompanionsReady),
+          p_night_turn_ends_at: options?.nightTurnEndsAt ?? null,
+          p_night_caption: options?.nightCaption ?? null,
+        },
+        'Não foi possível confirmar visualização do papel.'
+      );
+      this.activeRoomId = roomId;
+      const snapshot = await this.getCidadeDormeRoom(roomId, playerId);
+      this.notifyCidadeDormeRoomBroadcast(roomId);
+      return snapshot;
+    } catch (err: unknown) {
+      return this.wrapError(
+        err,
+        'Não foi possível confirmar visualização do papel.'
+      );
+    }
+  }
+
+  async submitCidadeDormeNightAction(
+    roomId: string,
+    actorPlayerId: string,
+    kind: 'night_assassin' | 'night_angel' | 'night_detective',
+    targetPlayerId: string | null
+  ): Promise<CidadeDormeRoom> {
+    this.ensureCredentials();
+    if (this.delegateService) {
+      return this.delegateService.submitCidadeDormeNightAction(
+        roomId,
+        actorPlayerId,
+        kind,
+        targetPlayerId
+      );
+    }
+
+    try {
+      await this.ensureAuthenticatedUserId();
+      await this.invokeCidadeDormeRpc(
+        'cidade_dorme_submit_night_action',
+        {
+          p_room_id: roomId,
+          p_kind: kind,
+          p_target_id: targetPlayerId,
+        },
+        'Não foi possível registrar a ação noturna.'
+      );
+      this.activeRoomId = roomId;
+      return await this.getCidadeDormeRoom(roomId, actorPlayerId);
+    } catch (err: unknown) {
+      return this.wrapError(err, 'Não foi possível registrar a ação noturna.');
+    }
+  }
+
+  async submitCidadeDormeVote(
+    roomId: string,
+    voterPlayerId: string,
+    targetPlayerIdOrSkip: string
+  ): Promise<CidadeDormeRoom> {
+    this.ensureCredentials();
+    if (this.delegateService) {
+      return this.delegateService.submitCidadeDormeVote(
+        roomId,
+        voterPlayerId,
+        targetPlayerIdOrSkip
+      );
+    }
+
+    try {
+      await this.ensureAuthenticatedUserId();
+      await this.invokeCidadeDormeRpc(
+        'cidade_dorme_cast_vote',
+        {
+          p_room_id: roomId,
+          p_target_id: targetPlayerIdOrSkip,
+        },
+        'Não foi possível registrar seu voto secreto.'
+      );
+      this.activeRoomId = roomId;
+      const snapshot = await this.getCidadeDormeRoom(roomId, voterPlayerId);
+      this.notifyCidadeDormeRoomBroadcast(roomId);
+      return snapshot;
+    } catch (err: unknown) {
+      return this.wrapError(err, 'Não foi possível registrar seu voto secreto.');
+    }
+  }
+
+  async resolveCidadeDormeDawn(
+    roomId: string,
+    options?: {
+      debateEndsAt?: string | null;
+    }
+  ): Promise<CidadeDormeRoom> {
+    this.ensureCredentials();
+    if (this.delegateService) {
+      return this.delegateService.resolveCidadeDormeDawn(roomId, options);
+    }
+
+    try {
+      await this.ensureAuthenticatedUserId();
+      await this.invokeCidadeDormeRpc(
+        'cidade_dorme_resolve_dawn',
+        {
+          p_room_id: roomId,
+          p_debate_ends_at: options?.debateEndsAt ?? null,
+        },
+        'Não foi possível apurar o amanhecer da cidade.'
+      );
+      this.activeRoomId = roomId;
+      const snapshot = await this.getCidadeDormeRoom(roomId);
+      this.notifyCidadeDormeRoomBroadcast(roomId);
+      return snapshot;
+    } catch (err: unknown) {
+      return this.wrapError(
+        err,
+        'Não foi possível apurar o amanhecer da cidade.'
+      );
+    }
+  }
+
+  async tallyCidadeDormeVotes(roomId: string): Promise<CidadeDormeRoom> {
+    this.ensureCredentials();
+    if (this.delegateService) {
+      return this.delegateService.tallyCidadeDormeVotes(roomId);
+    }
+
+    try {
+      await this.ensureAuthenticatedUserId();
+      await this.invokeCidadeDormeRpc(
+        'cidade_dorme_tally_votes',
+        {
+          p_room_id: roomId,
+        },
+        'Não foi possível apurar os votos da cidade.'
+      );
+      this.activeRoomId = roomId;
+      const snapshot = await this.getCidadeDormeRoom(roomId);
+      this.notifyCidadeDormeRoomBroadcast(roomId);
+      return snapshot;
+    } catch (err: unknown) {
+      return this.wrapError(err, 'Não foi possível apurar os votos da cidade.');
     }
   }
 
@@ -1631,7 +2117,12 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
         },
         refresh
       )
-      .subscribe();
+      .on('broadcast', { event: 'room_updated' }, refresh)
+      .subscribe((status?: string) => {
+        if (status === 'SUBSCRIBED') {
+          refresh();
+        }
+      });
 
     this.activeChannels.set(channelName, channel);
 

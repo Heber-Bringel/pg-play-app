@@ -1,13 +1,11 @@
 import type {
   CidadeDormeAlignment,
   CidadeDormeConfig,
-  CidadeDormeDawnReport,
-  CidadeDormeDetectiveVerdict,
+  CidadeDormePhase,
   CidadeDormePlayer,
   CidadeDormeRole,
   CidadeDormeRoom,
   CidadeDormeVoiceProfile,
-  CidadeDormeVoteReport,
 } from '@/model/entities/multiplayerSession';
 import { ValidationError } from '@/model/errors';
 import type { IMultiplayerRoomService } from '@/model/services/iMultiplayerRoomService';
@@ -73,10 +71,28 @@ export function evaluateCidadeDormeWinner(
   return null;
 }
 
+export function shuffleRoles(
+  roles: readonly CidadeDormeRole[],
+  random: () => number = Math.random
+): CidadeDormeRole[] {
+  const copy = [...roles];
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const raw = random();
+    const clamped = Number.isFinite(raw)
+      ? Math.min(0.999999999999, Math.max(0, raw))
+      : 0;
+    const j = Math.floor(clamped * (i + 1));
+    const temp = copy[i];
+    copy[i] = copy[j];
+    copy[j] = temp;
+  }
+  return copy;
+}
+
 function buildRolePool(
   playerCount: number,
   assassinCount: number,
-  roundSeed: number
+  random: () => number
 ): CidadeDormeRole[] {
   const roles: CidadeDormeRole[] = [];
   roles.push('detetive');
@@ -87,19 +103,60 @@ function buildRolePool(
   while (roles.length < playerCount) {
     roles.push('cidadao');
   }
-
-  const offset = (roundSeed - 1) % playerCount;
-  if (offset === 0) {
-    return roles;
-  }
-  return roles.map((_, idx) => roles[(idx + offset) % playerCount]);
+  return shuffleRoles(roles, random);
 }
 
 export class CidadeDormeUseCases implements ICidadeDormeUseCases {
   constructor(
     private readonly roomService: IMultiplayerRoomService,
-    private readonly narratorService: INarratorAudioService
+    private readonly narratorService: INarratorAudioService,
+    private readonly random: () => number = Math.random,
+    private readonly now: () => number = Date.now
   ) {}
+
+  private computePhaseEndsAt(durationSeconds: number): string {
+    return new Date(this.now() + durationSeconds * 1000).toISOString();
+  }
+
+  private async validateNightActor(
+    roomId: string,
+    actorPlayerId: string,
+    expectedPhase: CidadeDormePhase,
+    expectedRole: CidadeDormeRole
+  ): Promise<CidadeDormeRoom> {
+    const cleanActorId = actorPlayerId.trim();
+    if (!cleanActorId) {
+      throw new ValidationError('Jogador não encontrado na sala.');
+    }
+
+    const room = await this.roomService.getCidadeDormeRoom(roomId, cleanActorId);
+    if (room.phase !== expectedPhase) {
+      if (expectedPhase === 'night_assassin') {
+        throw new ValidationError('Não estamos no turno noturno do Assassino.');
+      }
+      if (expectedPhase === 'night_angel') {
+        throw new ValidationError('Não estamos no turno noturno do Anjo.');
+      }
+      throw new ValidationError('Não estamos no turno noturno do Detetive.');
+    }
+
+    const actor = room.players.find((p) => p.id === cleanActorId);
+    if (!actor) {
+      throw new ValidationError('Jogador não encontrado na sala.');
+    }
+    if (!actor.isAlive) {
+      throw new ValidationError(
+        'Jogadores eliminados não podem realizar ações noturnas.'
+      );
+    }
+    if (actor.role !== expectedRole) {
+      throw new ValidationError(
+        'Este jogador não possui o papel ativo deste turno noturno.'
+      );
+    }
+
+    return room;
+  }
 
   private async speakIfHost(
     room: CidadeDormeRoom,
@@ -274,41 +331,23 @@ export class CidadeDormeUseCases implements ICidadeDormeUseCases {
       }
       assignedRoles = [...preferredRoles];
     } else {
-      assignedRoles = buildRolePool(
-        totalPlayers,
-        assassinCount,
-        room.currentRound
-      );
+      assignedRoles = buildRolePool(totalPlayers, assassinCount, this.random);
     }
 
-    const updatedPlayers: CidadeDormePlayer[] = room.players.map(
-      (player, index) => ({
-        ...player,
-        isAlive: true,
-        isReady: false,
-        hasVoted: false,
-        role: assignedRoles[index],
-      })
-    );
+    const assignedRolesByPlayerId: Record<string, CidadeDormeRole> = {};
+    room.players.forEach((player, index) => {
+      assignedRolesByPlayerId[player.id] = assignedRoles[index];
+    });
 
     const caption =
       'Papéis secretos distribuídos! Revele seu papel sem mostrar aos colegas e confirme que está pronto.';
-    await this.speakIfHost(room, caption);
-
-    return this.roomService.saveCidadeDormeRoom({
-      ...room,
-      phase: 'role_reveal',
-      currentRound: 1,
-      narratorCaption: caption,
-      players: updatedPlayers,
-      nightTargetId: null,
-      nightProtectedId: null,
-      detectiveVerdict: null,
-      votesByPlayerId: {},
-      dawnReport: null,
-      voteReport: null,
-      winner: null,
-    });
+    const started = await this.roomService.startCidadeDormeMatch(
+      room.id,
+      assignedRolesByPlayerId,
+      caption
+    );
+    await this.speakIfHost(started, caption);
+    return started;
   }
 
   async confirmPlayerReady(
@@ -316,7 +355,7 @@ export class CidadeDormeUseCases implements ICidadeDormeUseCases {
     playerId: string,
     markCompanionsReady = false
   ): Promise<CidadeDormeRoom> {
-    const room = await this.roomService.getCidadeDormeRoom(roomId);
+    const room = await this.roomService.getCidadeDormeRoom(roomId, playerId);
     if (room.phase !== 'role_reveal') {
       throw new ValidationError(
         'A confirmação de papel só pode ocorrer na fase de revelação.'
@@ -328,43 +367,41 @@ export class CidadeDormeUseCases implements ICidadeDormeUseCases {
       throw new ValidationError('Jogador não encontrado na sala.');
     }
 
-    const updatedPlayers = room.players.map((p) => {
-      if (markCompanionsReady || p.id === playerId) {
-        return { ...p, isReady: true };
-      }
-      return { ...p };
-    });
-
-    const allReady = updatedPlayers.every((p) => p.isReady);
-    if (!allReady) {
-      return this.roomService.saveCidadeDormeRoom({
-        ...room,
-        players: updatedPlayers,
-      });
-    }
-
     const nightCaption =
       'A cidade dorme... Todos fecham os olhos. Assassino, acorde e escolha sua vítima.';
-    await this.speakIfHost(room, nightCaption);
+    const updated = await this.roomService.markCidadeDormePlayerReady(
+      room.id,
+      playerId,
+      {
+        markCompanionsReady,
+        nightTurnEndsAt: this.computePhaseEndsAt(room.config.nightTurnSeconds),
+        nightCaption,
+      }
+    );
 
-    return this.roomService.saveCidadeDormeRoom({
-      ...room,
-      phase: 'night_assassin',
-      narratorCaption: nightCaption,
-      players: updatedPlayers,
-      nightTargetId: null,
-      nightProtectedId: null,
-      detectiveVerdict: null,
-    });
+    if (updated.phase === 'night_assassin') {
+      await this.speakIfHost(updated, updated.narratorCaption);
+    }
+
+    return updated;
   }
 
   async submitAssassinTarget(
     roomId: string,
+    actorPlayerId: string,
     targetPlayerId: string
   ): Promise<CidadeDormeRoom> {
-    const room = await this.roomService.getCidadeDormeRoom(roomId);
-    if (room.phase !== 'night_assassin') {
-      throw new ValidationError('Não estamos no turno noturno do Assassino.');
+    const room = await this.validateNightActor(
+      roomId,
+      actorPlayerId,
+      'night_assassin',
+      'assassino'
+    );
+
+    if (targetPlayerId === actorPlayerId) {
+      throw new ValidationError(
+        'O Assassino não pode escolher a si mesmo como vítima.'
+      );
     }
 
     const target = room.players.find((p) => p.id === targetPlayerId);
@@ -373,99 +410,100 @@ export class CidadeDormeUseCases implements ICidadeDormeUseCases {
         'Escolha um jogador vivo como alvo do Assassino.'
       );
     }
+    if (
+      target.role === 'assassino' ||
+      room.allyAssassinIds?.includes(targetPlayerId)
+    ) {
+      throw new ValidationError(
+        'O Assassino não pode atacar outro Assassino parceiro.'
+      );
+    }
 
-    const caption =
-      'Assassino, volte a dormir e feche os olhos. Anjo, acorde e escolha quem você deseja proteger esta noite.';
-    await this.speakIfHost(room, caption);
-
-    return this.roomService.saveCidadeDormeRoom({
-      ...room,
-      phase: 'night_angel',
-      narratorCaption: caption,
-      nightTargetId: target.id,
-    });
+    return this.roomService.submitCidadeDormeNightAction(
+      room.id,
+      actorPlayerId,
+      'night_assassin',
+      target.id
+    );
   }
 
   async submitAngelProtection(
     roomId: string,
+    actorPlayerId: string,
     protectedPlayerId: string | null
   ): Promise<CidadeDormeRoom> {
-    const room = await this.roomService.getCidadeDormeRoom(roomId);
-    if (room.phase !== 'night_angel') {
-      throw new ValidationError('Não estamos no turno noturno do Anjo.');
-    }
-
-    const angelAlive = room.players.some(
-      (p) => p.role === 'anjo' && p.isAlive
+    const room = await this.validateNightActor(
+      roomId,
+      actorPlayerId,
+      'night_angel',
+      'anjo'
     );
 
-    let chosenId: string | null = null;
-    if (protectedPlayerId !== null) {
-      const target = room.players.find((p) => p.id === protectedPlayerId);
-      if (!target || !target.isAlive) {
-        throw new ValidationError('O Anjo só pode proteger um jogador vivo.');
-      }
-      chosenId = target.id;
-    } else if (angelAlive) {
+    if (protectedPlayerId === null || !protectedPlayerId.trim()) {
       throw new ValidationError(
         'Selecione um jogador vivo para o Anjo proteger esta noite.'
       );
     }
 
-    const caption =
-      'Anjo, volte a dormir e feche os olhos. Detetive, acorde e aponte um suspeito para investigar.';
-    await this.speakIfHost(room, caption);
+    const target = room.players.find((p) => p.id === protectedPlayerId);
+    if (!target || !target.isAlive) {
+      throw new ValidationError('O Anjo só pode proteger um jogador vivo.');
+    }
 
-    return this.roomService.saveCidadeDormeRoom({
-      ...room,
-      phase: 'night_detective',
-      narratorCaption: caption,
-      nightProtectedId: chosenId,
-    });
+    return this.roomService.submitCidadeDormeNightAction(
+      room.id,
+      actorPlayerId,
+      'night_angel',
+      target.id
+    );
   }
 
   async submitDetectiveInvestigation(
     roomId: string,
+    actorPlayerId: string,
     suspectPlayerId: string | null
   ): Promise<CidadeDormeRoom> {
-    const room = await this.roomService.getCidadeDormeRoom(roomId);
-    if (room.phase !== 'night_detective') {
-      throw new ValidationError('Não estamos no turno noturno do Detetive.');
-    }
-
-    const detectiveAlive = room.players.some(
-      (p) => p.role === 'detetive' && p.isAlive
+    const room = await this.validateNightActor(
+      roomId,
+      actorPlayerId,
+      'night_detective',
+      'detetive'
     );
 
-    let verdict: CidadeDormeDetectiveVerdict | null = null;
-    if (suspectPlayerId !== null) {
-      const suspect = room.players.find((p) => p.id === suspectPlayerId);
-      if (!suspect || !suspect.isAlive) {
-        throw new ValidationError(
-          'O Detetive só pode investigar um jogador vivo.'
-        );
-      }
-      verdict = {
-        targetPlayerId: suspect.id,
-        targetNickname: suspect.nickname,
-        isAssassin: suspect.role === 'assassino',
-        roundNumber: room.currentRound,
-      };
-    } else if (detectiveAlive) {
+    if (
+      room.detectiveVerdict &&
+      room.detectiveVerdict.roundNumber === room.currentRound
+    ) {
+      throw new ValidationError(
+        'O Detetive só pode investigar um suspeito por noite.'
+      );
+    }
+
+    if (suspectPlayerId === null || !suspectPlayerId.trim()) {
       throw new ValidationError(
         'Selecione um jogador vivo para o Detetive investigar.'
       );
     }
 
-    const caption =
-      'Detetive, guarde seu segredo, volte a dormir e feche os olhos.';
-    await this.speakIfHost(room, caption);
+    if (suspectPlayerId === actorPlayerId) {
+      throw new ValidationError(
+        'O Detetive não pode investigar a si mesmo.'
+      );
+    }
 
-    return this.roomService.saveCidadeDormeRoom({
-      ...room,
-      narratorCaption: caption,
-      detectiveVerdict: verdict,
-    });
+    const suspect = room.players.find((p) => p.id === suspectPlayerId);
+    if (!suspect || !suspect.isAlive) {
+      throw new ValidationError(
+        'O Detetive só pode investigar um jogador vivo.'
+      );
+    }
+
+    return this.roomService.submitCidadeDormeNightAction(
+      room.id,
+      actorPlayerId,
+      'night_detective',
+      suspect.id
+    );
   }
 
   async advanceToDawn(roomId: string): Promise<CidadeDormeRoom> {
@@ -476,99 +514,57 @@ export class CidadeDormeUseCases implements ICidadeDormeUseCases {
       );
     }
 
-    const attacked = room.nightTargetId
-      ? room.players.find((p) => p.id === room.nightTargetId) ?? null
-      : null;
-    const savedByAngel = Boolean(
-      attacked &&
-        room.nightProtectedId &&
-        attacked.id === room.nightProtectedId
-    );
-
-    const updatedPlayers = room.players.map((p) => {
-      if (!savedByAngel && attacked && p.id === attacked.id) {
-        return { ...p, isAlive: false, hasVoted: false };
-      }
-      return { ...p, hasVoted: false };
+    const resolved = await this.roomService.resolveCidadeDormeDawn(room.id, {
+      debateEndsAt: this.computePhaseEndsAt(room.config.dayDebateSeconds),
     });
-
-    const dawnReport: CidadeDormeDawnReport = {
-      roundNumber: room.currentRound,
-      attackedPlayerId: attacked?.id ?? null,
-      attackedNickname: attacked?.nickname ?? null,
-      savedByAngel,
-      eliminatedPlayerId: savedByAngel ? null : (attacked?.id ?? null),
-      eliminatedNickname: savedByAngel ? null : (attacked?.nickname ?? null),
-      eliminatedRole:
-        !savedByAngel && attacked && room.config.revealRoleOnDeath
-          ? attacked.role
-          : null,
-    };
-
-    const winner = evaluateCidadeDormeWinner(updatedPlayers);
-    let caption: string;
-
-    if (winner === 'infiltrados') {
-      caption = attacked
-        ? `A cidade acorda! Triste notícia na cidade: ${attacked.nickname} foi eliminado durante a noite. Os Assassinos atingiram a paridade e venceram a partida!`
-        : 'A cidade acorda! Os Assassinos atingiram a paridade numérica e venceram a partida!';
-    } else if (winner === 'cidade') {
-      caption =
-        'A cidade acorda! Todos os Assassinos foram neutralizados. Vitória da Cidade!';
-    } else if (savedByAngel) {
-      caption =
-        'A cidade acorda! Todos podem abrir os olhos. A madrugada foi tensa, mas o Anjo protegeu a vítima a tempo! Ninguém foi eliminado!';
-    } else if (attacked) {
-      caption = `A cidade acorda! Todos podem abrir os olhos. Triste notícia na cidade: ${attacked.nickname} foi eliminado durante a noite.`;
-    } else {
-      caption =
-        'A cidade acorda! Todos podem abrir os olhos. Ninguém foi eliminado durante a noite.';
-    }
-
-    await this.speakIfHost(room, caption);
-
-    return this.roomService.saveCidadeDormeRoom({
-      ...room,
-      phase: winner ? 'finished' : 'day_debate',
-      narratorCaption: caption,
-      players: updatedPlayers,
-      dawnReport,
-      voteReport: null,
-      votesByPlayerId: {},
-      winner,
-    });
+    await this.speakIfHost(resolved, resolved.narratorCaption);
+    return resolved;
   }
 
-  async autoAdvanceNightTurn(roomId: string): Promise<CidadeDormeRoom> {
+  async autoAdvanceNightTurn(
+    roomId: string,
+    expectedPhase?: CidadeDormePhase,
+    expectedRound?: number
+  ): Promise<CidadeDormeRoom> {
     const room = await this.roomService.getCidadeDormeRoom(roomId);
-    const alivePlayers = room.players.filter((p) => p.isAlive);
+
+    if (expectedPhase !== undefined && room.phase !== expectedPhase) {
+      return room;
+    }
+    if (expectedRound !== undefined && room.currentRound !== expectedRound) {
+      return room;
+    }
 
     if (room.phase === 'night_assassin') {
-      const target =
-        alivePlayers.find((p) => p.role !== 'assassino') ?? alivePlayers[0];
-      if (!target) {
-        throw new ValidationError('Não há jogadores vivos para o turno.');
-      }
-      return this.submitAssassinTarget(room.id, target.id);
+      const caption =
+        'Assassino, volte a dormir e feche os olhos. Anjo, acorde e escolha quem você deseja proteger esta noite.';
+      await this.speakIfHost(room, caption);
+      return this.roomService.saveCidadeDormeRoom({
+        ...room,
+        phase: 'night_angel',
+        phaseEndsAt: this.computePhaseEndsAt(room.config.nightTurnSeconds),
+        narratorCaption: caption,
+      });
     }
 
     if (room.phase === 'night_angel') {
-      const angel = alivePlayers.find((p) => p.role === 'anjo');
-      if (!angel) {
-        return this.submitAngelProtection(room.id, null);
-      }
-      const protectedTarget = alivePlayers[0] ?? angel;
-      return this.submitAngelProtection(room.id, protectedTarget.id);
+      const caption =
+        'Anjo, volte a dormir e feche os olhos. Detetive, acorde e aponte um suspeito para investigar.';
+      await this.speakIfHost(room, caption);
+      return this.roomService.saveCidadeDormeRoom({
+        ...room,
+        phase: 'night_detective',
+        phaseEndsAt: this.computePhaseEndsAt(room.config.nightTurnSeconds),
+        narratorCaption: caption,
+      });
     }
 
     if (room.phase === 'night_detective') {
-      const detective = alivePlayers.find((p) => p.role === 'detetive');
-      if (detective && !room.detectiveVerdict) {
-        const suspect =
-          alivePlayers.find((p) => p.id !== detective.id) ?? detective;
-        await this.submitDetectiveInvestigation(room.id, suspect.id);
-      }
       return this.advanceToDawn(room.id);
+    }
+
+    if (expectedPhase !== undefined) {
+      return room;
     }
 
     throw new ValidationError(
@@ -591,6 +587,7 @@ export class CidadeDormeUseCases implements ICidadeDormeUseCases {
     return this.roomService.saveCidadeDormeRoom({
       ...room,
       phase: 'day_voting',
+      phaseEndsAt: null,
       narratorCaption: caption,
       votesByPlayerId: {},
       players: room.players.map((p) => ({ ...p, hasVoted: false })),
@@ -602,7 +599,10 @@ export class CidadeDormeUseCases implements ICidadeDormeUseCases {
     voterPlayerId: string,
     targetPlayerIdOrSkip: string
   ): Promise<CidadeDormeRoom> {
-    const room = await this.roomService.getCidadeDormeRoom(roomId);
+    const room = await this.roomService.getCidadeDormeRoom(
+      roomId,
+      voterPlayerId
+    );
     if (room.phase !== 'day_voting') {
       throw new ValidationError('A sala não está em fase de votação.');
     }
@@ -618,6 +618,16 @@ export class CidadeDormeUseCases implements ICidadeDormeUseCases {
     }
 
     const cleanChoice = targetPlayerIdOrSkip.trim();
+    if (!cleanChoice) {
+      throw new ValidationError(
+        'Selecione um suspeito vivo ou escolha Abster-se / Pular Voto.'
+      );
+    }
+    if (cleanChoice === voter.id) {
+      throw new ValidationError(
+        'Você não pode votar em si mesmo na votação da cidade.'
+      );
+    }
     if (cleanChoice !== 'skip') {
       const target = room.players.find((p) => p.id === cleanChoice);
       if (!target || !target.isAlive) {
@@ -627,20 +637,11 @@ export class CidadeDormeUseCases implements ICidadeDormeUseCases {
       }
     }
 
-    const updatedVotes = {
-      ...room.votesByPlayerId,
-      [voter.id]: cleanChoice,
-    };
-
-    const updatedPlayers = room.players.map((p) =>
-      p.id === voter.id ? { ...p, hasVoted: true } : { ...p }
+    return this.roomService.submitCidadeDormeVote(
+      room.id,
+      voter.id,
+      cleanChoice
     );
-
-    return this.roomService.saveCidadeDormeRoom({
-      ...room,
-      votesByPlayerId: updatedVotes,
-      players: updatedPlayers,
-    });
   }
 
   async tallyVotes(roomId: string): Promise<CidadeDormeRoom> {
@@ -651,90 +652,9 @@ export class CidadeDormeUseCases implements ICidadeDormeUseCases {
       );
     }
 
-    const entries = Object.entries(room.votesByPlayerId);
-    if (entries.length === 0) {
-      throw new ValidationError(
-        'Registre pelo menos um voto antes de apurar a votação.'
-      );
-    }
-
-    const voteCounts: Record<string, number> = {};
-    let skipCount = 0;
-
-    for (const [, targetId] of entries) {
-      if (targetId === 'skip') {
-        skipCount += 1;
-      } else {
-        voteCounts[targetId] = (voteCounts[targetId] ?? 0) + 1;
-      }
-    }
-
-    let maxVotes = 0;
-    let leaders: string[] = [];
-    for (const [candidateId, count] of Object.entries(voteCounts)) {
-      if (count > maxVotes) {
-        maxVotes = count;
-        leaders = [candidateId];
-      } else if (count === maxVotes && count > 0) {
-        leaders.push(candidateId);
-      }
-    }
-
-    const tieOrSkipped =
-      maxVotes === 0 || leaders.length !== 1 || skipCount >= maxVotes;
-
-    const eliminatedPlayer = !tieOrSkipped
-      ? room.players.find((p) => p.id === leaders[0]) ?? null
-      : null;
-
-    const updatedPlayers = room.players.map((p) => {
-      if (eliminatedPlayer && p.id === eliminatedPlayer.id) {
-        return { ...p, isAlive: false };
-      }
-      return { ...p };
-    });
-
-    const voteReport: CidadeDormeVoteReport = {
-      roundNumber: room.currentRound,
-      eliminatedPlayerId: eliminatedPlayer?.id ?? null,
-      eliminatedNickname: eliminatedPlayer?.nickname ?? null,
-      eliminatedRole:
-        eliminatedPlayer && room.config.revealRoleOnDeath
-          ? eliminatedPlayer.role
-          : null,
-      tieOrSkipped,
-      voteCounts,
-      skipCount,
-    };
-
-    const winner = evaluateCidadeDormeWinner(updatedPlayers);
-    let caption: string;
-
-    if (winner === 'cidade') {
-      caption = eliminatedPlayer
-        ? `A cidade votou e eliminou ${eliminatedPlayer.nickname}! Todos os Assassinos foram descobertos: Vitória da Cidade!`
-        : 'Todos os Assassinos foram descobertos: Vitória da Cidade!';
-    } else if (winner === 'infiltrados') {
-      caption = eliminatedPlayer
-        ? `A cidade eliminou ${eliminatedPlayer.nickname}, e os Assassinos atingiram paridade numérica: Vitória dos Assassinos!`
-        : 'Os Assassinos atingiram paridade numérica com os inocentes: Vitória dos Assassinos!';
-    } else if (tieOrSkipped || !eliminatedPlayer) {
-      caption =
-        'A cidade não chegou a um consenso na votação. Ninguém foi eliminado hoje!';
-    } else {
-      caption = `A cidade decidiu por maioria simples: ${eliminatedPlayer.nickname} foi eliminado na votação!`;
-    }
-
-    await this.speakIfHost(room, caption);
-
-    return this.roomService.saveCidadeDormeRoom({
-      ...room,
-      phase: winner ? 'finished' : 'vote_result',
-      narratorCaption: caption,
-      players: updatedPlayers,
-      voteReport,
-      winner,
-    });
+    const tallied = await this.roomService.tallyCidadeDormeVotes(room.id);
+    await this.speakIfHost(tallied, tallied.narratorCaption);
+    return tallied;
   }
 
   async startNextNight(roomId: string): Promise<CidadeDormeRoom> {
@@ -753,6 +673,7 @@ export class CidadeDormeUseCases implements ICidadeDormeUseCases {
       ...room,
       phase: 'night_assassin',
       currentRound: room.currentRound + 1,
+      phaseEndsAt: this.computePhaseEndsAt(room.config.nightTurnSeconds),
       narratorCaption: caption,
       nightTargetId: null,
       nightProtectedId: null,

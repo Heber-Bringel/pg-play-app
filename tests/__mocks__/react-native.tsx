@@ -1,6 +1,8 @@
 import React from 'react';
 
 export const View = (props: any) => React.createElement('View', props, props.children);
+export const ActivityIndicator = (props: any) =>
+  React.createElement('ActivityIndicator', props, props.children);
 export const Modal = (props: any) =>
   props.visible ? React.createElement('Modal', props, props.children) : null;
 export const KeyboardAvoidingView = (props: any) => React.createElement('KeyboardAvoidingView', props, props.children);
