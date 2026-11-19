@@ -26,6 +26,7 @@ module.exports = {
     '^react-native-safe-area-context$': '<rootDir>/tests/__mocks__/react-native-safe-area-context.tsx',
     '^@expo/vector-icons$': '<rootDir>/tests/__mocks__/expo-vector-icons.tsx',
     '^expo-router$': '<rootDir>/tests/__mocks__/expo-router.ts',
+    '^expo-speech$': '<rootDir>/tests/__mocks__/expo-speech.ts',
   },
   collectCoverageFrom: [
     'src/view/theme.ts',
