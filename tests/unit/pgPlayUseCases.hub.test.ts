@@ -21,7 +21,7 @@ describe('PgPlayUseCases — Catálogo e Hub de Jogos (UC01)', () => {
       'adedonha',
       'cidade-dorme',
     ]);
-    expect(games.find((g) => g.id === 'cidade-dorme')?.available).toBe(false);
+    expect(games.find((g) => g.id === 'cidade-dorme')?.available).toBe(true);
     expect(games.find((g) => g.id === 'mimica')?.available).toBe(true);
   });
 

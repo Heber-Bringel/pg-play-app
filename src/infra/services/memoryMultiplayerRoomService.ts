@@ -4,6 +4,9 @@ import type {
   AdedonhaRoom,
   AdedonhaSubmission,
   AdedonhaTallyVerdict,
+  CidadeDormeConfig,
+  CidadeDormePlayer,
+  CidadeDormeRoom,
 } from '@/model/entities/multiplayerSession';
 import { DataSourceError } from '@/model/errors';
 import type { IMultiplayerRoomService } from '@/model/services/iMultiplayerRoomService';
@@ -123,17 +126,142 @@ function cloneRoom(room: AdedonhaRoom): AdedonhaRoom {
   };
 }
 
+function createDefaultCidadeDormePlayers(
+  hostNickname = 'Líder do PG'
+): CidadeDormePlayer[] {
+  return [
+    {
+      id: 'cd-player-1',
+      nickname: hostNickname,
+      isHost: true,
+      isAlive: true,
+      isReady: false,
+      role: 'detetive',
+      hasVoted: false,
+    },
+    {
+      id: 'cd-player-2',
+      nickname: 'Ana',
+      isHost: false,
+      isAlive: true,
+      isReady: false,
+      role: 'assassino',
+      hasVoted: false,
+    },
+    {
+      id: 'cd-player-3',
+      nickname: 'Lucas',
+      isHost: false,
+      isAlive: true,
+      isReady: false,
+      role: 'anjo',
+      hasVoted: false,
+    },
+    {
+      id: 'cd-player-4',
+      nickname: 'Beatriz',
+      isHost: false,
+      isAlive: true,
+      isReady: false,
+      role: 'cidadao',
+      hasVoted: false,
+    },
+    {
+      id: 'cd-player-5',
+      nickname: 'Pedro',
+      isHost: false,
+      isAlive: true,
+      isReady: false,
+      role: 'cidadao',
+      hasVoted: false,
+    },
+    {
+      id: 'cd-player-6',
+      nickname: 'Sara',
+      isHost: false,
+      isAlive: true,
+      isReady: false,
+      role: 'cidadao',
+      hasVoted: false,
+    },
+  ];
+}
+
+function createDefaultCidadeDormeRoom(): CidadeDormeRoom {
+  return {
+    id: 'room-cidade-dorme-1',
+    code: 'CD2026',
+    gameType: 'cidade-dorme',
+    hostId: 'cd-player-1',
+    phase: 'lobby',
+    config: {
+      narratorVoice: 'masculina',
+      assassinCount: 1,
+      dayDebateSeconds: 120,
+      nightTurnSeconds: 15,
+      revealRoleOnDeath: true,
+    },
+    currentRound: 1,
+    narratorCaption:
+      'Sala pronta no Lobby. Configure a voz do Narrador e inicie quando todos estiverem na roda.',
+    players: createDefaultCidadeDormePlayers(),
+    nightTargetId: null,
+    nightProtectedId: null,
+    detectiveVerdict: null,
+    votesByPlayerId: {},
+    dawnReport: null,
+    voteReport: null,
+    winner: null,
+  };
+}
+
+function cloneCidadeDormeRoom(room: CidadeDormeRoom): CidadeDormeRoom {
+  return {
+    ...room,
+    config: { ...room.config },
+    players: room.players.map((p) => ({ ...p })),
+    detectiveVerdict: room.detectiveVerdict
+      ? { ...room.detectiveVerdict }
+      : null,
+    votesByPlayerId: { ...room.votesByPlayerId },
+    dawnReport: room.dawnReport ? { ...room.dawnReport } : null,
+    voteReport: room.voteReport
+      ? {
+          ...room.voteReport,
+          voteCounts: { ...room.voteReport.voteCounts },
+        }
+      : null,
+  };
+}
+
 export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
   private rooms: Map<string, AdedonhaRoom> = new Map();
   private activeRoomId: string;
   private localPlayerIdByRoom: Map<string, string> = new Map();
   private listeners: Map<string, Set<(room: AdedonhaRoom) => void>> = new Map();
+  private cidadeDormeRooms: Map<string, CidadeDormeRoom> = new Map();
+  private activeCidadeDormeRoomId: string;
+  private cidadeDormeListeners: Map<
+    string,
+    Set<(room: CidadeDormeRoom) => void>
+  > = new Map();
+  private playerIdCounter = 100;
 
-  constructor(initialRoom?: AdedonhaRoom) {
+  constructor(
+    initialRoom?: AdedonhaRoom,
+    initialCidadeDormeRoom?: CidadeDormeRoom
+  ) {
     const seedRoom = initialRoom ? cloneRoom(initialRoom) : createDefaultRoom();
     this.rooms.set(seedRoom.id, seedRoom);
     this.activeRoomId = seedRoom.id;
     this.localPlayerIdByRoom.set(seedRoom.id, seedRoom.hostId);
+
+    const seedCidadeDorme = initialCidadeDormeRoom
+      ? cloneCidadeDormeRoom(initialCidadeDormeRoom)
+      : createDefaultCidadeDormeRoom();
+    this.cidadeDormeRooms.set(seedCidadeDorme.id, seedCidadeDorme);
+    this.activeCidadeDormeRoomId = seedCidadeDorme.id;
+    this.localPlayerIdByRoom.set(seedCidadeDorme.id, seedCidadeDorme.hostId);
   }
 
   private resolveRoom(roomId?: string): AdedonhaRoom {
@@ -263,8 +391,9 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
       return cloneRoom(found);
     }
 
+    this.playerIdCounter += 1;
     const newPlayer: AdedonhaPlayer = {
-      id: `player-${found.players.length + 1}`,
+      id: `player-${this.playerIdCounter}`,
       nickname: cleanNick,
       isHost: false,
       score: 0,
@@ -279,6 +408,21 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
     this.activeRoomId = found.id;
     this.localPlayerIdByRoom.set(found.id, newPlayer.id);
     return this.saveAndNotify(updated);
+  }
+
+  async leaveAdedonhaRoom(roomId: string, playerId: string): Promise<void> {
+    const room = this.rooms.get(roomId);
+    if (!room) return;
+    if (this.localPlayerIdByRoom.get(roomId) === playerId) {
+      this.localPlayerIdByRoom.delete(roomId);
+    }
+    if (room.phase === 'lobby' && playerId !== room.hostId) {
+      const updated: AdedonhaRoom = {
+        ...room,
+        players: room.players.filter((p) => p.id !== playerId),
+      };
+      this.saveAndNotify(updated);
+    }
   }
 
   async updateAdedonhaColumns(
@@ -566,5 +710,164 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
         uniqueAnswersCount: uniqueCount,
       };
     });
+  }
+
+  private resolveCidadeDormeRoom(roomId?: string): CidadeDormeRoom {
+    const targetId = roomId ?? this.activeCidadeDormeRoomId;
+    const room = this.cidadeDormeRooms.get(targetId);
+    if (!room) {
+      throw new DataSourceError('Sala de Cidade Dorme não encontrada.');
+    }
+    return room;
+  }
+
+  private saveAndNotifyCidadeDorme(room: CidadeDormeRoom): CidadeDormeRoom {
+    this.cidadeDormeRooms.set(room.id, room);
+    const snapshot = cloneCidadeDormeRoom(room);
+    const roomListeners = this.cidadeDormeListeners.get(room.id);
+    if (roomListeners) {
+      roomListeners.forEach((listener) =>
+        listener(cloneCidadeDormeRoom(snapshot))
+      );
+    }
+    return snapshot;
+  }
+
+  async getCidadeDormeRoom(roomId?: string): Promise<CidadeDormeRoom> {
+    const room = this.resolveCidadeDormeRoom(roomId);
+    return cloneCidadeDormeRoom(room);
+  }
+
+  async createCidadeDormeRoom(hostNickname: string): Promise<CidadeDormeRoom> {
+    try {
+      const id = `room-cd-${Date.now()}`;
+      const code = `CD${String(this.cidadeDormeRooms.size + 1000).slice(-4)}`;
+      const room: CidadeDormeRoom = {
+        id,
+        code,
+        gameType: 'cidade-dorme',
+        hostId: 'cd-player-1',
+        phase: 'lobby',
+        config: {
+          narratorVoice: 'masculina',
+          assassinCount: 1,
+          dayDebateSeconds: 120,
+          nightTurnSeconds: 15,
+          revealRoleOnDeath: true,
+        },
+        currentRound: 1,
+        narratorCaption:
+          'Sala criada! Escolha a voz do Narrador e aguarde os jogadores entrarem na roda.',
+        players: createDefaultCidadeDormePlayers(hostNickname.trim()),
+        nightTargetId: null,
+        nightProtectedId: null,
+        detectiveVerdict: null,
+        votesByPlayerId: {},
+        dawnReport: null,
+        voteReport: null,
+        winner: null,
+      };
+      this.activeCidadeDormeRoomId = id;
+      this.localPlayerIdByRoom.set(id, room.hostId);
+      return this.saveAndNotifyCidadeDorme(room);
+    } catch (err: unknown) {
+      if (err instanceof DataSourceError) throw err;
+      throw new DataSourceError('Não foi possível criar a sala de Cidade Dorme.');
+    }
+  }
+
+  async joinCidadeDormeRoom(
+    code: string,
+    nickname: string
+  ): Promise<CidadeDormeRoom> {
+    const normalizedCode = code.trim().toUpperCase();
+    const found = Array.from(this.cidadeDormeRooms.values()).find(
+      (r) => r.code.toUpperCase() === normalizedCode
+    );
+    if (!found) {
+      throw new DataSourceError('Código de sala do Cidade Dorme não encontrado.');
+    }
+
+    const cleanNick = nickname.trim();
+    const existing = found.players.find(
+      (p) => p.nickname.toLowerCase() === cleanNick.toLowerCase()
+    );
+    if (existing) {
+      this.activeCidadeDormeRoomId = found.id;
+      this.localPlayerIdByRoom.set(found.id, existing.id);
+      return cloneCidadeDormeRoom(found);
+    }
+
+    this.playerIdCounter += 1;
+    const newPlayer: CidadeDormePlayer = {
+      id: `cd-player-${this.playerIdCounter}`,
+      nickname: cleanNick,
+      isHost: false,
+      isAlive: true,
+      isReady: false,
+      role: 'cidadao',
+      hasVoted: false,
+    };
+
+    const updated: CidadeDormeRoom = {
+      ...found,
+      players: [...found.players, newPlayer],
+    };
+    this.activeCidadeDormeRoomId = found.id;
+    this.localPlayerIdByRoom.set(found.id, newPlayer.id);
+    return this.saveAndNotifyCidadeDorme(updated);
+  }
+
+  async leaveCidadeDormeRoom(roomId: string, playerId: string): Promise<void> {
+    const room = this.cidadeDormeRooms.get(roomId);
+    if (!room) return;
+    if (this.localPlayerIdByRoom.get(roomId) === playerId) {
+      this.localPlayerIdByRoom.delete(roomId);
+    }
+    if (room.phase === 'lobby' && playerId !== room.hostId) {
+      const updated: CidadeDormeRoom = {
+        ...room,
+        players: room.players.filter((p) => p.id !== playerId),
+      };
+      this.saveAndNotifyCidadeDorme(updated);
+    }
+  }
+
+  async updateCidadeDormeConfig(
+    roomId: string,
+    partialConfig: Partial<CidadeDormeConfig>
+  ): Promise<CidadeDormeRoom> {
+    const room = this.resolveCidadeDormeRoom(roomId);
+    const updated: CidadeDormeRoom = {
+      ...room,
+      config: {
+        ...room.config,
+        ...partialConfig,
+      },
+    };
+    return this.saveAndNotifyCidadeDorme(updated);
+  }
+
+  async saveCidadeDormeRoom(room: CidadeDormeRoom): Promise<CidadeDormeRoom> {
+    this.resolveCidadeDormeRoom(room.id);
+    return this.saveAndNotifyCidadeDorme(cloneCidadeDormeRoom(room));
+  }
+
+  subscribeToCidadeDormeRoom(
+    roomId: string,
+    onRoomUpdated: (room: CidadeDormeRoom) => void
+  ): () => void {
+    const listeners = this.cidadeDormeListeners.get(roomId) ?? new Set();
+    listeners.add(onRoomUpdated);
+    this.cidadeDormeListeners.set(roomId, listeners);
+
+    return () => {
+      const current = this.cidadeDormeListeners.get(roomId);
+      if (!current) return;
+      current.delete(onRoomUpdated);
+      if (current.size === 0) {
+        this.cidadeDormeListeners.delete(roomId);
+      }
+    };
   }
 }
