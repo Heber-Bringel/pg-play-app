@@ -13,6 +13,7 @@ O **Cidade Dorme** (também conhecido como *Máfia* ou *Werewolf*) é um clássi
   - O aplicativo conduz todas as fases por **áudio com vozes clonadas dos líderes do PG**.
   - Nas configurações da sala (Lobby), o **Moderador/Anfitrião** escolhe entre **Voz Masculina** ou **Voz Feminina** para o Narrador.
   - **Áudio centralizada:** A narração em voz alta é reproduzida apenas no dispositivo do **Anfitrião** (evitando eco entre múltiplos celulares na mesma sala), enquanto as telas de todos os participantes são sincronizadas em tempo real.
+  - **Implementação atual da voz:** a fala é sintetizada com `expo-speech` (texto para voz em pt-BR), usando as vozes masculina e feminina disponíveis no aparelho do Anfitrião, com legendas sincronizadas em todos os celulares (**RNF08**). A voz clonada dos líderes fica para uma versão futura. Issue: #32.
 
 ---
 
