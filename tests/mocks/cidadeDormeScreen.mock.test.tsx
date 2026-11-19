@@ -49,6 +49,7 @@ const baseRoom: CidadeDormeRoom = {
     revealRoleOnDeath: true,
   },
   currentRound: 1,
+  phaseEndsAt: null,
   narratorCaption: 'A cidade dorme... Todos fecham os olhos.',
   players: [
     {
@@ -97,6 +98,7 @@ const baseRoom: CidadeDormeRoom = {
       hasVoted: false,
     },
   ],
+  allyAssassinIds: [],
   nightTargetId: null,
   nightProtectedId: null,
   detectiveVerdict: null,
@@ -121,6 +123,7 @@ const baseState: CidadeDormeState = {
   isRealtimeEnabled: false,
   isNightPhase: false,
   isRoleVisible: false,
+  hasSubmittedNightAction: false,
   selectedNightTargetId: 'cd-player-2',
   selectedVoteTargetId: 'cd-player-2',
   secondsRemaining: 15,
@@ -190,6 +193,18 @@ describe('CidadeDormeScreen — Testes de Tela com Mocks de ViewModel (UC07)', (
       accessibilityLabel: 'Entrar na Sala Demo Offline (CD2026)',
     } as any);
     expect(demoBtns).toHaveLength(0);
+
+    // Spinner de carregamento durante conexão inicial
+    jest
+      .spyOn(cidadeDormeVmModule, 'useCidadeDormeViewModel')
+      .mockReturnValue([{ ...baseState, room: null, loading: true }, actions]);
+    let entryLoadingTree!: renderer.ReactTestRenderer;
+    act(() => {
+      entryLoadingTree = renderer.create(<CidadeDormeScreen />);
+    });
+    expect(
+      entryLoadingTree.root.findAllByType('ActivityIndicator' as any).length
+    ).toBeGreaterThan(0);
   });
 
   it('deve renderizar o Lobby, selecionar a voz do Narrador e iniciar a partida (RF18, RF19)', async () => {
@@ -248,7 +263,7 @@ describe('CidadeDormeScreen — Testes de Tela com Mocks de ViewModel (UC07)', (
     });
     expect(actions.handleConfirmRoleReady).toHaveBeenCalledTimes(1);
 
-    // Fase da Noite (Detetive com veredito de Assassino confirmado)
+    // Fase da Noite (Detetive com veredito de Assassino confirmado: oculta lista e botão manual de amanhecer)
     jest
       .spyOn(cidadeDormeVmModule, 'useCidadeDormeViewModel')
       .mockReturnValue([
@@ -274,13 +289,21 @@ describe('CidadeDormeScreen — Testes de Tela com Mocks de ViewModel (UC07)', (
       nightTree = renderer.create(<CidadeDormeScreen />);
     });
 
-    const dawnBtn = nightTree.root.findByProps({
-      accessibilityLabel: 'Concluir Noite e Amanhecer',
-    } as any);
-    await act(async () => {
-      dawnBtn.props.onPress();
-    });
-    expect(actions.handleAdvanceToDawn).toHaveBeenCalledTimes(1);
+    expect(
+      nightTree.root.findAllByProps({
+        accessibilityLabel: 'Concluir Noite e Amanhecer',
+      } as any)
+    ).toHaveLength(0);
+    expect(
+      nightTree.root.findAllByProps({
+        accessibilityLabel: 'Investigar Suspeito',
+      } as any)
+    ).toHaveLength(0);
+    expect(
+      nightTree.root.findAllByProps({
+        accessibilityLabel: 'Suspeito Confirmado: Ana é Assassino',
+      } as any).length
+    ).toBeGreaterThan(0);
   });
 
   it('deve renderizar O Dia (Boletim da Manhã, Votação Secreta e Fim de Jogo com Revanche) (RF19, RF20)', async () => {
@@ -466,5 +489,149 @@ describe('CidadeDormeScreen — Testes de Tela com Mocks de ViewModel (UC07)', (
         accessibilityLabel: 'Trocar de Jogo',
       } as any).length
     ).toBeGreaterThan(0);
+  });
+
+  it('deve aplicar melhorias de IHC (#42, #43): cabeçalho contextual, aviso para convidados, opções numeradas sem A-D e filtragem de alvos', () => {
+    const actions = createMockActions();
+
+    // 1. Cabeçalho contextual por fase
+    const phaseExpectations: Array<{
+      phase: CidadeDormeRoom['phase'];
+      expectedText: string;
+    }> = [
+      { phase: 'lobby', expectedText: 'PIN CD2026 · Lobby' },
+      { phase: 'role_reveal', expectedText: 'PIN CD2026 · Revelação' },
+      { phase: 'night_assassin', expectedText: 'PIN CD2026 · A Noite 1' },
+      { phase: 'day_debate', expectedText: 'PIN CD2026 · O Dia 1' },
+      { phase: 'finished', expectedText: 'PIN CD2026 · Fim de Jogo' },
+    ];
+
+    for (const item of phaseExpectations) {
+      jest
+        .spyOn(cidadeDormeVmModule, 'useCidadeDormeViewModel')
+        .mockReturnValue([
+          {
+            ...baseState,
+            isNightPhase: item.phase.startsWith('night_'),
+            room: { ...baseRoom, phase: item.phase },
+          },
+          actions,
+        ]);
+      let phaseTree!: renderer.ReactTestRenderer;
+      act(() => {
+        phaseTree = renderer.create(<CidadeDormeScreen />);
+      });
+      const texts = phaseTree.root.findAllByType('Text' as any);
+      expect(texts.some((t) => t.props.children === item.expectedText)).toBe(
+        true
+      );
+      expect(texts.some((t) => t.props.children === 'PIN CD2026 · O Dia 1')).toBe(
+        item.phase === 'day_debate'
+      );
+    }
+
+    // 2. Aviso claro na aba Parâmetros para convidados
+    jest
+      .spyOn(cidadeDormeVmModule, 'useCidadeDormeViewModel')
+      .mockReturnValue([
+        {
+          ...baseState,
+          isCurrentPlayerHost: false,
+          currentPlayerId: 'cd-player-2',
+          currentPlayer: baseRoom.players[1],
+          room: { ...baseRoom, phase: 'lobby' },
+        },
+        actions,
+      ]);
+    let guestLobbyTree!: renderer.ReactTestRenderer;
+    act(() => {
+      guestLobbyTree = renderer.create(<CidadeDormeScreen />);
+    });
+    const configTab = guestLobbyTree.root.findByProps({
+      accessibilityLabel: 'Aba Configurar Parâmetros da Partida',
+    } as any);
+    act(() => {
+      configTab.props.onPress();
+    });
+    const guestLobbyTexts = guestLobbyTree.root.findAllByType('Text' as any);
+    expect(
+      guestLobbyTexts.some(
+        (t) =>
+          t.props.children ===
+          'Somente o moderador altera os parâmetros da sala.'
+      )
+    ).toBe(true);
+
+    // 3. Noite do Assassino: exclui a si mesmo e aliados em allyAssassinIds + exibe feedback após agir
+    jest
+      .spyOn(cidadeDormeVmModule, 'useCidadeDormeViewModel')
+      .mockReturnValue([
+        {
+          ...baseState,
+          isNightPhase: true,
+          isCurrentPlayerHost: false,
+          hasSubmittedNightAction: true,
+          currentPlayerId: 'cd-player-2',
+          currentPlayer: baseRoom.players[1],
+          room: {
+            ...baseRoom,
+            phase: 'night_assassin',
+            allyAssassinIds: ['cd-player-3'],
+            players: baseRoom.players.map((p) =>
+              p.id === 'cd-player-2' ? p : { ...p, role: null }
+            ),
+          },
+        },
+        actions,
+      ]);
+    let assassinNightTree!: renderer.ReactTestRenderer;
+    act(() => {
+      assassinNightTree = renderer.create(<CidadeDormeScreen />);
+    });
+    const nightTexts = assassinNightTree.root.findAllByType('Text' as any);
+    expect(nightTexts.some((t) => t.props.children === 'Ana')).toBe(false);
+    expect(nightTexts.some((t) => t.props.children === 'Lucas')).toBe(false);
+    expect(nightTexts.some((t) => t.props.children === 'Líder do PG')).toBe(
+      true
+    );
+    expect(
+      nightTexts.some(
+        (t) =>
+          t.props.children === 'Escolha registrada — aguarde o fim do turno.'
+      )
+    ).toBe(true);
+
+    // 4. Votação do Dia: exclui próprio jogador, usa SelectableOptionItem sem A-D e ícones corretos
+    jest
+      .spyOn(cidadeDormeVmModule, 'useCidadeDormeViewModel')
+      .mockReturnValue([
+        {
+          ...baseState,
+          currentPlayerId: 'cd-player-1',
+          currentPlayer: baseRoom.players[0],
+          room: { ...baseRoom, phase: 'day_voting' },
+        },
+        actions,
+      ]);
+    let voteDayTree!: renderer.ReactTestRenderer;
+    act(() => {
+      voteDayTree = renderer.create(<CidadeDormeScreen />);
+    });
+    const voteTexts = voteDayTree.root.findAllByType('Text' as any);
+    // Próprio jogador (Líder do PG) não aparece como candidato
+    expect(voteTexts.some((t) => t.props.children === 'Líder do PG')).toBe(
+      false
+    );
+    expect(voteTexts.some((t) => t.props.children === 'Ana')).toBe(true);
+    expect(
+      voteTexts.some((t) => t.props.children === 'Abster-se / Pular Voto')
+    ).toBe(true);
+    const voteIcons = voteDayTree.root.findAllByType(
+      'MaterialCommunityIcons' as any
+    );
+    expect(voteIcons.some((i) => i.props.name === 'vote-outline')).toBe(true);
+    expect(
+      voteIcons.some((i) => i.props.name === 'hand-back-left-outline')
+    ).toBe(true);
   });
 });
