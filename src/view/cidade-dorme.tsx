@@ -21,7 +21,7 @@ import { useCidadeDormeViewModel } from '@/viewmodel/useCidadeDormeViewModel';
 export const CidadeDormeScreen = () => {
   const [state, actions] = useCidadeDormeViewModel();
 
-  if (state.loading) {
+  if (state.loading && state.room) {
     return (
       <View
         style={styles.centerScreen}
@@ -53,11 +53,11 @@ export const CidadeDormeScreen = () => {
         >
           <CidadeDormeEntrySection
             isRealtimeEnabled={state.isRealtimeEnabled}
+            loading={state.loading}
             error={state.error}
             onExitArena={actions.handleExitArena}
             onCreateRoom={actions.handleCreateRoom}
             onJoinRoom={actions.handleJoinRoom}
-            onJoinDemoRoom={actions.handleJoinDemoRoom}
           />
         </ScrollView>
       </KeyboardAvoidingView>
@@ -160,7 +160,6 @@ export const CidadeDormeScreen = () => {
             currentPlayerId={state.currentPlayerId}
             isCurrentPlayerHost={state.isCurrentPlayerHost}
             onStartMatch={actions.handleStartMatch}
-            onAddPlayer={actions.handleAddPlayer}
             onRemovePlayer={actions.handleRemovePlayer}
             onUpdateConfig={actions.handleUpdateConfig}
           />
@@ -172,7 +171,6 @@ export const CidadeDormeScreen = () => {
             currentPlayer={state.currentPlayer}
             roleInfo={state.currentRoleMeta}
             isRoleVisible={state.isRoleVisible}
-            isCurrentPlayerHost={state.isCurrentPlayerHost}
             onToggleRoleVisibility={actions.handleToggleRoleVisibility}
             onConfirmRoleReady={actions.handleConfirmRoleReady}
           />
@@ -182,7 +180,6 @@ export const CidadeDormeScreen = () => {
           <CidadeDormeNightSection
             room={room}
             currentPlayer={state.currentPlayer}
-            isCurrentPlayerHost={state.isCurrentPlayerHost}
             selectedNightTargetId={state.selectedNightTargetId}
             secondsRemaining={state.secondsRemaining}
             onSelectNightTarget={actions.handleSelectNightTarget}
@@ -192,7 +189,6 @@ export const CidadeDormeScreen = () => {
               actions.handleConfirmDetectiveInvestigation
             }
             onAdvanceToDawn={actions.handleAdvanceToDawn}
-            onAutoAdvanceNightTurn={actions.handleAutoAdvanceNightTurn}
           />
         )}
 

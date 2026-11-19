@@ -131,14 +131,27 @@ export const CidadeDormeDaySection = ({
               Conversem, apresentem argumentos e descubram quem está blefando antes de abrir a votação secreta.
             </Text>
 
-            <ExpressiveButton
-              label="Iniciar Votação Secreta"
-              variant="primaryJumbo"
-              icon="vote-outline"
-              onPress={() => {
-                void onStartVotingPhase();
-              }}
-            />
+            {isCurrentPlayerHost ? (
+              <ExpressiveButton
+                label="Iniciar Votação Secreta"
+                variant="primaryJumbo"
+                icon="vote-outline"
+                onPress={() => {
+                  void onStartVotingPhase();
+                }}
+              />
+            ) : (
+              <View style={styles.waitingCard}>
+                <MaterialCommunityIcons
+                  name="clock-outline"
+                  size={tokens.semantic.icon.md}
+                  color={tokens.semantic.color.onActionContainer}
+                />
+                <Text allowFontScaling style={styles.waitingText}>
+                  Aguardando o Moderador encerrar o debate e abrir a votação secreta.
+                </Text>
+              </View>
+            )}
           </View>
         </View>
       )}
@@ -238,14 +251,27 @@ export const CidadeDormeDaySection = ({
           />
 
           <View style={styles.cardBox}>
-            <ExpressiveButton
-              label="Iniciar Próxima Noite"
-              variant="primaryJumbo"
-              icon="weather-night"
-              onPress={() => {
-                void onStartNextNight();
-              }}
-            />
+            {isCurrentPlayerHost ? (
+              <ExpressiveButton
+                label="Iniciar Próxima Noite"
+                variant="primaryJumbo"
+                icon="weather-night"
+                onPress={() => {
+                  void onStartNextNight();
+                }}
+              />
+            ) : (
+              <View style={styles.waitingCard}>
+                <MaterialCommunityIcons
+                  name="clock-outline"
+                  size={tokens.semantic.icon.md}
+                  color={tokens.semantic.color.onActionContainer}
+                />
+                <Text allowFontScaling style={styles.waitingText}>
+                  Aguardando o Moderador iniciar a próxima noite.
+                </Text>
+              </View>
+            )}
           </View>
         </View>
       )}
@@ -354,14 +380,27 @@ export const CidadeDormeDaySection = ({
               })}
             </View>
 
-            <ExpressiveButton
-              label="Jogar Novamente (Revanche)"
-              variant="primaryJumbo"
-              icon="refresh"
-              onPress={() => {
-                void onRestartMatch();
-              }}
-            />
+            {isCurrentPlayerHost ? (
+              <ExpressiveButton
+                label="Jogar Novamente (Revanche)"
+                variant="primaryJumbo"
+                icon="refresh"
+                onPress={() => {
+                  void onRestartMatch();
+                }}
+              />
+            ) : (
+              <View style={styles.waitingCard}>
+                <MaterialCommunityIcons
+                  name="clock-outline"
+                  size={tokens.semantic.icon.md}
+                  color={tokens.semantic.color.onActionContainer}
+                />
+                <Text allowFontScaling style={styles.waitingText}>
+                  Aguardando o Moderador iniciar uma revanche ou toque em Trocar de Jogo abaixo.
+                </Text>
+              </View>
+            )}
 
             <ExpressiveButton
               label="Trocar de Jogo"
@@ -550,5 +589,20 @@ const styles = StyleSheet.create({
     lineHeight: tokens.semantic.font.caption.lineHeight,
     fontWeight: tokens.semantic.font.caption.weight,
     color: tokens.semantic.color.onSurface,
+  },
+  waitingCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: tokens.semantic.space.sm,
+    padding: tokens.semantic.space.md,
+    borderRadius: tokens.semantic.radius.lg,
+    backgroundColor: tokens.semantic.color.actionContainer,
+  },
+  waitingText: {
+    flex: 1,
+    fontFamily: tokens.semantic.font.body.family,
+    fontSize: tokens.semantic.font.body.size,
+    lineHeight: tokens.semantic.font.body.lineHeight,
+    color: tokens.semantic.color.onActionContainer,
   },
 });

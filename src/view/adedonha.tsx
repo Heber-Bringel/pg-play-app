@@ -21,7 +21,7 @@ import { useAdedonhaViewModel } from '@/viewmodel/useAdedonhaViewModel';
 export const AdedonhaScreen = () => {
   const [state, actions] = useAdedonhaViewModel();
 
-  if (state.loading) {
+  if (state.loading && state.room) {
     return (
       <View
         style={styles.centerScreen}
@@ -53,6 +53,7 @@ export const AdedonhaScreen = () => {
         >
           <AdedonhaEntrySection
             isRealtimeEnabled={state.isRealtimeEnabled}
+            loading={state.loading}
             error={state.error}
             onExitArena={actions.handleExitArena}
             onCreateRoom={actions.handleCreateRoom}

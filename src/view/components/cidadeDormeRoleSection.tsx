@@ -23,9 +23,8 @@ export type CidadeDormeRoleSectionProps = {
   currentPlayer: CidadeDormePlayer | null;
   roleInfo: CidadeDormeRoleViewInfo | null;
   isRoleVisible: boolean;
-  isCurrentPlayerHost: boolean;
   onToggleRoleVisibility: () => void;
-  onConfirmRoleReady: (markAllReady?: boolean) => Promise<void>;
+  onConfirmRoleReady: () => Promise<void>;
 };
 
 export const CidadeDormeRoleSection = ({
@@ -33,7 +32,6 @@ export const CidadeDormeRoleSection = ({
   currentPlayer,
   roleInfo,
   isRoleVisible,
-  isCurrentPlayerHost,
   onToggleRoleVisibility,
   onConfirmRoleReady,
 }: CidadeDormeRoleSectionProps) => {
@@ -153,18 +151,8 @@ export const CidadeDormeRoleSection = ({
             color={tokens.semantic.color.success}
           />
           <Text allowFontScaling style={styles.readyNoticeText}>
-            Papel ocultado e confirmado! Aguardando o início da primeira noite.
+            Papel ocultado e confirmado! Aguardando todos os jogadores confirmarem para iniciar a primeira noite.
           </Text>
-          {isCurrentPlayerHost && readyCount < totalCount && (
-            <ExpressiveButton
-              label="Iniciar Primeira Noite Agora"
-              variant="tonal"
-              icon="weather-night"
-              onPress={() => {
-                void onConfirmRoleReady(true);
-              }}
-            />
-          )}
         </View>
       )}
     </View>

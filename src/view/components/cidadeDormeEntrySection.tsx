@@ -11,20 +11,20 @@ type EntryMode = 'create' | 'join';
 
 export type CidadeDormeEntrySectionProps = {
   isRealtimeEnabled: boolean;
+  loading?: boolean;
   error: string | null;
   onExitArena: () => void;
   onCreateRoom: (nickname: string) => Promise<boolean>;
   onJoinRoom: (code: string, nickname: string) => Promise<boolean>;
-  onJoinDemoRoom: () => Promise<boolean>;
 };
 
 export const CidadeDormeEntrySection = ({
   isRealtimeEnabled,
+  loading = false,
   error,
   onExitArena,
   onCreateRoom,
   onJoinRoom,
-  onJoinDemoRoom,
 }: CidadeDormeEntrySectionProps) => {
   const [entryMode, setEntryMode] = useState<EntryMode>('create');
   const [nicknameInput, setNicknameInput] = useState<string>('');
@@ -45,11 +45,11 @@ export const CidadeDormeEntrySection = ({
           accessibilityLabel={
             isRealtimeEnabled
               ? 'Modo Multiplayer Supabase Realtime'
-              : 'Modo Local Offline'
+              : 'Servidor Multiplayer não configurado'
           }
         >
           <MaterialCommunityIcons
-            name={isRealtimeEnabled ? 'cloud-check-outline' : 'lan'}
+            name={isRealtimeEnabled ? 'cloud-check-outline' : 'cloud-off-outline'}
             size={tokens.semantic.icon.sm}
             color={tokens.semantic.color.onActionContainer}
           />
@@ -58,7 +58,7 @@ export const CidadeDormeEntrySection = ({
             maxFontSizeMultiplier={tokens.semantic.typography.maxScale}
             style={styles.modeBadgeText}
           >
-            {isRealtimeEnabled ? 'Realtime Ativo' : 'Modo Offline'}
+            {isRealtimeEnabled ? 'Realtime Ativo' : 'Sem Conexão Realtime'}
           </Text>
         </View>
       </View>
@@ -121,9 +121,10 @@ export const CidadeDormeEntrySection = ({
 
         {entryMode === 'create' ? (
           <ExpressiveButton
-            label="Criar Sala (Moderador)"
+            label={loading ? 'Conectando...' : 'Criar Sala (Moderador)'}
             variant="primaryJumbo"
             icon="crown-outline"
+            disabled={loading}
             onPress={() => {
               void onCreateRoom(nicknameInput);
             }}
@@ -140,9 +141,10 @@ export const CidadeDormeEntrySection = ({
               onChangeText={setRoomCodeInput}
             />
             <ExpressiveButton
-              label="Entrar na Sala"
+              label={loading ? 'Entrando...' : 'Entrar na Sala'}
               variant="primaryJumbo"
               icon="account-arrow-right"
+              disabled={loading}
               onPress={() => {
                 void onJoinRoom(roomCodeInput, nicknameInput);
               }}
@@ -150,22 +152,6 @@ export const CidadeDormeEntrySection = ({
           </View>
         )}
       </View>
-
-      {!isRealtimeEnabled && (
-        <View style={styles.demoFooter}>
-          <Text allowFontScaling style={styles.demoHint}>
-            Quer testar a dinâmica com 6 jogadores pré-carregados?
-          </Text>
-          <ExpressiveButton
-            label="Entrar na Sala Demo Offline (CD2026)"
-            variant="outlined"
-            icon="play-circle-outline"
-            onPress={() => {
-              void onJoinDemoRoom();
-            }}
-          />
-        </View>
-      )}
     </View>
   );
 };
@@ -236,16 +222,5 @@ const styles = StyleSheet.create({
   },
   joinFields: {
     gap: tokens.semantic.space.md,
-  },
-  demoFooter: {
-    gap: tokens.semantic.space.sm,
-    paddingTop: tokens.semantic.space.xs,
-  },
-  demoHint: {
-    fontFamily: tokens.semantic.font.body.family,
-    fontSize: tokens.semantic.font.body.size,
-    lineHeight: tokens.semantic.font.body.lineHeight,
-    fontWeight: tokens.semantic.font.body.weight,
-    color: tokens.semantic.color.onSurfaceMuted,
   },
 });

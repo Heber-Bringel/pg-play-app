@@ -11,6 +11,7 @@ type EntryMode = 'create' | 'join';
 
 export type AdedonhaEntrySectionProps = {
   isRealtimeEnabled: boolean;
+  loading?: boolean;
   error: string | null;
   onExitArena: () => void;
   onCreateRoom: (nickname: string) => Promise<boolean>;
@@ -20,6 +21,7 @@ export type AdedonhaEntrySectionProps = {
 
 export const AdedonhaEntrySection = ({
   isRealtimeEnabled,
+  loading = false,
   error,
   onExitArena,
   onCreateRoom,
@@ -121,9 +123,10 @@ export const AdedonhaEntrySection = ({
 
         {entryMode === 'create' ? (
           <ExpressiveButton
-            label="Criar Sala (Moderador)"
+            label={loading ? 'Conectando...' : 'Criar Sala (Moderador)'}
             variant="primaryJumbo"
             icon="crown-outline"
+            disabled={loading}
             onPress={() => {
               void onCreateRoom(nicknameInput);
             }}
@@ -140,9 +143,10 @@ export const AdedonhaEntrySection = ({
               onChangeText={setRoomCodeInput}
             />
             <ExpressiveButton
-              label="Entrar na Sala"
+              label={loading ? 'Entrando...' : 'Entrar na Sala'}
               variant="primaryJumbo"
               icon="account-arrow-right"
+              disabled={loading}
               onPress={() => {
                 void onJoinRoom(roomCodeInput, nicknameInput);
               }}

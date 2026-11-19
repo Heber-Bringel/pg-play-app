@@ -11,7 +11,6 @@ import type {
 } from '@/model/entities/multiplayerSession';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
 import { ExpressiveChip } from '@/view/components/expressiveChip';
-import { ExpressiveTextField } from '@/view/components/expressiveTextField';
 import { GameCard } from '@/view/components/gameCard';
 import { tokens } from '@/view/theme';
 
@@ -43,7 +42,6 @@ export type CidadeDormeLobbySectionProps = {
   currentPlayerId: string | null;
   isCurrentPlayerHost: boolean;
   onStartMatch: () => Promise<void>;
-  onAddPlayer: (nickname: string) => Promise<boolean>;
   onRemovePlayer: (playerId: string) => Promise<void>;
   onUpdateConfig: (partialConfig: Partial<CidadeDormeConfig>) => Promise<void>;
 };
@@ -53,22 +51,13 @@ export const CidadeDormeLobbySection = ({
   currentPlayerId,
   isCurrentPlayerHost,
   onStartMatch,
-  onAddPlayer,
   onRemovePlayer,
   onUpdateConfig,
 }: CidadeDormeLobbySectionProps) => {
   const [activeTab, setActiveTab] = useState<LobbyTab>('play');
-  const [newPlayerInput, setNewPlayerInput] = useState<string>('');
   const [focusedPlayerId, setFocusedPlayerId] = useState<string | null>(null);
 
   const canStart = room.players.length >= 5 && room.players.length <= 16;
-
-  const handleAddParticipant = async () => {
-    const added = await onAddPlayer(newPlayerInput);
-    if (added) {
-      setNewPlayerInput('');
-    }
-  };
 
   return (
     <View style={styles.container}>
@@ -136,24 +125,15 @@ export const CidadeDormeLobbySection = ({
             </Text>
 
             {isCurrentPlayerHost && (
-              <View style={styles.addPlayerBox}>
-                <ExpressiveTextField
-                  label="Adicionar Participante na Roda"
-                  value={newPlayerInput}
-                  placeholder="Ex.: Gabriel ou Julia"
-                  helperText="Adicione participantes presenciais (mínimo de 5 para jogar)"
-                  icon="account-plus-outline"
-                  maxLength={20}
-                  onChangeText={setNewPlayerInput}
+              <View style={styles.waitingCard}>
+                <MaterialCommunityIcons
+                  name="cellphone-link"
+                  size={tokens.semantic.icon.md}
+                  color={tokens.semantic.color.onActionContainer}
                 />
-                <ExpressiveButton
-                  label="Adicionar Participante"
-                  variant="tonal"
-                  icon="plus-circle-outline"
-                  onPress={() => {
-                    void handleAddParticipant();
-                  }}
-                />
+                <Text allowFontScaling style={styles.waitingText}>
+                  {`Compartilhe o PIN ${room.code} para que cada participante entre pelo próprio celular (mínimo de 5 jogadores).`}
+                </Text>
               </View>
             )}
 
@@ -380,9 +360,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: tokens.semantic.space.sm,
-  },
-  addPlayerBox: {
-    gap: tokens.semantic.space.md,
   },
   playerList: {
     gap: tokens.semantic.space.sm,

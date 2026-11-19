@@ -16,7 +16,6 @@ const OPTION_KEYS: Array<'A' | 'B' | 'C' | 'D'> = ['A', 'B', 'C', 'D'];
 export type CidadeDormeNightSectionProps = {
   room: CidadeDormeRoom;
   currentPlayer: CidadeDormePlayer | null;
-  isCurrentPlayerHost: boolean;
   selectedNightTargetId: string | null;
   secondsRemaining: number;
   onSelectNightTarget: (targetPlayerId: string) => void;
@@ -24,13 +23,11 @@ export type CidadeDormeNightSectionProps = {
   onConfirmAngelProtection: () => Promise<void>;
   onConfirmDetectiveInvestigation: () => Promise<void>;
   onAdvanceToDawn: () => Promise<void>;
-  onAutoAdvanceNightTurn: () => Promise<void>;
 };
 
 export const CidadeDormeNightSection = ({
   room,
   currentPlayer,
-  isCurrentPlayerHost,
   selectedNightTargetId,
   secondsRemaining,
   onSelectNightTarget,
@@ -38,7 +35,6 @@ export const CidadeDormeNightSection = ({
   onConfirmAngelProtection,
   onConfirmDetectiveInvestigation,
   onAdvanceToDawn,
-  onAutoAdvanceNightTurn,
 }: CidadeDormeNightSectionProps) => {
   const alivePlayers = room.players.filter((p) => p.isAlive);
   const isAlive = Boolean(currentPlayer?.isAlive);
@@ -49,8 +45,6 @@ export const CidadeDormeNightSection = ({
     ((room.phase === 'night_assassin' && myRole === 'assassino') ||
       (room.phase === 'night_angel' && myRole === 'anjo') ||
       (room.phase === 'night_detective' && myRole === 'detetive'));
-
-  const canActOrSimulate = isMyActiveTurn || isCurrentPlayerHost;
 
   const turnTitle =
     room.phase === 'night_assassin'
@@ -135,7 +129,10 @@ export const CidadeDormeNightSection = ({
         icon="weather-night"
       />
 
-      {room.phase === 'night_detective' && room.detectiveVerdict && (
+      {room.phase === 'night_detective' &&
+        room.detectiveVerdict &&
+        myRole === 'detetive' &&
+        isAlive && (
         <View
           style={[
             styles.verdictCard,
@@ -203,7 +200,7 @@ export const CidadeDormeNightSection = ({
         </View>
       )}
 
-      {canActOrSimulate ? (
+      {isMyActiveTurn ? (
         <View style={styles.nightCard}>
           <Text allowFontScaling style={styles.sectionTitle}>
             Escolha um Jogador Vivo
@@ -232,17 +229,6 @@ export const CidadeDormeNightSection = ({
               void handleConfirmNightAction();
             }}
           />
-
-          {isCurrentPlayerHost && (
-            <ExpressiveButton
-              label="Simular Turno da Noite Automaticamente"
-              variant="outlined"
-              icon="fast-forward-outline"
-              onPress={() => {
-                void onAutoAdvanceNightTurn();
-              }}
-            />
-          )}
         </View>
       ) : (
         <View style={styles.sleepingCard}>
