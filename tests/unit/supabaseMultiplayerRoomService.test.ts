@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseMultiplayerRoomService } from '@/infra/services/supabaseMultiplayerRoomService';
-import { AuthError, DataSourceError } from '@/model/errors';
+import { AuthError, DataSourceError, ValidationError } from '@/model/errors';
 
 type MockTableState = {
   rooms: Record<string, unknown>[];
@@ -126,11 +126,12 @@ function createFakeSupabaseClient(initial?: Partial<MockTableState>) {
             then: (
               resolve: (val: { data: unknown; error: unknown }) => void
             ) => {
-              db[table] = db[table].map((row) =>
+              const updated = db[table].map((row) =>
                 updateFilters.every((fn) => fn(row))
                   ? { ...row, ...patch }
                   : row
               );
+              db[table].splice(0, db[table].length, ...updated);
               resolve({ data: null, error: null });
             },
           };
@@ -147,9 +148,10 @@ function createFakeSupabaseClient(initial?: Partial<MockTableState>) {
             then: (
               resolve: (val: { data: unknown; error: unknown }) => void
             ) => {
-              db[table] = db[table].filter(
+              const remaining = db[table].filter(
                 (row) => !deleteFilters.every((fn) => fn(row))
               );
+              db[table].splice(0, db[table].length, ...remaining);
               resolve({ data: null, error: null });
             },
           };
@@ -319,5 +321,159 @@ describe('SupabaseMultiplayerRoomService — Integração Postgres, Auth Anônim
     await expect(
       serviceMissingRoom.joinAdedonhaRoom('INVALI', 'Ana')
     ).rejects.toThrow(DataSourceError);
+  });
+
+  it('deve permitir sair e reentrar no mesmo lobby com o mesmo nome sem erro e bloquear apelido duplicado de outro usuário', async () => {
+    const fake = createFakeSupabaseClient();
+    const hostService = new SupabaseMultiplayerRoomService(
+      {
+        supabaseUrl: 'https://proj.supabase.co',
+        supabaseAnonKey: 'anon-key',
+      },
+      undefined,
+      fake.client
+    );
+
+    const created = await hostService.createAdedonhaRoom('Heber');
+
+    // Simula jogador 2 entrando, saindo no lobby e voltando com o mesmo nome
+    const fakePlayer2 = createFakeSupabaseClient({
+      rooms: fake.db.rooms,
+      room_players: fake.db.room_players,
+      adedonha_submissions: fake.db.adedonha_submissions,
+    });
+    fakePlayer2.rawClient.auth.signInAnonymously = jest.fn(async () => ({
+      data: { user: { id: 'user-anon-2' } },
+      error: null,
+    }));
+    const player2Service = new SupabaseMultiplayerRoomService(
+      {
+        supabaseUrl: 'https://proj.supabase.co',
+        supabaseAnonKey: 'anon-key',
+      },
+      undefined,
+      fakePlayer2.client
+    );
+
+    const joinedOnce = await player2Service.joinAdedonhaRoom(
+      created.code,
+      'Ana'
+    );
+    expect(joinedOnce.players).toHaveLength(2);
+
+    // Reentrar sem sair (mesmo userId, mesmo nickname) não deve falhar nem duplicar
+    const rejoinedSame = await player2Service.joinAdedonhaRoom(
+      created.code,
+      'Ana'
+    );
+    expect(rejoinedSame.players).toHaveLength(2);
+
+    // Sair no lobby remove da lista e permite voltar com o mesmo nome
+    await player2Service.leaveAdedonhaRoom(created.id, 'user-anon-2');
+    const afterLeave = await hostService.getAdedonhaRoom(created.id);
+    expect(afterLeave.players).toHaveLength(1);
+
+    const rejoinedAfterLeave = await player2Service.joinAdedonhaRoom(
+      created.code,
+      'Ana'
+    );
+    expect(rejoinedAfterLeave.players).toHaveLength(2);
+
+    // Outro usuário (user-anon-3) tentando entrar com o mesmo nome "Ana" deve receber ValidationError
+    const fakePlayer3 = createFakeSupabaseClient({
+      rooms: fakePlayer2.db.rooms,
+      room_players: fakePlayer2.db.room_players,
+      adedonha_submissions: fakePlayer2.db.adedonha_submissions,
+    });
+    fakePlayer3.rawClient.auth.signInAnonymously = jest.fn(async () => ({
+      data: { user: { id: 'user-anon-3' } },
+      error: null,
+    }));
+    const player3Service = new SupabaseMultiplayerRoomService(
+      {
+        supabaseUrl: 'https://proj.supabase.co',
+        supabaseAnonKey: 'anon-key',
+      },
+      undefined,
+      fakePlayer3.client
+    );
+
+    await expect(
+      player3Service.joinAdedonhaRoom(created.code, 'ana')
+    ).rejects.toThrow(ValidationError);
+
+    // Jogador 3 com nome distinto entra normalmente (3+ jogadores sem sobrescrever)
+    const joined3 = await player3Service.joinAdedonhaRoom(
+      created.code,
+      'Lucas'
+    );
+    expect(joined3.players).toHaveLength(3);
+    expect(joined3.players.map((p) => p.nickname)).toEqual([
+      'Heber',
+      'Ana',
+      'Lucas',
+    ]);
+  });
+
+  it('deve suportar 3+ jogadores no Cidade Dorme via room_players sem sobrescrever o último logado e manter status lobby', async () => {
+    const fake = createFakeSupabaseClient();
+    const hostService = new SupabaseMultiplayerRoomService(
+      {
+        supabaseUrl: 'https://proj.supabase.co',
+        supabaseAnonKey: 'anon-key',
+      },
+      undefined,
+      fake.client
+    );
+
+    const created = await hostService.createCidadeDormeRoom('Heber');
+    expect(created.players).toHaveLength(1);
+
+    const joinAs = async (uid: string, nick: string) => {
+      const clientFake = createFakeSupabaseClient({
+        rooms: fake.db.rooms,
+        room_players: fake.db.room_players,
+        adedonha_submissions: fake.db.adedonha_submissions,
+      });
+      clientFake.rawClient.auth.signInAnonymously = jest.fn(async () => ({
+        data: { user: { id: uid } },
+        error: null,
+      }));
+      const svc = new SupabaseMultiplayerRoomService(
+        {
+          supabaseUrl: 'https://proj.supabase.co',
+          supabaseAnonKey: 'anon-key',
+        },
+        undefined,
+        clientFake.client
+      );
+      return { svc, room: await svc.joinCidadeDormeRoom(created.code, nick) };
+    };
+
+    const p2 = await joinAs('user-cd-2', 'Ana');
+    expect(p2.room.players).toHaveLength(2);
+
+    const p3 = await joinAs('user-cd-3', 'Lucas');
+    expect(p3.room.players).toHaveLength(3);
+    expect(p3.room.players.map((p) => p.nickname)).toEqual([
+      'Heber',
+      'Ana',
+      'Lucas',
+    ]);
+
+    // Atualizar config no lobby preserva status 'lobby' e todos os 3 jogadores
+    const updated = await hostService.updateCidadeDormeConfig(created.id, {
+      narratorVoice: 'feminina',
+    });
+    expect(updated.players).toHaveLength(3);
+    expect(fake.db.rooms[0].status).toBe('lobby');
+
+    // Sair e reentrar com o mesmo nome no Cidade Dorme
+    await p2.svc.leaveCidadeDormeRoom(created.id, 'user-cd-2');
+    const afterLeave = await hostService.getCidadeDormeRoom(created.id);
+    expect(afterLeave.players).toHaveLength(2);
+
+    const rejoined = await p2.svc.joinCidadeDormeRoom(created.code, 'Ana');
+    expect(rejoined.players).toHaveLength(3);
   });
 });
