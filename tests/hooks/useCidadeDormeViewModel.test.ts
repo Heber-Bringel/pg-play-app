@@ -156,31 +156,29 @@ describe('useCidadeDormeViewModel — Hook do Cidade Dorme em Sala Multiplayer (
     expect(harness.getState().room?.phase).toBe('night_assassin');
     expect(harness.getState().isNightPhase).toBe(true);
 
-    // Turno do Assassino
-    act(() => {
-      harness.getActions().handleSelectNightTarget('cd-player-4');
-    });
+    // Turno do Assassino (cd-player-2 ataca cd-player-4; cadência fixa até avanço do turno)
+    const roomId = harness.getState().room!.id;
     await act(async () => {
-      await harness.getActions().handleConfirmAssassinTarget();
+      await useCases.submitAssassinTarget(roomId, 'cd-player-2', 'cd-player-4');
+      await harness.getActions().handleAutoAdvanceNightTurn();
     });
     expect(harness.getState().room?.phase).toBe('night_angel');
 
-    // Turno do Anjo (protege a mesma vítima cd-player-4)
-    act(() => {
-      harness.getActions().handleSelectNightTarget('cd-player-4');
-    });
+    // Turno do Anjo (cd-player-3 protege a mesma vítima cd-player-4)
     await act(async () => {
-      await harness.getActions().handleConfirmAngelProtection();
+      await useCases.submitAngelProtection(roomId, 'cd-player-3', 'cd-player-4');
+      await harness.getActions().handleAutoAdvanceNightTurn();
     });
     expect(harness.getState().room?.phase).toBe('night_detective');
 
-    // Turno do Detetive (investiga Ana cd-player-2)
+    // Turno do Detetive (Anfitrião cd-player-1 investiga Ana cd-player-2)
     act(() => {
       harness.getActions().handleSelectNightTarget('cd-player-2');
     });
     await act(async () => {
       await harness.getActions().handleConfirmDetectiveInvestigation();
     });
+    expect(harness.getState().hasSubmittedNightAction).toBe(true);
     expect(harness.getState().room?.detectiveVerdict?.isAssassin).toBe(true);
 
     // Amanhecer
@@ -189,6 +187,7 @@ describe('useCidadeDormeViewModel — Hook do Cidade Dorme em Sala Multiplayer (
     });
     expect(harness.getState().room?.phase).toBe('day_debate');
     expect(harness.getState().isNightPhase).toBe(false);
+    expect(harness.getState().hasSubmittedNightAction).toBe(false);
     expect(harness.getState().room?.dawnReport?.savedByAngel).toBe(true);
 
     // Iniciar votação secreta
@@ -430,5 +429,145 @@ describe('useCidadeDormeViewModel — Hook do Cidade Dorme em Sala Multiplayer (
     expect(guestSpeakSpy).not.toHaveBeenCalled();
 
     guestHarness.unmount();
+  });
+
+  it('deve calcular secondsRemaining por phaseEndsAt e disparar autoAdvanceNightTurn no Anfitrião ao zerar (Issue #41)', async () => {
+    const useCases = new CidadeDormeUseCases(
+      new MemoryMultiplayerRoomService(),
+      new MemoryNarratorAudioService(),
+      undefined,
+      () => Date.now()
+    );
+    const autoAdvanceSpy = jest.spyOn(useCases, 'autoAdvanceNightTurn');
+    const harness = createHookHarness(useCases);
+    await harness.mount();
+
+    await act(async () => {
+      await harness.getActions().handleCreateRoom('Héber');
+    });
+    await act(async () => {
+      await harness
+        .getActions()
+        .handleStartMatch([
+          'detetive',
+          'assassino',
+          'anjo',
+          'cidadao',
+          'cidadao',
+          'cidadao',
+        ]);
+    });
+    await act(async () => {
+      await harness.getActions().handleConfirmRoleReady(true);
+    });
+
+    expect(harness.getState().room?.phase).toBe('night_assassin');
+    expect(harness.getState().secondsRemaining).toBe(15);
+
+    await act(async () => {
+      jest.advanceTimersByTime(5_000);
+    });
+    expect(harness.getState().secondsRemaining).toBe(10);
+
+    await act(async () => {
+      jest.advanceTimersByTime(10_000);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(autoAdvanceSpy).toHaveBeenCalledWith(
+      harness.getState().room!.id,
+      'night_assassin',
+      1
+    );
+    expect(harness.getState().room?.phase).toBe('night_angel');
+    expect(harness.getState().secondsRemaining).toBe(15);
+
+    harness.unmount();
+  });
+
+  it('deve aplicar timeout de 10s em handleCreateRoom e handleJoinRoom liberando loading e expondo erro recuperável (Issue #43)', async () => {
+    const baseUseCases = new CidadeDormeUseCases(
+      new MemoryMultiplayerRoomService(),
+      new MemoryNarratorAudioService()
+    );
+    const hangingUseCases: ICidadeDormeUseCases = {
+      getLocalPlayerId: () => baseUseCases.getLocalPlayerId(),
+      subscribeToRoom: (rid, cb) => baseUseCases.subscribeToRoom(rid, cb),
+      getRoom: (rid) => baseUseCases.getRoom(rid),
+      createRoom: () => new Promise(() => {}),
+      joinRoom: () => new Promise(() => {}),
+      leaveRoom: (rid, pid) => baseUseCases.leaveRoom(rid, pid),
+      removePlayer: (rid, pid) => baseUseCases.removePlayer(rid, pid),
+      updateConfig: (rid, cfg) => baseUseCases.updateConfig(rid, cfg),
+      getRoleMetadata: (role) => baseUseCases.getRoleMetadata(role),
+      startMatch: (rid, roles) => baseUseCases.startMatch(rid, roles),
+      confirmPlayerReady: (rid, pid, all) =>
+        baseUseCases.confirmPlayerReady(rid, pid, all),
+      submitAssassinTarget: (rid, aid, tid) =>
+        baseUseCases.submitAssassinTarget(rid, aid, tid),
+      submitAngelProtection: (rid, aid, pid) =>
+        baseUseCases.submitAngelProtection(rid, aid, pid),
+      submitDetectiveInvestigation: (rid, aid, sid) =>
+        baseUseCases.submitDetectiveInvestigation(rid, aid, sid),
+      advanceToDawn: (rid) => baseUseCases.advanceToDawn(rid),
+      autoAdvanceNightTurn: (rid, ep, er) =>
+        baseUseCases.autoAdvanceNightTurn(rid, ep, er),
+      startVotingPhase: (rid) => baseUseCases.startVotingPhase(rid),
+      castVote: (rid, vid, cid) => baseUseCases.castVote(rid, vid, cid),
+      tallyVotes: (rid) => baseUseCases.tallyVotes(rid),
+      startNextNight: (rid) => baseUseCases.startNextNight(rid),
+      restartMatch: (rid, roles) => baseUseCases.restartMatch(rid, roles),
+      speakNarratorCaption: (cap, voice) =>
+        baseUseCases.speakNarratorCaption(cap, voice),
+      stopNarratorAudio: () => baseUseCases.stopNarratorAudio(),
+    };
+
+    const harness = createHookHarness(hangingUseCases);
+    await harness.mount();
+
+    let createResult: boolean | undefined;
+    act(() => {
+      void harness
+        .getActions()
+        .handleCreateRoom('Héber')
+        .then((res) => {
+          createResult = res;
+        });
+    });
+    expect(harness.getState().loading).toBe(true);
+
+    await act(async () => {
+      jest.advanceTimersByTime(10_000);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(createResult).toBe(false);
+    expect(harness.getState().loading).toBe(false);
+    expect(harness.getState().error).toContain('Tempo limite de conexão excedido');
+
+    let joinResult: boolean | undefined;
+    act(() => {
+      void harness
+        .getActions()
+        .handleJoinRoom('CD2026', 'Ana')
+        .then((res) => {
+          joinResult = res;
+        });
+    });
+    expect(harness.getState().loading).toBe(true);
+
+    await act(async () => {
+      jest.advanceTimersByTime(10_000);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(joinResult).toBe(false);
+    expect(harness.getState().loading).toBe(false);
+    expect(harness.getState().error).toContain('Tempo limite de conexão excedido');
+
+    harness.unmount();
   });
 });
