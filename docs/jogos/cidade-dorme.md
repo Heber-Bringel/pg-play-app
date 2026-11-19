@@ -39,6 +39,17 @@ Antes de iniciar a partida no Lobby, o Moderador pode configurar:
 4. **Tempo por Turno da Noite:** `15s` (padrão) ou `20s`.
 5. **Revelar Papel ao Morrer:** Ativado (padrão) ou Desativado (modo difícil).
 
+> [!IMPORTANT]
+> **Permissões do Anfitrião: configura antes, joga como todos depois (`RNF11`)**
+>
+> - **Antes da partida (Lobby):** o Anfitrião tem permissão para alterar todas as configurações acima e gerenciar a roda de jogadores.
+> - **Depois que os papéis são distribuídos:** o Anfitrião passa a ser **um jogador como os demais**. Ele **não pode**:
+>   - ver o papel secreto de outro jogador;
+>   - ver ou escolher a ação noturna de outro papel (vítima do Assassino, proteção do Anjo, investigação do Detetive);
+>   - ver o veredito do Detetive, a menos que ele mesmo seja o Detetive.
+> - O Anfitrião age **somente no turno do próprio papel**. Seus poderes durante a partida se limitam a controles que não revelam segredo: tocar o áudio do Narrador, iniciar a votação, apurar os votos, iniciar a próxima noite e encerrar ou recomeçar a partida.
+> - O isolamento vale também para os **dados**, não só para a tela: cada aparelho, inclusive o do Anfitrião, recebe apenas o próprio papel. O estado público da sala sincronizado entre os celulares não deve conter os papéis dos outros jogadores.
+
 ---
 
 ## 4. Fluxo Completo da Partida
