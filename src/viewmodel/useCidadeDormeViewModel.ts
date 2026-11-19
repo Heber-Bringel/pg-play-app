@@ -36,8 +36,6 @@ export type CidadeDormeState = {
 export type CidadeDormeActions = {
   handleCreateRoom: (hostNickname: string) => Promise<boolean>;
   handleJoinRoom: (code: string, nickname: string) => Promise<boolean>;
-  handleJoinDemoRoom: () => Promise<boolean>;
-  handleAddPlayer: (nickname: string) => Promise<boolean>;
   handleRemovePlayer: (playerId: string) => Promise<void>;
   handleUpdateConfig: (
     partialConfig: Partial<CidadeDormeConfig>
@@ -105,6 +103,7 @@ export function useCidadeDormeViewModel(
   const [confirmingExit, setConfirmingExit] = useState<boolean>(false);
 
   const lastPhaseKeyRef = useRef<string | null>(null);
+  const lastSpokenKeyRef = useRef<string | null>(null);
 
   const syncPhaseTimerAndSelection = useCallback(
     (nextRoom: CidadeDormeRoom) => {
@@ -142,6 +141,38 @@ export function useCidadeDormeViewModel(
   }, [room?.id, syncPhaseTimerAndSelection, useCase]);
 
   const activePlayerId = currentPlayerId ?? room?.hostId ?? '';
+  const isCurrentPlayerHost = Boolean(
+    room && (!currentPlayerId || room.hostId === currentPlayerId)
+  );
+
+  useEffect(() => {
+    if (
+      !room ||
+      !isCurrentPlayerHost ||
+      room.phase === 'lobby' ||
+      room.narratorCaption.trim().length === 0
+    ) {
+      return;
+    }
+
+    const speechKey = `${room.id}:${room.currentRound}:${room.phase}:${room.narratorCaption}`;
+    if (lastSpokenKeyRef.current !== speechKey) {
+      lastSpokenKeyRef.current = speechKey;
+      void useCase
+        .speakNarratorCaption(room.narratorCaption, room.config.narratorVoice)
+        .catch(() => {
+          // Falha na síntese de voz não bloqueia a partida.
+        });
+    }
+  }, [isCurrentPlayerHost, room, useCase]);
+
+  useEffect(() => {
+    return () => {
+      void useCase.stopNarratorAudio().catch(() => {
+        // Ignora falha ao parar o áudio ao desmontar a tela.
+      });
+    };
+  }, [useCase]);
 
   const handleCreateRoom = useCallback(
     async (hostNickname: string): Promise<boolean> => {
@@ -185,45 +216,6 @@ export function useCidadeDormeViewModel(
       }
     },
     [applyRoomState, useCase]
-  );
-
-  const handleJoinDemoRoom = useCallback(async (): Promise<boolean> => {
-    setLoading(true);
-    setError(null);
-    try {
-      const demoRoom = await useCase.getRoom();
-      await applyRoomState(demoRoom);
-      return true;
-    } catch (err: unknown) {
-      if (err instanceof DomainError) {
-        setError(err.message);
-      } else {
-        setError('Não foi possível carregar a sala de demonstração.');
-      }
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }, [applyRoomState, useCase]);
-
-  const handleAddPlayer = useCallback(
-    async (nickname: string): Promise<boolean> => {
-      if (!room) return false;
-      try {
-        setError(null);
-        const updated = await useCase.addPlayer(room.id, nickname);
-        setRoom(updated);
-        return true;
-      } catch (err: unknown) {
-        if (err instanceof DomainError) {
-          setError(err.message);
-        } else {
-          setError('Não foi possível adicionar o participante.');
-        }
-        return false;
-      }
-    },
-    [room, useCase]
   );
 
   const handleRemovePlayer = useCallback(
@@ -287,7 +279,7 @@ export function useCidadeDormeViewModel(
   }, []);
 
   const handleConfirmRoleReady = useCallback(
-    async (markAllReady = !isSupabaseMultiplayerEnabled): Promise<void> => {
+    async (markAllReady = false): Promise<void> => {
       if (!room) return;
       try {
         setError(null);
@@ -549,8 +541,23 @@ export function useCidadeDormeViewModel(
 
   const handleExitArena = useCallback((): void => {
     setConfirmingExit(false);
-    router.push('/');
-  }, [router]);
+    lastSpokenKeyRef.current = null;
+    void useCase.stopNarratorAudio().catch(() => {
+      // Falha transitória ao parar o áudio não impede retorno ao Hub.
+    });
+    if (room?.id && activePlayerId) {
+      void useCase.leaveRoom(room.id, activePlayerId).catch(() => {
+        // Falha transitória na saída não impede retorno ao Hub.
+      });
+    }
+    setRoom(null);
+    setCurrentPlayerId(null);
+    setError(null);
+    setIsRoleVisible(false);
+    setSelectedNightTargetId(null);
+    setSelectedVoteTargetId(null);
+    router.replace('/');
+  }, [activePlayerId, room?.id, router, useCase]);
 
   const handleRetry = useCallback(async (): Promise<void> => {
     if (!room) {
@@ -574,18 +581,12 @@ export function useCidadeDormeViewModel(
   }, [applyRoomState, room, useCase]);
 
   const currentPlayer: CidadeDormePlayer | null = room
-    ? room.players.find((p) => p.id === activePlayerId) ??
-      room.players[0] ??
-      null
+    ? room.players.find((p) => p.id === activePlayerId) ?? null
     : null;
 
   const currentRoleMeta: CidadeDormeRoleMetadata | null = currentPlayer
     ? useCase.getRoleMetadata(currentPlayer.role)
     : null;
-
-  const isCurrentPlayerHost = Boolean(
-    room && (!currentPlayerId || room.hostId === currentPlayerId)
-  );
 
   const isNightPhase = isPhaseNight(room?.phase);
 
@@ -609,8 +610,6 @@ export function useCidadeDormeViewModel(
   const actions: CidadeDormeActions = {
     handleCreateRoom,
     handleJoinRoom,
-    handleJoinDemoRoom,
-    handleAddPlayer,
     handleRemovePlayer,
     handleUpdateConfig,
     handleStartMatch,

@@ -477,8 +477,17 @@ export function useAdedonhaViewModel(
 
   const handleExitArena = useCallback((): void => {
     setConfirmingExit(false);
-    router.push('/');
-  }, [router]);
+    if (room?.id && activePlayerId) {
+      void useCase.leaveRoom(room.id, activePlayerId).catch(() => {
+        // Falha transitória na saída não impede retorno ao Hub.
+      });
+    }
+    setRoom(null);
+    setCurrentPlayerId(null);
+    setError(null);
+    setAnswers({});
+    router.replace('/');
+  }, [activePlayerId, room?.id, router, useCase]);
 
   const handleRetry = useCallback(async (): Promise<void> => {
     if (!room) {
