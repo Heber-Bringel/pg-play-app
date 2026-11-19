@@ -2,6 +2,7 @@ import type {
   CidadeDormeConfig,
   CidadeDormeRole,
   CidadeDormeRoom,
+  CidadeDormeVoiceProfile,
 } from '@/model/entities/multiplayerSession';
 
 export type CidadeDormeRoleMetadata = {
@@ -21,7 +22,7 @@ export interface ICidadeDormeUseCases {
   getRoom(roomId?: string): Promise<CidadeDormeRoom>;
   createRoom(hostNickname: string): Promise<CidadeDormeRoom>;
   joinRoom(code: string, nickname: string): Promise<CidadeDormeRoom>;
-  addPlayer(roomId: string, nickname: string): Promise<CidadeDormeRoom>;
+  leaveRoom(roomId: string, playerId: string): Promise<void>;
   removePlayer(roomId: string, playerId: string): Promise<CidadeDormeRoom>;
   updateConfig(
     roomId: string,
@@ -63,4 +64,9 @@ export interface ICidadeDormeUseCases {
     roomId: string,
     preferredRoles?: CidadeDormeRole[]
   ): Promise<CidadeDormeRoom>;
+  speakNarratorCaption(
+    caption: string,
+    voice: CidadeDormeVoiceProfile
+  ): Promise<void>;
+  stopNarratorAudio(): Promise<void>;
 }

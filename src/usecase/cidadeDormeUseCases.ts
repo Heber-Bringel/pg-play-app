@@ -6,6 +6,7 @@ import type {
   CidadeDormePlayer,
   CidadeDormeRole,
   CidadeDormeRoom,
+  CidadeDormeVoiceProfile,
   CidadeDormeVoteReport,
 } from '@/model/entities/multiplayerSession';
 import { ValidationError } from '@/model/errors';
@@ -100,6 +101,31 @@ export class CidadeDormeUseCases implements ICidadeDormeUseCases {
     private readonly narratorService: INarratorAudioService
   ) {}
 
+  private async speakIfHost(
+    room: CidadeDormeRoom,
+    caption: string
+  ): Promise<void> {
+    const localId = await this.roomService.getLocalPlayerId(room.id);
+    if (!localId || localId === room.hostId) {
+      await this.narratorService.speak(caption, room.config.narratorVoice);
+    }
+  }
+
+  async speakNarratorCaption(
+    caption: string,
+    voice: CidadeDormeVoiceProfile
+  ): Promise<void> {
+    const clean = caption.trim();
+    if (!clean) {
+      return;
+    }
+    await this.narratorService.speak(clean, voice);
+  }
+
+  async stopNarratorAudio(): Promise<void> {
+    await this.narratorService.stop();
+  }
+
   async getLocalPlayerId(roomId?: string): Promise<string | null> {
     return this.roomService.getLocalPlayerId(roomId);
   }
@@ -154,49 +180,11 @@ export class CidadeDormeUseCases implements ICidadeDormeUseCases {
     return this.roomService.joinCidadeDormeRoom(cleanCode, cleanNickname);
   }
 
-  async addPlayer(roomId: string, nickname: string): Promise<CidadeDormeRoom> {
-    const cleanNickname = nickname.trim();
-    if (cleanNickname.length < 2) {
-      throw new ValidationError(
-        'Digite um nome com pelo menos 2 letras para o participante.'
-      );
+  async leaveRoom(roomId: string, playerId: string): Promise<void> {
+    if (!roomId.trim() || !playerId.trim()) {
+      return;
     }
-    if (cleanNickname.length > 20) {
-      throw new ValidationError(
-        'O nome do participante deve ter no máximo 20 caracteres.'
-      );
-    }
-
-    const room = await this.roomService.getCidadeDormeRoom(roomId);
-    if (room.players.length >= CIDADE_DORME_MAX_PLAYERS) {
-      throw new ValidationError(
-        'A sala atingiu o limite máximo de 16 jogadores.'
-      );
-    }
-
-    const duplicate = room.players.some(
-      (p) => p.nickname.toLowerCase() === cleanNickname.toLowerCase()
-    );
-    if (duplicate) {
-      throw new ValidationError(
-        'Já existe um participante com este nome na sala.'
-      );
-    }
-
-    const newPlayer: CidadeDormePlayer = {
-      id: `cd-player-${Date.now()}-${room.players.length + 1}`,
-      nickname: cleanNickname,
-      isHost: false,
-      isAlive: true,
-      isReady: false,
-      role: 'cidadao',
-      hasVoted: false,
-    };
-
-    return this.roomService.saveCidadeDormeRoom({
-      ...room,
-      players: [...room.players, newPlayer],
-    });
+    await this.roomService.leaveCidadeDormeRoom(roomId, playerId);
   }
 
   async removePlayer(
@@ -305,7 +293,7 @@ export class CidadeDormeUseCases implements ICidadeDormeUseCases {
 
     const caption =
       'Papéis secretos distribuídos! Revele seu papel sem mostrar aos colegas e confirme que está pronto.';
-    await this.narratorService.speak(caption, room.config.narratorVoice);
+    await this.speakIfHost(room, caption);
 
     return this.roomService.saveCidadeDormeRoom({
       ...room,
@@ -357,7 +345,7 @@ export class CidadeDormeUseCases implements ICidadeDormeUseCases {
 
     const nightCaption =
       'A cidade dorme... Todos fecham os olhos. Assassino, acorde e escolha sua vítima.';
-    await this.narratorService.speak(nightCaption, room.config.narratorVoice);
+    await this.speakIfHost(room, nightCaption);
 
     return this.roomService.saveCidadeDormeRoom({
       ...room,
@@ -388,7 +376,7 @@ export class CidadeDormeUseCases implements ICidadeDormeUseCases {
 
     const caption =
       'Assassino, volte a dormir e feche os olhos. Anjo, acorde e escolha quem você deseja proteger esta noite.';
-    await this.narratorService.speak(caption, room.config.narratorVoice);
+    await this.speakIfHost(room, caption);
 
     return this.roomService.saveCidadeDormeRoom({
       ...room,
@@ -426,7 +414,7 @@ export class CidadeDormeUseCases implements ICidadeDormeUseCases {
 
     const caption =
       'Anjo, volte a dormir e feche os olhos. Detetive, acorde e aponte um suspeito para investigar.';
-    await this.narratorService.speak(caption, room.config.narratorVoice);
+    await this.speakIfHost(room, caption);
 
     return this.roomService.saveCidadeDormeRoom({
       ...room,
@@ -471,7 +459,7 @@ export class CidadeDormeUseCases implements ICidadeDormeUseCases {
 
     const caption =
       'Detetive, guarde seu segredo, volte a dormir e feche os olhos.';
-    await this.narratorService.speak(caption, room.config.narratorVoice);
+    await this.speakIfHost(room, caption);
 
     return this.roomService.saveCidadeDormeRoom({
       ...room,
@@ -537,7 +525,7 @@ export class CidadeDormeUseCases implements ICidadeDormeUseCases {
         'A cidade acorda! Todos podem abrir os olhos. Ninguém foi eliminado durante a noite.';
     }
 
-    await this.narratorService.speak(caption, room.config.narratorVoice);
+    await this.speakIfHost(room, caption);
 
     return this.roomService.saveCidadeDormeRoom({
       ...room,
@@ -598,7 +586,7 @@ export class CidadeDormeUseCases implements ICidadeDormeUseCases {
 
     const caption =
       'O tempo de discussão acabou! Agora, votem pelo celular em quem vocês acreditam ser o Assassino.';
-    await this.narratorService.speak(caption, room.config.narratorVoice);
+    await this.speakIfHost(room, caption);
 
     return this.roomService.saveCidadeDormeRoom({
       ...room,
@@ -737,7 +725,7 @@ export class CidadeDormeUseCases implements ICidadeDormeUseCases {
       caption = `A cidade decidiu por maioria simples: ${eliminatedPlayer.nickname} foi eliminado na votação!`;
     }
 
-    await this.narratorService.speak(caption, room.config.narratorVoice);
+    await this.speakIfHost(room, caption);
 
     return this.roomService.saveCidadeDormeRoom({
       ...room,
@@ -759,7 +747,7 @@ export class CidadeDormeUseCases implements ICidadeDormeUseCases {
 
     const caption =
       'A noite cai novamente sobre a cidade... Todos fecham os olhos. Assassino, acorde e escolha sua vítima.';
-    await this.narratorService.speak(caption, room.config.narratorVoice);
+    await this.speakIfHost(room, caption);
 
     return this.roomService.saveCidadeDormeRoom({
       ...room,

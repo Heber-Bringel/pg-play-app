@@ -14,6 +14,7 @@ export interface IAdedonhaUseCases {
     initialColumns?: string[]
   ): Promise<AdedonhaRoom>;
   joinRoom(code: string, nickname: string): Promise<AdedonhaRoom>;
+  leaveRoom(roomId: string, playerId: string): Promise<void>;
   subscribeToRoom(
     roomId: string,
     onRoomUpdated: (room: AdedonhaRoom) => void

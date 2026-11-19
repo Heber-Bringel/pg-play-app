@@ -1,7 +1,7 @@
 import { AsyncStorageTeamDataSource } from '@/infra/datasources/asyncStorageTeamDataSource';
 import { MemoryGameCatalogDataSource } from '@/infra/datasources/memoryGameCatalogDataSource';
+import { ExpoSpeechNarratorAudioService } from '@/infra/services/expoSpeechNarratorAudioService';
 import { MemoryMultiplayerRoomService } from '@/infra/services/memoryMultiplayerRoomService';
-import { MemoryNarratorAudioService } from '@/infra/services/memoryNarratorAudioService';
 import { SupabaseMultiplayerRoomService } from '@/infra/services/supabaseMultiplayerRoomService';
 import type { IMultiplayerRoomService } from '@/model/services/iMultiplayerRoomService';
 import type { INarratorAudioService } from '@/model/services/iNarratorAudioService';
@@ -16,7 +16,7 @@ import { PgPlayUseCases } from '@/usecase/pgPlayUseCases';
 const teamDataSource = new AsyncStorageTeamDataSource();
 const gameCatalogDataSource = new MemoryGameCatalogDataSource();
 const narratorAudioService: INarratorAudioService =
-  new MemoryNarratorAudioService();
+  new ExpoSpeechNarratorAudioService();
 
 const supabaseUrl = (process.env.EXPO_PUBLIC_SUPABASE_URL ?? '').trim();
 const supabaseAnonKey = (

@@ -90,6 +90,13 @@ export class AdedonhaUseCases implements IAdedonhaUseCases {
     return this.roomService.joinAdedonhaRoom(cleanCode, cleanNickname);
   }
 
+  async leaveRoom(roomId: string, playerId: string): Promise<void> {
+    if (!roomId.trim() || !playerId.trim()) {
+      return;
+    }
+    await this.roomService.leaveAdedonhaRoom(roomId, playerId);
+  }
+
   async addColumn(roomId: string, columnName: string): Promise<AdedonhaRoom> {
     const cleanColumn = columnName.trim();
     if (cleanColumn.length < 2) {
