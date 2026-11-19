@@ -13,7 +13,7 @@ import type {
   CidadeDormeConfig,
   CidadeDormeRoom,
 } from '@/model/entities/multiplayerSession';
-import { AuthError, DataSourceError } from '@/model/errors';
+import { AuthError, DataSourceError, ValidationError } from '@/model/errors';
 import type { IMultiplayerRoomService } from '@/model/services/iMultiplayerRoomService';
 
 export type SupabaseServiceConfig = {
@@ -65,6 +65,47 @@ type DbSubmissionRow = {
   points: number;
 };
 
+type WebSessionStorageLike = {
+  getItem: (key: string) => string | null;
+  setItem: (key: string, value: string) => void;
+  removeItem: (key: string) => void;
+};
+
+type SupabaseAuthStorageAdapter = {
+  getItem: (key: string) => Promise<string | null> | string | null;
+  setItem: (key: string, value: string) => Promise<void> | void;
+  removeItem: (key: string) => Promise<void> | void;
+};
+
+// TODO (temporário): isolar sessão anônima por aba no Web usando sessionStorage
+// para facilitar testes com múltiplos jogadores em abas do mesmo navegador.
+// No mobile (Android/iOS), mantém AsyncStorage normalmente.
+function resolveTemporaryAuthStorage(): SupabaseAuthStorageAdapter {
+  const globalScope = globalThis as {
+    sessionStorage?: WebSessionStorageLike;
+  };
+  const webSessionStorage = globalScope.sessionStorage;
+
+  if (
+    webSessionStorage &&
+    typeof webSessionStorage.getItem === 'function' &&
+    typeof webSessionStorage.setItem === 'function' &&
+    typeof webSessionStorage.removeItem === 'function'
+  ) {
+    return {
+      getItem: (key: string) => webSessionStorage.getItem(key),
+      setItem: (key: string, value: string) => {
+        webSessionStorage.setItem(key, value);
+      },
+      removeItem: (key: string) => {
+        webSessionStorage.removeItem(key);
+      },
+    };
+  }
+
+  return AsyncStorage;
+}
+
 const DEFAULT_COLUMNS: string[] = [
   'Personagem Bíblico',
   'Livro da Bíblia',
@@ -89,6 +130,8 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
   private client?: SupabaseClient;
   private activeRoomId: string | null = null;
   private cachedUserId: string | null = null;
+  private activeChannels: Map<string, ReturnType<SupabaseClient['channel']>> =
+    new Map();
 
   constructor(
     config: SupabaseServiceConfig = {
@@ -117,7 +160,7 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
     if (!this.client) {
       this.client = createClient(this.supabaseUrl, this.supabaseAnonKey, {
         auth: {
-          storage: AsyncStorage,
+          storage: resolveTemporaryAuthStorage(),
           autoRefreshToken: true,
           persistSession: true,
           detectSessionInUrl: false,
@@ -158,7 +201,11 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
   }
 
   private wrapError(err: unknown, fallbackMessage: string): never {
-    if (err instanceof AuthError || err instanceof DataSourceError) {
+    if (
+      err instanceof AuthError ||
+      err instanceof DataSourceError ||
+      err instanceof ValidationError
+    ) {
       throw err;
     }
     if (err instanceof Error && err.message.trim()) {
@@ -326,6 +373,13 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
     }
 
     const client = this.getClient();
+    const channelName = `adedonha-room-${roomId}`;
+    const previousChannel = this.activeChannels.get(channelName);
+    if (previousChannel) {
+      this.activeChannels.delete(channelName);
+      void client.removeChannel(previousChannel);
+    }
+
     const refresh = () => {
       void this.loadRoomSnapshot(roomId)
         .then((snapshot) => onRoomUpdated(snapshot))
@@ -335,7 +389,7 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
     };
 
     const channel = client
-      .channel(`adedonha-room-${roomId}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -368,7 +422,12 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
       )
       .subscribe();
 
+    this.activeChannels.set(channelName, channel);
+
     return () => {
+      if (this.activeChannels.get(channelName) === channel) {
+        this.activeChannels.delete(channelName);
+      }
       void client.removeChannel(channel);
     };
   }
@@ -504,19 +563,62 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
       }
 
       const targetRoom = roomData as { id: string; host_id: string };
-      const { error: joinError } = await client.from('room_players').upsert(
-        {
-          room_id: targetRoom.id,
-          user_id: userId,
-          nickname: nickname.trim(),
-          is_host: targetRoom.host_id === userId,
-          is_ready: true,
-        },
-        { onConflict: 'room_id,user_id' }
+      const cleanNickname = nickname.trim();
+
+      const { data: existingPlayersData, error: existingPlayersError } =
+        await client
+          .from('room_players')
+          .select('id, room_id, user_id, nickname, is_host, score')
+          .eq('room_id', targetRoom.id);
+
+      if (existingPlayersError) {
+        throw new DataSourceError('Erro ao verificar participantes da sala.');
+      }
+
+      const existingPlayers = (existingPlayersData ?? []) as DbRoomPlayerRow[];
+      const sameUserRow = existingPlayers.find((p) => p.user_id === userId);
+      const duplicateNickRow = existingPlayers.find(
+        (p) =>
+          p.user_id !== userId &&
+          p.nickname.trim().toLowerCase() === cleanNickname.toLowerCase()
       );
 
-      if (joinError) {
-        throw new DataSourceError('Não foi possível entrar na sala.');
+      if (duplicateNickRow) {
+        throw new ValidationError(
+          'Já existe um participante com este apelido na sala. Escolha outro nome.'
+        );
+      }
+
+      if (sameUserRow) {
+        if (
+          sameUserRow.nickname.trim().toLowerCase() !==
+          cleanNickname.toLowerCase()
+        ) {
+          const { error: updateError } = await client
+            .from('room_players')
+            .update({ nickname: cleanNickname })
+            .eq('room_id', targetRoom.id)
+            .eq('user_id', userId);
+
+          if (updateError) {
+            throw new DataSourceError(
+              'Não foi possível atualizar seu apelido na sala.'
+            );
+          }
+        }
+      } else {
+        const { error: insertError } = await client.from('room_players').insert({
+          room_id: targetRoom.id,
+          user_id: userId,
+          nickname: cleanNickname,
+          is_host: targetRoom.host_id === userId,
+          is_ready: true,
+          score: 0,
+        });
+
+        if (insertError) {
+          throw new DataSourceError('Não foi possível entrar na sala.');
+        }
       }
 
       this.activeRoomId = targetRoom.id;
@@ -526,6 +628,39 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
         err,
         'Não foi possível entrar na sala via Supabase.'
       );
+    }
+  }
+
+  async leaveAdedonhaRoom(roomId: string, playerId: string): Promise<void> {
+    this.ensureCredentials();
+    if (this.delegateService) {
+      return this.delegateService.leaveAdedonhaRoom(roomId, playerId);
+    }
+
+    if (this.activeRoomId === roomId) {
+      this.activeRoomId = null;
+    }
+
+    try {
+      const client = this.getClient();
+      const { data: roomData } = await client
+        .from('rooms')
+        .select('id, host_id, phase')
+        .eq('id', roomId)
+        .single();
+
+      const row = roomData as
+        | { id: string; host_id: string; phase: string }
+        | null;
+      if (row && row.phase === 'lobby' && row.host_id !== playerId) {
+        await client
+          .from('room_players')
+          .delete()
+          .eq('room_id', roomId)
+          .eq('user_id', playerId);
+      }
+    } catch {
+      // Saída em best-effort: não bloqueia o retorno do jogador ao Hub.
     }
   }
 
@@ -973,15 +1108,18 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
     }
   }
 
-  private mapRowToCidadeDormeRoom(row: {
-    id: string;
-    code: string;
-    host_id: string;
-    phase: string;
-    current_round: number;
-    narrator_caption?: string | null;
-    config: Record<string, unknown> | null;
-  }): CidadeDormeRoom {
+  private mapRowToCidadeDormeRoom(
+    row: {
+      id: string;
+      code: string;
+      host_id: string;
+      phase: string;
+      current_round: number;
+      narrator_caption?: string | null;
+      config: Record<string, unknown> | null;
+    },
+    playerRows: DbRoomPlayerRow[] = []
+  ): CidadeDormeRoom {
     const raw = (row.config ?? {}) as Partial<CidadeDormeRoom> & {
       config?: CidadeDormeConfig;
     };
@@ -992,6 +1130,34 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
       nightTurnSeconds: 15,
       revealRoleOnDeath: true,
     };
+
+    const storedPlayers = Array.isArray(raw.players)
+      ? raw.players.map((p) => ({ ...p }))
+      : [];
+    const storedById = new Map(storedPlayers.map((p) => [p.id, p]));
+
+    let mergedPlayers: CidadeDormeRoom['players'];
+    if (playerRows.length > 0) {
+      mergedPlayers = playerRows.map((pRow) => {
+        const existingMeta = storedById.get(pRow.user_id);
+        return {
+          id: pRow.user_id,
+          nickname: pRow.nickname,
+          isHost: pRow.is_host || pRow.user_id === row.host_id,
+          isAlive: existingMeta?.isAlive ?? true,
+          isReady: existingMeta?.isReady ?? false,
+          role:
+            existingMeta?.role ??
+            (pRow.is_host || pRow.user_id === row.host_id
+              ? 'detetive'
+              : 'cidadao'),
+          hasVoted: existingMeta?.hasVoted ?? false,
+        };
+      });
+    } else {
+      mergedPlayers = storedPlayers;
+    }
+
     return {
       id: row.id,
       code: row.code,
@@ -1007,9 +1173,7 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
         row.narrator_caption ??
         raw.narratorCaption ??
         'Sala pronta no Lobby.',
-      players: Array.isArray(raw.players)
-        ? raw.players.map((p) => ({ ...p }))
-        : [],
+      players: mergedPlayers,
       nightTargetId: raw.nightTargetId ?? null,
       nightProtectedId: raw.nightProtectedId ?? null,
       detectiveVerdict: raw.detectiveVerdict
@@ -1063,6 +1227,18 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
           'Sala de Cidade Dorme não encontrada no Supabase.'
         );
       }
+
+      const { data: playersData, error: playersError } = await client
+        .from('room_players')
+        .select('id, room_id, user_id, nickname, is_host, score')
+        .eq('room_id', targetId);
+
+      if (playersError) {
+        throw new DataSourceError(
+          'Erro ao carregar jogadores da sala de Cidade Dorme.'
+        );
+      }
+
       this.activeRoomId = targetId;
       return this.mapRowToCidadeDormeRoom(
         data as {
@@ -1073,7 +1249,8 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
           current_round: number;
           narrator_caption?: string | null;
           config: Record<string, unknown> | null;
-        }
+        },
+        (playersData ?? []) as DbRoomPlayerRow[]
       );
     } catch (err: unknown) {
       return this.wrapError(
@@ -1100,6 +1277,7 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
       const client = this.getClient();
       const userId = await this.ensureAuthenticatedUserId();
       const code = generatePinCode();
+      const cleanHost = hostNickname.trim();
       const initialConfig: CidadeDormeConfig = {
         narratorVoice: 'masculina',
         assassinCount: 1,
@@ -1110,7 +1288,7 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
       const initialPlayers: CidadeDormeRoom['players'] = [
         {
           id: userId,
-          nickname: hostNickname.trim(),
+          nickname: cleanHost,
           isHost: true,
           isAlive: true,
           isReady: false,
@@ -1154,6 +1332,22 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
       }
 
       const roomId = (created as { id: string }).id;
+      const { error: playerError } = await client.from('room_players').insert({
+        room_id: roomId,
+        user_id: userId,
+        nickname: cleanHost,
+        is_host: true,
+        is_alive: true,
+        is_ready: false,
+        score: 0,
+      });
+
+      if (playerError) {
+        throw new DataSourceError(
+          'Sala criada, mas falhou ao registrar o Moderador.'
+        );
+      }
+
       this.activeRoomId = roomId;
       return await this.getCidadeDormeRoom(roomId);
     } catch (err: unknown) {
@@ -1184,6 +1378,7 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
       const client = this.getClient();
       const userId = await this.ensureAuthenticatedUserId();
       const normalizedCode = code.trim().toUpperCase();
+      const cleanNickname = nickname.trim();
 
       const { data: roomData, error } = await client
         .from('rooms')
@@ -1200,47 +1395,116 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
         );
       }
 
-      const currentRoom = this.mapRowToCidadeDormeRoom(
-        roomData as {
-          id: string;
-          code: string;
-          host_id: string;
-          phase: string;
-          current_round: number;
-          narrator_caption?: string | null;
-          config: Record<string, unknown> | null;
-        }
-      );
+      const targetRoom = roomData as {
+        id: string;
+        code: string;
+        host_id: string;
+        phase: string;
+        current_round: number;
+        narrator_caption?: string | null;
+        config: Record<string, unknown> | null;
+      };
 
-      const exists = currentRoom.players.some(
+      const { data: playersData, error: playersError } = await client
+        .from('room_players')
+        .select('id, room_id, user_id, nickname, is_host, score')
+        .eq('room_id', targetRoom.id);
+
+      if (playersError) {
+        throw new DataSourceError(
+          'Erro ao verificar jogadores da sala de Cidade Dorme.'
+        );
+      }
+
+      const existingRows = (playersData ?? []) as DbRoomPlayerRow[];
+      const sameUserRow = existingRows.find((p) => p.user_id === userId);
+      const duplicateNickRow = existingRows.find(
         (p) =>
-          p.id === userId ||
-          p.nickname.toLowerCase() === nickname.trim().toLowerCase()
+          p.user_id !== userId &&
+          p.nickname.trim().toLowerCase() === cleanNickname.toLowerCase()
       );
-      const nextPlayers = exists
-        ? currentRoom.players
-        : [
-            ...currentRoom.players,
-            {
-              id: userId,
-              nickname: nickname.trim(),
-              isHost: currentRoom.hostId === userId,
-              isAlive: true,
-              isReady: false,
-              role: 'cidadao' as const,
-              hasVoted: false,
-            },
-          ];
 
-      return await this.saveCidadeDormeRoom({
-        ...currentRoom,
-        players: nextPlayers,
-      });
+      if (duplicateNickRow) {
+        throw new ValidationError(
+          'Já existe um participante com este apelido na sala. Escolha outro nome.'
+        );
+      }
+
+      if (sameUserRow) {
+        if (
+          sameUserRow.nickname.trim().toLowerCase() !==
+          cleanNickname.toLowerCase()
+        ) {
+          const { error: updateError } = await client
+            .from('room_players')
+            .update({ nickname: cleanNickname })
+            .eq('room_id', targetRoom.id)
+            .eq('user_id', userId);
+
+          if (updateError) {
+            throw new DataSourceError(
+              'Não foi possível atualizar seu apelido na sala.'
+            );
+          }
+        }
+      } else {
+        const { error: insertError } = await client.from('room_players').insert({
+          room_id: targetRoom.id,
+          user_id: userId,
+          nickname: cleanNickname,
+          is_host: targetRoom.host_id === userId,
+          is_alive: true,
+          is_ready: false,
+          score: 0,
+        });
+
+        if (insertError) {
+          throw new DataSourceError(
+            'Não foi possível entrar na sala de Cidade Dorme.'
+          );
+        }
+      }
+
+      this.activeRoomId = targetRoom.id;
+      return await this.getCidadeDormeRoom(targetRoom.id);
     } catch (err: unknown) {
       return this.wrapError(
         err,
         'Não foi possível entrar na sala de Cidade Dorme.'
       );
+    }
+  }
+
+  async leaveCidadeDormeRoom(roomId: string, playerId: string): Promise<void> {
+    this.ensureCredentials();
+    if (this.delegateService) {
+      return this.delegateService.leaveCidadeDormeRoom(roomId, playerId);
+    }
+
+    if (this.activeRoomId === roomId) {
+      this.activeRoomId = null;
+    }
+
+    try {
+      const client = this.getClient();
+      const { data: roomData } = await client
+        .from('rooms')
+        .select('id, host_id, phase')
+        .eq('id', roomId)
+        .single();
+
+      const row = roomData as
+        | { id: string; host_id: string; phase: string }
+        | null;
+      if (row && row.phase === 'lobby' && row.host_id !== playerId) {
+        await client
+          .from('room_players')
+          .delete()
+          .eq('room_id', roomId)
+          .eq('user_id', playerId);
+      }
+    } catch {
+      // Saída em best-effort: não bloqueia o retorno do jogador ao Hub.
     }
   }
 
@@ -1271,6 +1535,13 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
 
     try {
       const client = this.getClient();
+      const nextStatus =
+        room.phase === 'lobby'
+          ? 'lobby'
+          : room.phase === 'finished'
+          ? 'finished'
+          : 'playing';
+
       const storedPayload = {
         config: room.config,
         players: room.players,
@@ -1288,7 +1559,7 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
         .from('rooms')
         .update({
           phase: room.phase,
-          status: room.phase === 'finished' ? 'finished' : 'playing',
+          status: nextStatus,
           current_round: room.currentRound,
           narrator_caption: room.narratorCaption,
           config: storedPayload,
@@ -1323,6 +1594,13 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
     }
 
     const client = this.getClient();
+    const channelName = `cidade-dorme-room-${roomId}`;
+    const previousChannel = this.activeChannels.get(channelName);
+    if (previousChannel) {
+      this.activeChannels.delete(channelName);
+      void client.removeChannel(previousChannel);
+    }
+
     const refresh = () => {
       void this.getCidadeDormeRoom(roomId)
         .then((snapshot) => onRoomUpdated(snapshot))
@@ -1332,7 +1610,7 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
     };
 
     const channel = client
-      .channel(`cidade-dorme-room-${roomId}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -1343,9 +1621,24 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
         },
         refresh
       )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'room_players',
+          filter: `room_id=eq.${roomId}`,
+        },
+        refresh
+      )
       .subscribe();
 
+    this.activeChannels.set(channelName, channel);
+
     return () => {
+      if (this.activeChannels.get(channelName) === channel) {
+        this.activeChannels.delete(channelName);
+      }
       void client.removeChannel(channel);
     };
   }

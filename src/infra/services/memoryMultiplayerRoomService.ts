@@ -245,6 +245,7 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
     string,
     Set<(room: CidadeDormeRoom) => void>
   > = new Map();
+  private playerIdCounter = 100;
 
   constructor(
     initialRoom?: AdedonhaRoom,
@@ -390,8 +391,9 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
       return cloneRoom(found);
     }
 
+    this.playerIdCounter += 1;
     const newPlayer: AdedonhaPlayer = {
-      id: `player-${found.players.length + 1}`,
+      id: `player-${this.playerIdCounter}`,
       nickname: cleanNick,
       isHost: false,
       score: 0,
@@ -406,6 +408,21 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
     this.activeRoomId = found.id;
     this.localPlayerIdByRoom.set(found.id, newPlayer.id);
     return this.saveAndNotify(updated);
+  }
+
+  async leaveAdedonhaRoom(roomId: string, playerId: string): Promise<void> {
+    const room = this.rooms.get(roomId);
+    if (!room) return;
+    if (this.localPlayerIdByRoom.get(roomId) === playerId) {
+      this.localPlayerIdByRoom.delete(roomId);
+    }
+    if (room.phase === 'lobby' && playerId !== room.hostId) {
+      const updated: AdedonhaRoom = {
+        ...room,
+        players: room.players.filter((p) => p.id !== playerId),
+      };
+      this.saveAndNotify(updated);
+    }
   }
 
   async updateAdedonhaColumns(
@@ -781,8 +798,9 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
       return cloneCidadeDormeRoom(found);
     }
 
+    this.playerIdCounter += 1;
     const newPlayer: CidadeDormePlayer = {
-      id: `cd-player-${found.players.length + 1}`,
+      id: `cd-player-${this.playerIdCounter}`,
       nickname: cleanNick,
       isHost: false,
       isAlive: true,
@@ -798,6 +816,21 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
     this.activeCidadeDormeRoomId = found.id;
     this.localPlayerIdByRoom.set(found.id, newPlayer.id);
     return this.saveAndNotifyCidadeDorme(updated);
+  }
+
+  async leaveCidadeDormeRoom(roomId: string, playerId: string): Promise<void> {
+    const room = this.cidadeDormeRooms.get(roomId);
+    if (!room) return;
+    if (this.localPlayerIdByRoom.get(roomId) === playerId) {
+      this.localPlayerIdByRoom.delete(roomId);
+    }
+    if (room.phase === 'lobby' && playerId !== room.hostId) {
+      const updated: CidadeDormeRoom = {
+        ...room,
+        players: room.players.filter((p) => p.id !== playerId),
+      };
+      this.saveAndNotifyCidadeDorme(updated);
+    }
   }
 
   async updateCidadeDormeConfig(
