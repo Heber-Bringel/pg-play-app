@@ -72,6 +72,23 @@ export type AdedonhaRoom = {
 
 export type CidadeDormeRole = 'cidadao' | 'assassino' | 'anjo' | 'detetive';
 
+export type CidadeDormeActionKind =
+  | 'ready'
+  | 'night_assassin'
+  | 'night_angel'
+  | 'night_detective'
+  | 'vote';
+
+export type CidadeDormeActionRecord = {
+  id: string;
+  roomId: string;
+  roundNumber: number;
+  playerId: string;
+  kind: CidadeDormeActionKind;
+  targetId: string | null;
+  createdAt: string;
+};
+
 export type CidadeDormeAlignment = 'cidade' | 'infiltrados';
 
 export type CidadeDormeVoiceProfile = 'masculina' | 'feminina';
@@ -134,7 +151,7 @@ export type CidadeDormePlayer = {
   isHost: boolean;
   isAlive: boolean;
   isReady: boolean;
-  role: CidadeDormeRole;
+  role: CidadeDormeRole | null;
   hasVoted: boolean;
 };
 
@@ -146,8 +163,10 @@ export type CidadeDormeRoom = {
   phase: CidadeDormePhase;
   config: CidadeDormeConfig;
   currentRound: number;
+  phaseEndsAt: string | null;
   narratorCaption: string;
   players: CidadeDormePlayer[];
+  allyAssassinIds?: string[];
   nightTargetId: string | null;
   nightProtectedId: string | null;
   detectiveVerdict: CidadeDormeDetectiveVerdict | null;

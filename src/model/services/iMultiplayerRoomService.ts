@@ -4,6 +4,7 @@ import type {
   AdedonhaSubmission,
   AdedonhaTallyVerdict,
   CidadeDormeConfig,
+  CidadeDormeRole,
   CidadeDormeRoom,
 } from '@/model/entities/multiplayerSession';
 
@@ -52,7 +53,10 @@ export interface IMultiplayerRoomService {
     roomId: string,
     onRoomUpdated: (room: AdedonhaRoom) => void
   ): () => void;
-  getCidadeDormeRoom(roomId?: string): Promise<CidadeDormeRoom>;
+  getCidadeDormeRoom(
+    roomId?: string,
+    viewerPlayerId?: string
+  ): Promise<CidadeDormeRoom>;
   createCidadeDormeRoom(hostNickname: string): Promise<CidadeDormeRoom>;
   joinCidadeDormeRoom(code: string, nickname: string): Promise<CidadeDormeRoom>;
   leaveCidadeDormeRoom(roomId: string, playerId: string): Promise<void>;
@@ -61,6 +65,38 @@ export interface IMultiplayerRoomService {
     partialConfig: Partial<CidadeDormeConfig>
   ): Promise<CidadeDormeRoom>;
   saveCidadeDormeRoom(room: CidadeDormeRoom): Promise<CidadeDormeRoom>;
+  startCidadeDormeMatch(
+    roomId: string,
+    assignedRolesByPlayerId: Record<string, CidadeDormeRole>,
+    narratorCaption: string
+  ): Promise<CidadeDormeRoom>;
+  markCidadeDormePlayerReady(
+    roomId: string,
+    playerId: string,
+    options?: {
+      markCompanionsReady?: boolean;
+      nightTurnEndsAt?: string | null;
+      nightCaption?: string;
+    }
+  ): Promise<CidadeDormeRoom>;
+  submitCidadeDormeNightAction(
+    roomId: string,
+    actorPlayerId: string,
+    kind: 'night_assassin' | 'night_angel' | 'night_detective',
+    targetPlayerId: string | null
+  ): Promise<CidadeDormeRoom>;
+  submitCidadeDormeVote(
+    roomId: string,
+    voterPlayerId: string,
+    targetPlayerIdOrSkip: string
+  ): Promise<CidadeDormeRoom>;
+  resolveCidadeDormeDawn(
+    roomId: string,
+    options?: {
+      debateEndsAt?: string | null;
+    }
+  ): Promise<CidadeDormeRoom>;
+  tallyCidadeDormeVotes(roomId: string): Promise<CidadeDormeRoom>;
   subscribeToCidadeDormeRoom(
     roomId: string,
     onRoomUpdated: (room: CidadeDormeRoom) => void
