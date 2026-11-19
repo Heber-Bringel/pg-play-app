@@ -15,6 +15,7 @@ export interface IMultiplayerRoomService {
     initialColumns?: string[]
   ): Promise<AdedonhaRoom>;
   joinAdedonhaRoom(code: string, nickname: string): Promise<AdedonhaRoom>;
+  leaveAdedonhaRoom(roomId: string, playerId: string): Promise<void>;
   updateAdedonhaColumns(roomId: string, columns: string[]): Promise<AdedonhaRoom>;
   updateAdedonhaConfig(
     roomId: string,
@@ -54,6 +55,7 @@ export interface IMultiplayerRoomService {
   getCidadeDormeRoom(roomId?: string): Promise<CidadeDormeRoom>;
   createCidadeDormeRoom(hostNickname: string): Promise<CidadeDormeRoom>;
   joinCidadeDormeRoom(code: string, nickname: string): Promise<CidadeDormeRoom>;
+  leaveCidadeDormeRoom(roomId: string, playerId: string): Promise<void>;
   updateCidadeDormeConfig(
     roomId: string,
     partialConfig: Partial<CidadeDormeConfig>
