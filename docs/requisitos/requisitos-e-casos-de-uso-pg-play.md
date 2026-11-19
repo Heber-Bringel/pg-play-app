@@ -37,6 +37,9 @@ O **PG PLAY** é um aplicativo voltado para dinâmicas presenciais em Pequenos G
 | **RF03** | Filtrar minigames em tempo real | O sistema deve permitir buscar minigames pelo nome ou tema por meio de um campo de busca, filtrando a lista em tempo real a cada caractere digitado, sem necessidade de confirmar com a tecla *Enter*. | Média | `design-system/05-padroes.md`, `ExpressiveTextField.tsx` |
 | **RF04** | Tratar busca vazia e limpar filtro | Quando nenhum minigame corresponder ao termo pesquisado, o sistema deve exibir o estado vazio (*"Nenhum minigame encontrado"*) acompanhado de um botão *"Limpar busca"* que restaura a lista completa com um único toque. | Média | `design-system/05-padroes.md` (Padrão 3) |
 
+> [!NOTE]
+> **RF03 e RF04 adiados (v1.2.0):** com poucos jogos no catálogo, a busca no Hub não é necessária no momento e foi retirada da tela. O Hub mantém o filtro por modalidade. Os dois requisitos voltam a valer quando o catálogo crescer.
+
 ### 3.2. Configuração de Equipes e Salas Multiplayer
 
 | Código | Requisito | Descrição Detalhada | Prioridade | Origem no Projeto |
