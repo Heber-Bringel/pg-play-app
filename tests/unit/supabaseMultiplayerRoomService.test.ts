@@ -6,19 +6,27 @@ type MockTableState = {
   rooms: Record<string, unknown>[];
   room_players: Record<string, unknown>[];
   adedonha_submissions: Record<string, unknown>[];
+  cidade_dorme_secrets: Record<string, unknown>[];
+  cidade_dorme_actions: Record<string, unknown>[];
 };
 
-function createFakeSupabaseClient(initial?: Partial<MockTableState>) {
+function createFakeSupabaseClient(
+  initial?: Partial<MockTableState> & { authUserId?: string }
+) {
   const db: MockTableState = {
     rooms: initial?.rooms ?? [],
     room_players: initial?.room_players ?? [],
     adedonha_submissions: initial?.adedonha_submissions ?? [],
+    cidade_dorme_secrets: initial?.cidade_dorme_secrets ?? [],
+    cidade_dorme_actions: initial?.cidade_dorme_actions ?? [],
   };
+  const authUserId = initial?.authUserId ?? 'user-anon-1';
 
   const channelOnHandlers: Array<() => void> = [];
   type MockChannel = {
     on: jest.Mock<MockChannel, [string, unknown, () => void]>;
-    subscribe: jest.Mock<MockChannel, []>;
+    subscribe: jest.Mock<MockChannel, [((status?: string) => void)?]>;
+    send: jest.Mock<Promise<'ok'>, [unknown]>;
   };
   const mockChannel: MockChannel = {
     on: jest.fn(
@@ -27,7 +35,8 @@ function createFakeSupabaseClient(initial?: Partial<MockTableState>) {
         return mockChannel;
       }
     ),
-    subscribe: jest.fn((): MockChannel => mockChannel),
+    subscribe: jest.fn((_cb?: (status?: string) => void): MockChannel => mockChannel),
+    send: jest.fn(async (_payload: unknown) => 'ok' as const),
   };
 
   type FilterQuery = {
@@ -53,17 +62,344 @@ function createFakeSupabaseClient(initial?: Partial<MockTableState>) {
         error: null,
       })),
       signInAnonymously: jest.fn(async () => ({
-        data: { user: { id: 'user-anon-1' } },
+        data: { user: { id: authUserId } },
         error: null,
       })),
     },
     channel: jest.fn(() => mockChannel),
     removeChannel: jest.fn(async () => 'ok'),
+    rpc: jest.fn(
+      async (
+        fnName: string,
+        params: Record<string, unknown>
+      ): Promise<{ data: unknown; error: { message: string; code?: string } | null }> => {
+        const roomId = params.p_room_id as string;
+        const room = db.rooms.find((r) => r.id === roomId);
+        if (!room) {
+          return { data: null, error: { message: 'Sala não encontrada.' } };
+        }
+
+        if (fnName === 'cidade_dorme_start_match') {
+          const roles = (params.p_assigned_roles ?? {}) as Record<
+            string,
+            string
+          >;
+          const caption =
+            (params.p_narrator_caption as string) ??
+            'Papéis secretos distribuídos!';
+          const remainingSecrets = db.cidade_dorme_secrets.filter(
+            (s) => s.room_id !== roomId
+          );
+          db.cidade_dorme_secrets.splice(
+            0,
+            db.cidade_dorme_secrets.length,
+            ...remainingSecrets
+          );
+          const remainingActions = db.cidade_dorme_actions.filter(
+            (a) => a.room_id !== roomId
+          );
+          db.cidade_dorme_actions.splice(
+            0,
+            db.cidade_dorme_actions.length,
+            ...remainingActions
+          );
+          for (const rp of db.room_players.filter(
+            (p) => p.room_id === roomId
+          )) {
+            rp.is_alive = true;
+            rp.is_ready = false;
+            rp.has_voted = false;
+            db.cidade_dorme_secrets.push({
+              room_id: roomId,
+              user_id: rp.user_id,
+              secret_role: roles[rp.user_id as string] ?? 'cidadao',
+              detective_verdict: null,
+            });
+          }
+          const prevCfg = (room.config as Record<string, unknown>) ?? {};
+          room.phase = 'role_reveal';
+          room.status = 'playing';
+          room.current_round = 1;
+          room.phase_ends_at = null;
+          room.narrator_caption = caption;
+          room.config = {
+            config: prevCfg.config,
+            phaseEndsAt: null,
+            narratorCaption: caption,
+            dawnReport: null,
+            voteReport: null,
+            winner: null,
+          };
+          return { data: { roomId }, error: null };
+        }
+
+        if (fnName === 'cidade_dorme_mark_ready') {
+          const markAll = Boolean(params.p_mark_all);
+          const roomPlayers = db.room_players.filter(
+            (p) => p.room_id === roomId
+          );
+          for (const rp of roomPlayers) {
+            if (markAll || rp.user_id === authUserId) {
+              rp.is_ready = true;
+              const idx = db.cidade_dorme_actions.findIndex(
+                (a) =>
+                  a.room_id === roomId &&
+                  a.round_number === room.current_round &&
+                  a.user_id === rp.user_id &&
+                  a.kind === 'ready'
+              );
+              const act = {
+                id: `act-${db.cidade_dorme_actions.length + 1}`,
+                room_id: roomId,
+                round_number: room.current_round,
+                user_id: rp.user_id,
+                kind: 'ready',
+                target_id: null,
+                created_at: new Date().toISOString(),
+              };
+              if (idx >= 0) db.cidade_dorme_actions[idx] = act;
+              else db.cidade_dorme_actions.push(act);
+            }
+          }
+          if (roomPlayers.every((p) => Boolean(p.is_ready))) {
+            const nextEnds = (params.p_night_turn_ends_at as string | null) ?? null;
+            const nextCaption =
+              (params.p_night_caption as string | null) ??
+              'A cidade dorme... Todos fecham os olhos. Assassino, acorde e escolha sua vítima.';
+            room.phase = 'night_assassin';
+            room.phase_ends_at = nextEnds;
+            room.narrator_caption = nextCaption;
+            const prevCfg = (room.config as Record<string, unknown>) ?? {};
+            room.config = {
+              ...prevCfg,
+              phaseEndsAt: nextEnds,
+              narratorCaption: nextCaption,
+            };
+          }
+          return { data: { roomId }, error: null };
+        }
+
+        if (fnName === 'cidade_dorme_submit_night_action') {
+          const kind = params.p_kind as string;
+          const targetId = (params.p_target_id as string | null) ?? null;
+          const idx = db.cidade_dorme_actions.findIndex(
+            (a) =>
+              a.room_id === roomId &&
+              a.round_number === room.current_round &&
+              a.user_id === authUserId &&
+              a.kind === kind
+          );
+          const act = {
+            id: `act-${db.cidade_dorme_actions.length + 1}`,
+            room_id: roomId,
+            round_number: room.current_round,
+            user_id: authUserId,
+            kind,
+            target_id: targetId,
+            created_at: new Date().toISOString(),
+          };
+          if (idx >= 0) db.cidade_dorme_actions[idx] = act;
+          else db.cidade_dorme_actions.push(act);
+
+          if (kind === 'night_detective' && targetId) {
+            const targetPlayer = db.room_players.find(
+              (p) => p.room_id === roomId && p.user_id === targetId
+            );
+            const targetSecret = db.cidade_dorme_secrets.find(
+              (s) => s.room_id === roomId && s.user_id === targetId
+            );
+            const mySecret = db.cidade_dorme_secrets.find(
+              (s) => s.room_id === roomId && s.user_id === authUserId
+            );
+            if (mySecret && targetPlayer) {
+              mySecret.detective_verdict = {
+                targetPlayerId: targetId,
+                targetNickname: targetPlayer.nickname,
+                isAssassin: targetSecret?.secret_role === 'assassino',
+                roundNumber: room.current_round,
+              };
+            }
+          }
+          return { data: { roomId }, error: null };
+        }
+
+        if (fnName === 'cidade_dorme_cast_vote') {
+          const targetId = params.p_target_id as string;
+          const idx = db.cidade_dorme_actions.findIndex(
+            (a) =>
+              a.room_id === roomId &&
+              a.round_number === room.current_round &&
+              a.user_id === authUserId &&
+              a.kind === 'vote'
+          );
+          const act = {
+            id: `act-${db.cidade_dorme_actions.length + 1}`,
+            room_id: roomId,
+            round_number: room.current_round,
+            user_id: authUserId,
+            kind: 'vote',
+            target_id: targetId,
+            created_at: new Date().toISOString(),
+          };
+          if (idx >= 0) db.cidade_dorme_actions[idx] = act;
+          else db.cidade_dorme_actions.push(act);
+
+          const voter = db.room_players.find(
+            (p) => p.room_id === roomId && p.user_id === authUserId
+          );
+          if (voter) voter.has_voted = true;
+          return { data: { roomId }, error: null };
+        }
+
+        if (fnName === 'cidade_dorme_get_ally_assassins') {
+          const mySecret = db.cidade_dorme_secrets.find(
+            (s) => s.room_id === roomId && s.user_id === authUserId
+          );
+          if (mySecret?.secret_role !== 'assassino') {
+            return { data: [], error: null };
+          }
+          const allies = db.cidade_dorme_secrets
+            .filter(
+              (s) =>
+                s.room_id === roomId &&
+                s.secret_role === 'assassino' &&
+                s.user_id !== authUserId
+            )
+            .map((s) => s.user_id);
+          return { data: allies, error: null };
+        }
+
+        if (fnName === 'cidade_dorme_resolve_dawn') {
+          const round = room.current_round as number;
+          const assassinAct = db.cidade_dorme_actions.find(
+            (a) =>
+              a.room_id === roomId &&
+              a.round_number === round &&
+              a.kind === 'night_assassin'
+          );
+          const angelAct = db.cidade_dorme_actions.find(
+            (a) =>
+              a.room_id === roomId &&
+              a.round_number === round &&
+              a.kind === 'night_angel'
+          );
+          const attackedId = (assassinAct?.target_id as string | null) ?? null;
+          const protectedId = (angelAct?.target_id as string | null) ?? null;
+          const saved = Boolean(attackedId && protectedId === attackedId);
+          const attackedPlayer = attackedId
+            ? db.room_players.find(
+                (p) => p.room_id === roomId && p.user_id === attackedId
+              )
+            : undefined;
+          if (!saved && attackedPlayer) {
+            attackedPlayer.is_alive = false;
+          }
+          for (const rp of db.room_players.filter(
+            (p) => p.room_id === roomId
+          )) {
+            rp.has_voted = false;
+          }
+          const dawnReport = {
+            roundNumber: round,
+            attackedPlayerId: attackedId,
+            attackedNickname: (attackedPlayer?.nickname as string) ?? null,
+            savedByAngel: saved,
+            eliminatedPlayerId: saved ? null : attackedId,
+            eliminatedNickname: saved
+              ? null
+              : ((attackedPlayer?.nickname as string) ?? null),
+            eliminatedRole: null,
+          };
+          const prevCfg = (room.config as Record<string, unknown>) ?? {};
+          room.phase = 'day_debate';
+          room.phase_ends_at = (params.p_debate_ends_at as string | null) ?? null;
+          room.config = {
+            ...prevCfg,
+            dawnReport,
+            phaseEndsAt: room.phase_ends_at,
+          };
+          return { data: { roomId }, error: null };
+        }
+
+        if (fnName === 'cidade_dorme_tally_votes') {
+          const round = room.current_round as number;
+          const votes = db.cidade_dorme_actions.filter(
+            (a) =>
+              a.room_id === roomId &&
+              a.round_number === round &&
+              a.kind === 'vote'
+          );
+          const voteCounts: Record<string, number> = {};
+          let skipCount = 0;
+          for (const v of votes) {
+            const t = v.target_id as string;
+            if (t === 'skip') skipCount += 1;
+            else voteCounts[t] = (voteCounts[t] ?? 0) + 1;
+          }
+          const sorted = Object.entries(voteCounts).sort((a, b) => b[1] - a[1]);
+          const maxV = sorted[0]?.[1] ?? 0;
+          const tie =
+            maxV === 0 ||
+            (sorted[1] && sorted[1][1] === maxV) ||
+            skipCount >= maxV;
+          const eliminatedId = !tie ? sorted[0][0] : null;
+          const eliminatedPlayer = eliminatedId
+            ? db.room_players.find(
+                (p) => p.room_id === roomId && p.user_id === eliminatedId
+              )
+            : undefined;
+          if (eliminatedPlayer) {
+            eliminatedPlayer.is_alive = false;
+          }
+          const secrets = db.cidade_dorme_secrets.filter(
+            (s) => s.room_id === roomId
+          );
+          const aliveAssassins = db.room_players.filter(
+            (p) =>
+              p.room_id === roomId &&
+              p.is_alive !== false &&
+              secrets.find((s) => s.user_id === p.user_id)?.secret_role ===
+                'assassino'
+          ).length;
+          const winner = aliveAssassins === 0 ? 'cidade' : null;
+          const voteReport = {
+            roundNumber: round,
+            eliminatedPlayerId: eliminatedId,
+            eliminatedNickname: (eliminatedPlayer?.nickname as string) ?? null,
+            eliminatedRole: null,
+            tieOrSkipped: Boolean(tie),
+            voteCounts,
+            skipCount,
+          };
+          const prevCfg = (room.config as Record<string, unknown>) ?? {};
+          room.phase = winner ? 'finished' : 'vote_result';
+          room.status = winner ? 'finished' : 'playing';
+          room.phase_ends_at = null;
+          room.config = {
+            ...prevCfg,
+            voteReport,
+            winner,
+            phaseEndsAt: null,
+          };
+          return { data: { roomId }, error: null };
+        }
+
+        return { data: null, error: null };
+      }
+    ),
     from: jest.fn((table: keyof MockTableState): QueryBuilder => {
       const filters: Array<(row: Record<string, unknown>) => boolean> = [];
 
-      const applyFilters = () =>
-        db[table].filter((row) => filters.every((fn) => fn(row)));
+      const applyFilters = () => {
+        let rows = db[table].filter((row) => filters.every((fn) => fn(row)));
+        if (table === 'cidade_dorme_secrets') {
+          rows = rows.filter((row) => {
+            const room = db.rooms.find((r) => r.id === row.room_id);
+            return room?.phase === 'finished' || row.user_id === authUserId;
+          });
+        }
+        return rows;
+      };
 
       const queryBuilder: QueryBuilder = {
         select: jest.fn((): QueryBuilder => queryBuilder),
@@ -473,7 +809,167 @@ describe('SupabaseMultiplayerRoomService — Integração Postgres, Auth Anônim
     const afterLeave = await hostService.getCidadeDormeRoom(created.id);
     expect(afterLeave.players).toHaveLength(2);
 
+    // Remover jogador no lobby (inclusive se DELETE na tabela não ocorrer por RLS) e permitir reentrada
+    await hostService.saveCidadeDormeRoom({
+      ...afterLeave,
+      players: afterLeave.players.slice(0, 1),
+    });
+    const afterKick = await hostService.getCidadeDormeRoom(created.id);
+    expect(afterKick.players).toHaveLength(1);
+
     const rejoined = await p2.svc.joinCidadeDormeRoom(created.code, 'Ana');
-    expect(rejoined.players).toHaveLength(3);
+    expect(rejoined.players).toHaveLength(2);
+  });
+
+  it('deve assinar rooms, room_players e broadcast no Cidade Dorme, isolar segredos de rooms.config (RNF11) e usar RPCs atômicas (#38, #40)', async () => {
+    const fake = createFakeSupabaseClient({ authUserId: 'host-uuid' });
+    const hostService = new SupabaseMultiplayerRoomService(
+      {
+        supabaseUrl: 'https://proj.supabase.co',
+        supabaseAnonKey: 'anon-key',
+      },
+      undefined,
+      fake.client
+    );
+
+    const created = await hostService.createCidadeDormeRoom('Heber');
+
+    // Verificar inscrição Realtime em rooms, room_players e broadcast room_updated
+    const unsubscribe = hostService.subscribeToCidadeDormeRoom(
+      created.id,
+      jest.fn()
+    );
+    expect(fake.mockChannel.on).toHaveBeenCalledTimes(3);
+    expect(fake.mockChannel.on).toHaveBeenNthCalledWith(
+      1,
+      'postgres_changes',
+      expect.objectContaining({ table: 'rooms' }),
+      expect.any(Function)
+    );
+    expect(fake.mockChannel.on).toHaveBeenNthCalledWith(
+      2,
+      'postgres_changes',
+      expect.objectContaining({ table: 'room_players' }),
+      expect.any(Function)
+    );
+    expect(fake.mockChannel.on).toHaveBeenNthCalledWith(
+      3,
+      'broadcast',
+      { event: 'room_updated' },
+      expect.any(Function)
+    );
+    unsubscribe();
+
+    // Adicionar mais 4 jogadores
+    const playerIds = ['p2', 'p3', 'p4', 'p5'];
+    const playerServices: Record<string, SupabaseMultiplayerRoomService> = {};
+    for (let i = 0; i < playerIds.length; i++) {
+      const uid = playerIds[i];
+      const pFake = createFakeSupabaseClient({
+        rooms: fake.db.rooms,
+        room_players: fake.db.room_players,
+        cidade_dorme_secrets: fake.db.cidade_dorme_secrets,
+        cidade_dorme_actions: fake.db.cidade_dorme_actions,
+        authUserId: uid,
+      });
+      const svc = new SupabaseMultiplayerRoomService(
+        {
+          supabaseUrl: 'https://proj.supabase.co',
+          supabaseAnonKey: 'anon-key',
+        },
+        undefined,
+        pFake.client
+      );
+      await svc.joinCidadeDormeRoom(created.code, `Jogador${i + 2}`);
+      playerServices[uid] = svc;
+    }
+
+    // Iniciar partida via RPC segura e conferir que rooms.config não vaza roles/segredos
+    const started = await hostService.startCidadeDormeMatch(
+      created.id,
+      {
+        'host-uuid': 'detetive',
+        p2: 'assassino',
+        p3: 'anjo',
+        p4: 'cidadao',
+        p5: 'cidadao',
+      },
+      'Papéis distribuídos!'
+    );
+
+    const storedRoomConfig = fake.db.rooms[0].config as Record<
+      string,
+      unknown
+    >;
+    expect(storedRoomConfig.players).toBeUndefined();
+    expect(storedRoomConfig.nightTargetId).toBeUndefined();
+    expect(storedRoomConfig.nightProtectedId).toBeUndefined();
+    expect(storedRoomConfig.detectiveVerdict).toBeUndefined();
+    expect(storedRoomConfig.votesByPlayerId).toBeUndefined();
+
+    // Host vê apenas seu próprio papel ('detetive') e os demais como null
+    expect(started.players.find((p) => p.id === 'host-uuid')?.role).toBe(
+      'detetive'
+    );
+    expect(started.players.find((p) => p.id === 'p2')?.role).toBeNull();
+
+    // Jogador 2 vê apenas seu próprio papel ('assassino')
+    const p2Room = await playerServices.p2.getCidadeDormeRoom(created.id);
+    expect(p2Room.players.find((p) => p.id === 'p2')?.role).toBe('assassino');
+    expect(p2Room.players.find((p) => p.id === 'host-uuid')?.role).toBeNull();
+
+    // 5 confirmações simultâneas via RPC atômica
+    await Promise.all([
+      hostService.markCidadeDormePlayerReady(created.id, 'host-uuid'),
+      ...playerIds.map((uid) =>
+        playerServices[uid].markCidadeDormePlayerReady(created.id, uid)
+      ),
+    ]);
+    const nightRoom = await hostService.getCidadeDormeRoom(created.id);
+    expect(nightRoom.phase).toBe('night_assassin');
+    expect(nightRoom.players.every((p) => p.isReady)).toBe(true);
+
+    // Ação do Detetive e isolamento do veredito
+    await hostService.submitCidadeDormeNightAction(
+      created.id,
+      'host-uuid',
+      'night_detective',
+      'p2'
+    );
+    const hostDetectiveView = await hostService.getCidadeDormeRoom(created.id);
+    expect(hostDetectiveView.detectiveVerdict?.isAssassin).toBe(true);
+    const p3DetectiveView = await playerServices.p3.getCidadeDormeRoom(
+      created.id
+    );
+    expect(p3DetectiveView.detectiveVerdict).toBeNull();
+    expect(
+      (fake.db.rooms[0].config as Record<string, unknown>).detectiveVerdict
+    ).toBeUndefined();
+
+    // Amanhecer + Votação simultânea eliminando o Assassino (p2)
+    await hostService.resolveCidadeDormeDawn(created.id);
+    const currentRoom = await hostService.getCidadeDormeRoom(created.id);
+    await hostService.saveCidadeDormeRoom({
+      ...currentRoom,
+      phase: 'day_voting',
+    });
+
+    await Promise.all([
+      hostService.submitCidadeDormeVote(created.id, 'host-uuid', 'p2'),
+      playerServices.p2.submitCidadeDormeVote(created.id, 'p2', 'p3'),
+      playerServices.p3.submitCidadeDormeVote(created.id, 'p3', 'p2'),
+      playerServices.p4.submitCidadeDormeVote(created.id, 'p4', 'p2'),
+      playerServices.p5.submitCidadeDormeVote(created.id, 'p5', 'p2'),
+    ]);
+
+    const votingSnapshot = await hostService.getCidadeDormeRoom(created.id);
+    expect(votingSnapshot.players.every((p) => p.hasVoted)).toBe(true);
+    expect(votingSnapshot.votesByPlayerId).toEqual({});
+
+    const finished = await hostService.tallyCidadeDormeVotes(created.id);
+    expect(finished.phase).toBe('finished');
+    expect(finished.winner).toBe('cidade');
+    // Após finished, todos os papéis são revelados
+    expect(finished.players.every((p) => p.role !== null)).toBe(true);
   });
 });
