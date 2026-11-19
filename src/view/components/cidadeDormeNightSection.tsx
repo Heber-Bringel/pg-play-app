@@ -8,43 +8,65 @@ import type {
 import { ExpressiveButton } from '@/view/components/expressiveButton';
 import { ExpressiveTimer } from '@/view/components/expressiveTimer';
 import { GameCard } from '@/view/components/gameCard';
-import { QuizOption } from '@/view/components/quizOption';
+import { SelectableOptionItem } from '@/view/components/selectableOptionItem';
 import { darkTokens } from '@/view/theme';
-
-const OPTION_KEYS: Array<'A' | 'B' | 'C' | 'D'> = ['A', 'B', 'C', 'D'];
 
 export type CidadeDormeNightSectionProps = {
   room: CidadeDormeRoom;
   currentPlayer: CidadeDormePlayer | null;
   selectedNightTargetId: string | null;
+  hasSubmittedNightAction?: boolean;
   secondsRemaining: number;
   onSelectNightTarget: (targetPlayerId: string) => void;
   onConfirmAssassinTarget: () => Promise<void>;
   onConfirmAngelProtection: () => Promise<void>;
   onConfirmDetectiveInvestigation: () => Promise<void>;
-  onAdvanceToDawn: () => Promise<void>;
 };
 
 export const CidadeDormeNightSection = ({
   room,
   currentPlayer,
   selectedNightTargetId,
+  hasSubmittedNightAction = false,
   secondsRemaining,
   onSelectNightTarget,
   onConfirmAssassinTarget,
   onConfirmAngelProtection,
   onConfirmDetectiveInvestigation,
-  onAdvanceToDawn,
 }: CidadeDormeNightSectionProps) => {
   const alivePlayers = room.players.filter((p) => p.isAlive);
   const isAlive = Boolean(currentPlayer?.isAlive);
-  const myRole = currentPlayer?.role ?? 'cidadao';
+  const myRole = currentPlayer?.role ?? null;
 
   const isMyActiveTurn =
     isAlive &&
     ((room.phase === 'night_assassin' && myRole === 'assassino') ||
       (room.phase === 'night_angel' && myRole === 'anjo') ||
       (room.phase === 'night_detective' && myRole === 'detetive'));
+
+  const hasVerdictThisRound = Boolean(
+    room.phase === 'night_detective' &&
+      room.detectiveVerdict &&
+      room.detectiveVerdict.roundNumber === room.currentRound &&
+      myRole === 'detetive' &&
+      isAlive
+  );
+
+  const allyAssassinSet = new Set(room.allyAssassinIds ?? []);
+  const eligibleTargets = alivePlayers.filter((player) => {
+    if (room.phase === 'night_assassin') {
+      if (currentPlayer && player.id === currentPlayer.id) return false;
+      if (player.role === 'assassino') return false;
+      if (allyAssassinSet.has(player.id)) return false;
+      return true;
+    }
+    if (room.phase === 'night_detective') {
+      if (currentPlayer && player.id === currentPlayer.id) return false;
+      return true;
+    }
+    // Anjo pode proteger qualquer jogador vivo, inclusive a si mesmo
+    return true;
+  });
 
   const turnTitle =
     room.phase === 'night_assassin'
@@ -129,10 +151,7 @@ export const CidadeDormeNightSection = ({
         icon="weather-night"
       />
 
-      {room.phase === 'night_detective' &&
-        room.detectiveVerdict &&
-        myRole === 'detetive' &&
-        isAlive && (
+      {hasVerdictThisRound && room.detectiveVerdict ? (
         <View
           style={[
             styles.verdictCard,
@@ -188,33 +207,60 @@ export const CidadeDormeNightSection = ({
               ? `Alerta máximo! ${room.detectiveVerdict.targetNickname} faz parte dos Assassinos infiltrados.`
               : `${room.detectiveVerdict.targetNickname} pertence à Cidade (Inocente). Guarde este segredo até o debate!`}
           </Text>
-
-          <ExpressiveButton
-            label="Concluir Noite e Amanhecer"
-            variant="primaryJumbo"
-            icon="weather-sunny"
-            onPress={() => {
-              void onAdvanceToDawn();
-            }}
-          />
+          <View style={styles.verdictWaitRow}>
+            <MaterialCommunityIcons
+              name="clock-outline"
+              size={darkTokens.semantic.icon.sm}
+              color={
+                room.detectiveVerdict.isAssassin
+                  ? darkTokens.semantic.color.onErrorContainer
+                  : darkTokens.semantic.color.onSuccess
+              }
+            />
+            <Text
+              allowFontScaling
+              style={[
+                styles.verdictWaitText,
+                room.detectiveVerdict.isAssassin
+                  ? styles.verdictTitleAssassin
+                  : styles.verdictTitleInnocent,
+              ]}
+            >
+              Investigação concluída — aguarde o término do cronômetro para o amanhecer.
+            </Text>
+          </View>
         </View>
-      )}
-
-      {isMyActiveTurn ? (
+      ) : isMyActiveTurn ? (
         <View style={styles.nightCard}>
           <Text allowFontScaling style={styles.sectionTitle}>
             Escolha um Jogador Vivo
           </Text>
 
+          {hasSubmittedNightAction && (
+            <View
+              style={styles.submittedBanner}
+              accessibilityRole="text"
+              accessibilityLabel="Escolha registrada — aguarde o fim do turno."
+            >
+              <MaterialCommunityIcons
+                name="check-circle"
+                size={darkTokens.semantic.icon.md}
+                color={darkTokens.semantic.color.onActionContainer}
+              />
+              <Text allowFontScaling style={styles.submittedBannerText}>
+                Escolha registrada — aguarde o fim do turno.
+              </Text>
+            </View>
+          )}
+
           <View style={styles.optionsList}>
-            {alivePlayers.map((player, index) => (
-              <QuizOption
+            {eligibleTargets.map((player, index) => (
+              <SelectableOptionItem
                 key={player.id}
-                letter={OPTION_KEYS[index % OPTION_KEYS.length]}
-                text={player.nickname}
-                status={
-                  selectedNightTargetId === player.id ? 'selected' : 'default'
-                }
+                index={index + 1}
+                label={player.nickname}
+                themeMode="dark"
+                selected={selectedNightTargetId === player.id}
                 onPress={() => onSelectNightTarget(player.id)}
               />
             ))}
@@ -359,6 +405,34 @@ const styles = StyleSheet.create({
     fontFamily: darkTokens.semantic.font.body.family,
     fontSize: darkTokens.semantic.font.body.size,
     lineHeight: darkTokens.semantic.font.body.lineHeight,
+  },
+  verdictWaitRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: darkTokens.semantic.space.xs,
+  },
+  verdictWaitText: {
+    flex: 1,
+    fontFamily: darkTokens.semantic.font.caption.family,
+    fontSize: darkTokens.semantic.font.caption.size,
+    lineHeight: darkTokens.semantic.font.caption.lineHeight,
+    fontWeight: darkTokens.semantic.font.caption.weight,
+  },
+  submittedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: darkTokens.semantic.space.sm,
+    padding: darkTokens.semantic.space.md,
+    borderRadius: darkTokens.semantic.radius.lg,
+    backgroundColor: darkTokens.semantic.color.actionContainer,
+  },
+  submittedBannerText: {
+    flex: 1,
+    fontFamily: darkTokens.semantic.font.label.family,
+    fontSize: darkTokens.semantic.font.label.size,
+    lineHeight: darkTokens.semantic.font.label.lineHeight,
+    fontWeight: darkTokens.semantic.font.label.weight,
+    color: darkTokens.semantic.color.onActionContainer,
   },
   sleepingCard: {
     backgroundColor: darkTokens.component.card.bg,

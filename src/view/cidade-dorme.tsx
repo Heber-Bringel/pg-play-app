@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import type { CidadeDormeRoom } from '@/model/entities/multiplayerSession';
 import { CidadeDormeDaySection } from '@/view/components/cidadeDormeDaySection';
 import { CidadeDormeEntrySection } from '@/view/components/cidadeDormeEntrySection';
 import { CidadeDormeLobbySection } from '@/view/components/cidadeDormeLobbySection';
@@ -17,6 +18,52 @@ import { ConfirmModal } from '@/view/components/confirmModal';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
 import { darkTokens, tokens } from '@/view/theme';
 import { useCidadeDormeViewModel } from '@/viewmodel/useCidadeDormeViewModel';
+
+const resolvePhaseBadge = (
+  room: CidadeDormeRoom
+): {
+  label: string;
+  accessibilityLabel: string;
+  icon: keyof typeof MaterialCommunityIcons.glyphMap;
+} => {
+  if (room.phase === 'lobby') {
+    return {
+      label: `PIN ${room.code} · Lobby`,
+      accessibilityLabel: `Sala ${room.code}, Lobby`,
+      icon: 'account-group-outline',
+    };
+  }
+  if (room.phase === 'role_reveal') {
+    return {
+      label: `PIN ${room.code} · Revelação`,
+      accessibilityLabel: `Sala ${room.code}, Revelação de Papéis`,
+      icon: 'cards-playing-outline',
+    };
+  }
+  if (
+    room.phase === 'night_assassin' ||
+    room.phase === 'night_angel' ||
+    room.phase === 'night_detective'
+  ) {
+    return {
+      label: `PIN ${room.code} · A Noite ${room.currentRound}`,
+      accessibilityLabel: `Sala ${room.code}, Ciclo ${room.currentRound}, A Noite`,
+      icon: 'weather-night',
+    };
+  }
+  if (room.phase === 'finished') {
+    return {
+      label: `PIN ${room.code} · Fim de Jogo`,
+      accessibilityLabel: `Sala ${room.code}, Fim de Jogo`,
+      icon: 'trophy-outline',
+    };
+  }
+  return {
+    label: `PIN ${room.code} · O Dia ${room.currentRound}`,
+    accessibilityLabel: `Sala ${room.code}, Ciclo ${room.currentRound}, O Dia`,
+    icon: 'weather-sunny',
+  };
+};
 
 export const CidadeDormeScreen = () => {
   const [state, actions] = useCidadeDormeViewModel();
@@ -66,6 +113,7 @@ export const CidadeDormeScreen = () => {
 
   const { room } = state;
   const activeTokens = state.isNightPhase ? darkTokens : tokens;
+  const phaseBadge = resolvePhaseBadge(room);
 
   return (
     <KeyboardAvoidingView
@@ -97,12 +145,10 @@ export const CidadeDormeScreen = () => {
               state.isNightPhase && styles.roomBadgeNight,
             ]}
             accessibilityRole="text"
-            accessibilityLabel={`Sala ${room.code}, Ciclo ${room.currentRound}, ${
-              state.isNightPhase ? 'A Noite' : 'O Dia'
-            }`}
+            accessibilityLabel={phaseBadge.accessibilityLabel}
           >
             <MaterialCommunityIcons
-              name={state.isNightPhase ? 'weather-night' : 'weather-sunny'}
+              name={phaseBadge.icon}
               size={activeTokens.semantic.icon.sm}
               color={activeTokens.semantic.color.onActionContainer}
             />
@@ -114,9 +160,7 @@ export const CidadeDormeScreen = () => {
                 state.isNightPhase && styles.roomBadgeTextNight,
               ]}
             >
-              {`PIN ${room.code} · ${
-                state.isNightPhase ? 'A Noite' : 'O Dia'
-              } ${room.currentRound}`}
+              {phaseBadge.label}
             </Text>
           </View>
         </View>
@@ -181,6 +225,7 @@ export const CidadeDormeScreen = () => {
             room={room}
             currentPlayer={state.currentPlayer}
             selectedNightTargetId={state.selectedNightTargetId}
+            hasSubmittedNightAction={state.hasSubmittedNightAction}
             secondsRemaining={state.secondsRemaining}
             onSelectNightTarget={actions.handleSelectNightTarget}
             onConfirmAssassinTarget={actions.handleConfirmAssassinTarget}
@@ -188,7 +233,6 @@ export const CidadeDormeScreen = () => {
             onConfirmDetectiveInvestigation={
               actions.handleConfirmDetectiveInvestigation
             }
-            onAdvanceToDawn={actions.handleAdvanceToDawn}
           />
         )}
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
 import { ExpressiveChip } from '@/view/components/expressiveChip';
@@ -119,6 +119,28 @@ export const CidadeDormeEntrySection = ({
           />
         </View>
 
+        {loading && (
+          <View
+            style={styles.loadingBanner}
+            accessibilityRole="progressbar"
+            accessibilityLabel={
+              entryMode === 'create'
+                ? 'Criando sala e conectando ao servidor'
+                : 'Conectando à sala informada'
+            }
+          >
+            <ActivityIndicator
+              size="small"
+              color={tokens.semantic.color.action}
+            />
+            <Text allowFontScaling style={styles.loadingBannerText}>
+              {entryMode === 'create'
+                ? 'Criando sala no servidor... Aguarde alguns segundos.'
+                : 'Conectando à sala... Aguarde alguns segundos.'}
+            </Text>
+          </View>
+        )}
+
         {entryMode === 'create' ? (
           <ExpressiveButton
             label={loading ? 'Conectando...' : 'Criar Sala (Moderador)'}
@@ -219,6 +241,21 @@ const styles = StyleSheet.create({
   segmentedRow: {
     flexDirection: 'row',
     gap: tokens.semantic.space.sm,
+  },
+  loadingBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: tokens.semantic.space.sm,
+    padding: tokens.semantic.space.md,
+    borderRadius: tokens.semantic.radius.lg,
+    backgroundColor: tokens.semantic.color.actionContainer,
+  },
+  loadingBannerText: {
+    flex: 1,
+    fontFamily: tokens.semantic.font.body.family,
+    fontSize: tokens.semantic.font.body.size,
+    lineHeight: tokens.semantic.font.body.lineHeight,
+    color: tokens.semantic.color.onActionContainer,
   },
   joinFields: {
     gap: tokens.semantic.space.md,
