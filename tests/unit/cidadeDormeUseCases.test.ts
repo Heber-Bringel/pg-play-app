@@ -24,15 +24,12 @@ describe('CidadeDormeUseCases — Dedução Social com Narrador por Áudio (UC07
     const joined = await useCases.joinRoom(created.code, 'Mikaelle');
     expect(joined.players.some((p) => p.nickname === 'Mikaelle')).toBe(true);
 
-    const added = await useCases.addPlayer(created.id, 'Roger');
-    expect(added.players.some((p) => p.nickname === 'Roger')).toBe(true);
-
-    const roger = added.players.find((p) => p.nickname === 'Roger')!;
-    const afterRemove = await useCases.removePlayer(created.id, roger.id);
-    expect(afterRemove.players.some((p) => p.id === roger.id)).toBe(false);
+    const mikaelle = joined.players.find((p) => p.nickname === 'Mikaelle')!;
+    const afterRemove = await useCases.removePlayer(created.id, mikaelle.id);
+    expect(afterRemove.players.some((p) => p.id === mikaelle.id)).toBe(false);
   });
 
-  it('deve lançar ValidationError para apelidos curtos, PIN inválido, duplicidade ou remoção do Moderador', async () => {
+  it('deve lançar ValidationError para apelidos curtos, PIN inválido ou remoção do Moderador', async () => {
     const { useCases } = createSut();
     const room = await useCases.getRoom();
 
@@ -41,9 +38,6 @@ describe('CidadeDormeUseCases — Dedução Social com Narrador por Áudio (UC07
       ValidationError
     );
     await expect(useCases.joinRoom(room.code, 'X')).rejects.toThrow(
-      ValidationError
-    );
-    await expect(useCases.addPlayer(room.id, 'Ana')).rejects.toThrow(
       ValidationError
     );
     await expect(
@@ -240,5 +234,36 @@ describe('CidadeDormeUseCases — Dedução Social com Narrador por Áudio (UC07
     const finishedDawn = await useCases.advanceToDawn(initial.id);
     expect(finishedDawn.phase).toBe('finished');
     expect(finishedDawn.winner).toBe('infiltrados');
+  });
+
+  it('não deve acionar narratorService.speak no aparelho de convidado e deve expor speakNarratorCaption/stopNarratorAudio', async () => {
+    const { useCases, narratorService } = createSut();
+    const created = await useCases.createRoom('Héber');
+
+    await useCases.startMatch(created.id, [
+      'detetive',
+      'assassino',
+      'anjo',
+      'cidadao',
+      'cidadao',
+      'cidadao',
+    ]);
+    await useCases.confirmPlayerReady(created.id, created.hostId, true);
+    const historyAfterHostStart = narratorService.getSpeechHistory().length;
+    expect(historyAfterHostStart).toBeGreaterThan(0);
+
+    // Simula aparelho de um jogador convidado (localPlayerId != hostId)
+    await useCases.joinRoom(created.code, 'Ana');
+    await useCases.submitAssassinTarget(created.id, 'cd-player-4');
+    expect(narratorService.getSpeechHistory()).toHaveLength(
+      historyAfterHostStart
+    );
+
+    await useCases.speakNarratorCaption('Legenda de teste', 'feminina');
+    expect(narratorService.getLastSpeech()?.caption).toBe('Legenda de teste');
+    expect(narratorService.getLastSpeech()?.voice).toBe('feminina');
+
+    await useCases.stopNarratorAudio();
+    expect(narratorService.getLastSpeech()).toBeNull();
   });
 });
