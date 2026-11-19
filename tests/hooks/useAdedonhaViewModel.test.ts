@@ -9,7 +9,7 @@ import {
   type AdedonhaActions,
   type AdedonhaState,
 } from '@/viewmodel/useAdedonhaViewModel';
-import { mockPush } from '../__mocks__/expo-router';
+import { mockPush, mockReplace } from '../__mocks__/expo-router';
 
 function createHookHarness(useCases: IAdedonhaUseCases) {
   let latestState!: AdedonhaState;
@@ -43,6 +43,7 @@ describe('useAdedonhaViewModel — Hook da Adedonha Bíblica em Sala Multiplayer
   beforeEach(() => {
     jest.useFakeTimers();
     mockPush.mockClear();
+    mockReplace.mockClear();
   });
 
   afterEach(() => {
@@ -239,8 +240,9 @@ describe('useAdedonhaViewModel — Hook da Adedonha Bíblica em Sala Multiplayer
       harness.getActions().handleExitArena();
     });
     expect(harness.getState().confirmingExit).toBe(false);
+    expect(harness.getState().room).toBeNull();
     expect(mockPush).toHaveBeenCalledWith('/scoreboard');
-    expect(mockPush).toHaveBeenCalledWith('/');
+    expect(mockReplace).toHaveBeenCalledWith('/');
 
     harness.unmount();
   });
@@ -298,6 +300,7 @@ describe('useAdedonhaViewModel — Hook da Adedonha Bíblica em Sala Multiplayer
       joinRoom: async () => {
         throw new ValidationError('Código PIN inválido.');
       },
+      leaveRoom: async () => {},
       addColumn: async () => {
         throw new ValidationError('Erro');
       },

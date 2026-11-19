@@ -10,7 +10,7 @@ import {
   type CidadeDormeActions,
   type CidadeDormeState,
 } from '@/viewmodel/useCidadeDormeViewModel';
-import { mockPush } from '../__mocks__/expo-router';
+import { mockReplace } from '../__mocks__/expo-router';
 
 function createHookHarness(useCases: ICidadeDormeUseCases) {
   let latestState!: CidadeDormeState;
@@ -43,7 +43,7 @@ function createHookHarness(useCases: ICidadeDormeUseCases) {
 describe('useCidadeDormeViewModel — Hook do Cidade Dorme em Sala Multiplayer (UC07)', () => {
   beforeEach(() => {
     jest.useFakeTimers();
-    mockPush.mockClear();
+    mockReplace.mockClear();
   });
 
   afterEach(() => {
@@ -108,16 +108,16 @@ describe('useCidadeDormeViewModel — Hook do Cidade Dorme em Sala Multiplayer (
     await harness.mount();
 
     await act(async () => {
-      const ok = await harness.getActions().handleJoinDemoRoom();
+      const ok = await harness.getActions().handleCreateRoom('Líder do PG');
       expect(ok).toBe(true);
     });
 
     expect(harness.getState().room?.phase).toBe('lobby');
 
-    // Adicionar e remover participante no Lobby
+    // Remover um participante convidado no Lobby após entrada via PIN
+    const roomCode = harness.getState().room!.code;
     await act(async () => {
-      const added = await harness.getActions().handleAddPlayer('Douglas');
-      expect(added).toBe(true);
+      await useCases.joinRoom(roomCode, 'Douglas');
     });
     const douglas = harness
       .getState()
@@ -252,7 +252,8 @@ describe('useCidadeDormeViewModel — Hook do Cidade Dorme em Sala Multiplayer (
     act(() => {
       harness.getActions().handleExitArena();
     });
-    expect(mockPush).toHaveBeenCalledWith('/');
+    expect(harness.getState().room).toBeNull();
+    expect(mockReplace).toHaveBeenCalledWith('/');
 
     harness.unmount();
   });
@@ -274,15 +275,14 @@ describe('useCidadeDormeViewModel — Hook do Cidade Dorme em Sala Multiplayer (
     );
 
     await act(async () => {
-      await harness.getActions().handleJoinDemoRoom();
+      await harness.getActions().handleCreateRoom('Héber');
     });
 
     await act(async () => {
-      const ok = await harness.getActions().handleAddPlayer('A');
-      expect(ok).toBe(false);
+      await harness.getActions().handleRemovePlayer(harness.getState().room!.hostId);
     });
     expect(harness.getState().error).toBe(
-      'Digite um nome com pelo menos 2 letras para o participante.'
+      'O Moderador anfitrião não pode ser removido da sala.'
     );
 
     await act(async () => {
@@ -304,9 +304,7 @@ describe('useCidadeDormeViewModel — Hook do Cidade Dorme em Sala Multiplayer (
       joinRoom: async () => {
         throw new ValidationError('PIN inválido.');
       },
-      addPlayer: async () => {
-        throw new ValidationError('Erro');
-      },
+      leaveRoom: async () => {},
       removePlayer: async () => {
         throw new ValidationError('Erro');
       },
@@ -350,19 +348,87 @@ describe('useCidadeDormeViewModel — Hook do Cidade Dorme em Sala Multiplayer (
       restartMatch: async () => {
         throw new ValidationError('Erro');
       },
+      speakNarratorCaption: async () => {},
+      stopNarratorAudio: async () => {},
     };
 
     const failHarness = createHookHarness(failingUseCases);
     await failHarness.mount();
     await act(async () => {
-      const ok = await failHarness.getActions().handleJoinDemoRoom();
+      const ok = await failHarness.getActions().handleJoinRoom('CD2026', 'Ana');
       expect(ok).toBe(false);
     });
-    expect(failHarness.getState().error).toBe(
-      'Falha ao carregar sala do Cidade Dorme.'
-    );
+    expect(failHarness.getState().error).toBe('PIN inválido.');
 
     failHarness.unmount();
     harness.unmount();
+  });
+
+  it('deve reproduzir áudio do Narrador apenas no dispositivo do Anfitrião e parar ao sair', async () => {
+    const hostRoomService = new MemoryMultiplayerRoomService();
+    const hostNarratorService = new MemoryNarratorAudioService();
+    const hostUseCases = new CidadeDormeUseCases(
+      hostRoomService,
+      hostNarratorService
+    );
+    const hostSpeakSpy = jest.spyOn(hostUseCases, 'speakNarratorCaption');
+    const hostStopSpy = jest.spyOn(hostUseCases, 'stopNarratorAudio');
+
+    const hostHarness = createHookHarness(hostUseCases);
+    await hostHarness.mount();
+
+    await act(async () => {
+      await hostHarness.getActions().handleCreateRoom('Héber');
+    });
+    expect(hostSpeakSpy).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await hostHarness.getActions().handleStartMatch([
+        'detetive',
+        'assassino',
+        'anjo',
+        'cidadao',
+        'cidadao',
+        'cidadao',
+      ]);
+    });
+    expect(hostSpeakSpy).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      await hostHarness.getActions().handleConfirmRoleReady(true);
+    });
+    expect(hostSpeakSpy).toHaveBeenCalledTimes(2);
+
+    act(() => {
+      hostHarness.getActions().handleExitArena();
+    });
+    expect(hostStopSpy).toHaveBeenCalled();
+    hostHarness.unmount();
+
+    // Dispositivo de convidado não deve disparar speakNarratorCaption em atualizações Realtime
+    const guestRoomService = new MemoryMultiplayerRoomService();
+    const guestNarratorService = new MemoryNarratorAudioService();
+    const guestUseCases = new CidadeDormeUseCases(
+      guestRoomService,
+      guestNarratorService
+    );
+    const guestSpeakSpy = jest.spyOn(guestUseCases, 'speakNarratorCaption');
+    const guestHarness = createHookHarness(guestUseCases);
+    await guestHarness.mount();
+
+    await act(async () => {
+      await guestHarness.getActions().handleJoinRoom('CD2026', 'Mikaelle');
+    });
+    expect(guestHarness.getState().isCurrentPlayerHost).toBe(false);
+
+    const joinedRoomId = guestHarness.getState().room!.id;
+    await act(async () => {
+      await guestUseCases.startMatch(joinedRoomId);
+    });
+
+    expect(guestHarness.getState().room?.phase).toBe('role_reveal');
+    expect(guestSpeakSpy).not.toHaveBeenCalled();
+
+    guestHarness.unmount();
   });
 });
