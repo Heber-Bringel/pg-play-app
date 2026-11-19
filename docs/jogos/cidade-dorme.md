@@ -13,6 +13,7 @@ O **Cidade Dorme** (também conhecido como *Máfia* ou *Werewolf*) é um clássi
   - O aplicativo conduz todas as fases por **áudio com vozes clonadas dos líderes do PG**.
   - Nas configurações da sala (Lobby), o **Moderador/Anfitrião** escolhe entre **Voz Masculina** ou **Voz Feminina** para o Narrador.
   - **Áudio centralizada:** A narração em voz alta é reproduzida apenas no dispositivo do **Anfitrião** (evitando eco entre múltiplos celulares na mesma sala), enquanto as telas de todos os participantes são sincronizadas em tempo real.
+  - **Implementação atual da voz:** a fala é sintetizada com `expo-speech` (texto para voz em pt-BR), usando as vozes masculina e feminina disponíveis no aparelho do Anfitrião, com legendas sincronizadas em todos os celulares (**RNF08**). A voz clonada dos líderes fica para uma versão futura. Issue: #32.
 
 ---
 
@@ -38,6 +39,17 @@ Antes de iniciar a partida no Lobby, o Moderador pode configurar:
 3. **Tempo de Debate do Dia:** `60s`, `120s` (padrão) ou `180s`.
 4. **Tempo por Turno da Noite:** `15s` (padrão) ou `20s`.
 5. **Revelar Papel ao Morrer:** Ativado (padrão) ou Desativado (modo difícil).
+
+> [!IMPORTANT]
+> **Permissões do Anfitrião: configura antes, joga como todos depois (`RNF11`)**
+>
+> - **Antes da partida (Lobby):** o Anfitrião tem permissão para alterar todas as configurações acima e gerenciar a roda de jogadores.
+> - **Depois que os papéis são distribuídos:** o Anfitrião passa a ser **um jogador como os demais**. Ele **não pode**:
+>   - ver o papel secreto de outro jogador;
+>   - ver ou escolher a ação noturna de outro papel (vítima do Assassino, proteção do Anjo, investigação do Detetive);
+>   - ver o veredito do Detetive, a menos que ele mesmo seja o Detetive.
+> - O Anfitrião age **somente no turno do próprio papel**. Seus poderes durante a partida se limitam a controles que não revelam segredo: tocar o áudio do Narrador, iniciar a votação, apurar os votos, iniciar a próxima noite e encerrar ou recomeçar a partida.
+> - O isolamento vale também para os **dados**, não só para a tela: cada aparelho, inclusive o do Anfitrião, recebe apenas o próprio papel. O estado público da sala sincronizado entre os celulares não deve conter os papéis dos outros jogadores.
 
 ---
 
