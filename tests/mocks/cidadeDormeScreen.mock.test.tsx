@@ -12,8 +12,6 @@ import type {
 const createMockActions = (): CidadeDormeActions => ({
   handleCreateRoom: jest.fn(async () => true),
   handleJoinRoom: jest.fn(async () => true),
-  handleJoinDemoRoom: jest.fn(async () => true),
-  handleAddPlayer: jest.fn(async () => true),
   handleRemovePlayer: jest.fn(async () => {}),
   handleUpdateConfig: jest.fn(async () => {}),
   handleStartMatch: jest.fn(async () => {}),
@@ -140,7 +138,7 @@ describe('CidadeDormeScreen — Testes de Tela com Mocks de ViewModel (UC07)', (
     expect(CidadeDormeRoute).toBe(CidadeDormeScreen);
   });
 
-  it('deve renderizar loading e a etapa de entrada (Criar Sala, Entrar com PIN e Sala Demo)', async () => {
+  it('deve renderizar loading e a etapa de entrada (Criar Sala e Entrar com PIN, sem Sala Demo Offline)', async () => {
     const actions = createMockActions();
     jest
       .spyOn(cidadeDormeVmModule, 'useCidadeDormeViewModel')
@@ -188,13 +186,10 @@ describe('CidadeDormeScreen — Testes de Tela com Mocks de ViewModel (UC07)', (
     });
     expect(actions.handleCreateRoom).toHaveBeenCalledWith('Héber');
 
-    const demoBtn = entryTree.root.findByProps({
+    const demoBtns = entryTree.root.findAllByProps({
       accessibilityLabel: 'Entrar na Sala Demo Offline (CD2026)',
     } as any);
-    await act(async () => {
-      demoBtn.props.onPress();
-    });
-    expect(actions.handleJoinDemoRoom).toHaveBeenCalledTimes(1);
+    expect(demoBtns).toHaveLength(0);
   });
 
   it('deve renderizar o Lobby, selecionar a voz do Narrador e iniciar a partida (RF18, RF19)', async () => {
@@ -349,5 +344,127 @@ describe('CidadeDormeScreen — Testes de Tela com Mocks de ViewModel (UC07)', (
       rematchBtn.props.onPress();
     });
     expect(actions.handleRestartMatch).toHaveBeenCalledTimes(1);
+  });
+
+  it('deve aplicar permissões estritas da RNF11 (ocultar veredito do Detetive para não-Detetives e controles do Moderador para convidados)', () => {
+    const actions = createMockActions();
+
+    // Anfitrião com papel de Cidadão NÃO pode ver o veredito do Detetive
+    jest
+      .spyOn(cidadeDormeVmModule, 'useCidadeDormeViewModel')
+      .mockReturnValue([
+        {
+          ...baseState,
+          isCurrentPlayerHost: true,
+          isNightPhase: true,
+          currentPlayer: {
+            ...baseRoom.players[0],
+            role: 'cidadao',
+          },
+          room: {
+            ...baseRoom,
+            phase: 'night_detective',
+            detectiveVerdict: {
+              targetPlayerId: 'cd-player-2',
+              targetNickname: 'Ana',
+              isAssassin: true,
+              roundNumber: 1,
+            },
+          },
+        },
+        actions,
+      ]);
+
+    let nonDetectiveNightTree!: renderer.ReactTestRenderer;
+    act(() => {
+      nonDetectiveNightTree = renderer.create(<CidadeDormeScreen />);
+    });
+    expect(
+      nonDetectiveNightTree.root.findAllByProps({
+        accessibilityLabel: 'Concluir Noite e Amanhecer',
+      } as any)
+    ).toHaveLength(0);
+    expect(
+      nonDetectiveNightTree.root.findAllByProps({
+        accessibilityLabel: 'Suspeito Confirmado: Ana é Assassino',
+      } as any)
+    ).toHaveLength(0);
+
+    // Convidado em day_debate não vê botão de iniciar votação
+    jest
+      .spyOn(cidadeDormeVmModule, 'useCidadeDormeViewModel')
+      .mockReturnValue([
+        {
+          ...baseState,
+          isCurrentPlayerHost: false,
+          currentPlayerId: 'cd-player-2',
+          currentPlayer: baseRoom.players[1],
+          room: { ...baseRoom, phase: 'day_debate' },
+        },
+        actions,
+      ]);
+
+    let guestDebateTree!: renderer.ReactTestRenderer;
+    act(() => {
+      guestDebateTree = renderer.create(<CidadeDormeScreen />);
+    });
+    expect(
+      guestDebateTree.root.findAllByProps({
+        accessibilityLabel: 'Iniciar Votação Secreta',
+      } as any)
+    ).toHaveLength(0);
+
+    // Convidado em vote_result não vê botão de próxima noite
+    jest
+      .spyOn(cidadeDormeVmModule, 'useCidadeDormeViewModel')
+      .mockReturnValue([
+        {
+          ...baseState,
+          isCurrentPlayerHost: false,
+          currentPlayerId: 'cd-player-2',
+          currentPlayer: baseRoom.players[1],
+          room: { ...baseRoom, phase: 'vote_result' },
+        },
+        actions,
+      ]);
+
+    let guestVoteResultTree!: renderer.ReactTestRenderer;
+    act(() => {
+      guestVoteResultTree = renderer.create(<CidadeDormeScreen />);
+    });
+    expect(
+      guestVoteResultTree.root.findAllByProps({
+        accessibilityLabel: 'Iniciar Próxima Noite',
+      } as any)
+    ).toHaveLength(0);
+
+    // Convidado em finished não vê botão de revanche, mas vê Trocar de Jogo
+    jest
+      .spyOn(cidadeDormeVmModule, 'useCidadeDormeViewModel')
+      .mockReturnValue([
+        {
+          ...baseState,
+          isCurrentPlayerHost: false,
+          currentPlayerId: 'cd-player-2',
+          currentPlayer: baseRoom.players[1],
+          room: { ...baseRoom, phase: 'finished', winner: 'cidade' },
+        },
+        actions,
+      ]);
+
+    let guestFinishedTree!: renderer.ReactTestRenderer;
+    act(() => {
+      guestFinishedTree = renderer.create(<CidadeDormeScreen />);
+    });
+    expect(
+      guestFinishedTree.root.findAllByProps({
+        accessibilityLabel: 'Jogar Novamente (Revanche)',
+      } as any)
+    ).toHaveLength(0);
+    expect(
+      guestFinishedTree.root.findAllByProps({
+        accessibilityLabel: 'Trocar de Jogo',
+      } as any).length
+    ).toBeGreaterThan(0);
   });
 });
