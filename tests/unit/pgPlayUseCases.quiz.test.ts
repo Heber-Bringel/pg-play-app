@@ -26,10 +26,20 @@ describe('PgPlayUseCases — Regras de Negócio do Quiz Relâmpago (UC04)', () =
     const catalogDs = new MemoryGameCatalogDataSource();
     const useCases = new PgPlayUseCases(teamDs, catalogDs);
 
+    const packs = await useCases.listContentPacks('quiz');
+    expect(packs).toHaveLength(7);
+    expect(packs.every((pack) => pack.gameId === 'quiz')).toBe(true);
+
     const biblical = await useCases.listQuizQuestions(['Bíblico']);
 
     expect(biblical.length).toBeGreaterThan(0);
     expect(biblical.every((q) => q.category === 'Bíblico')).toBe(true);
+
+    const combined = await useCases.listQuizQuestions(['Bíblico', 'Ciência']);
+    expect(combined.length).toBeGreaterThan(biblical.length);
+    expect(
+      combined.every((q) => q.category === 'Bíblico' || q.category === 'Ciência')
+    ).toBe(true);
   });
 
   it('deve lançar ValidationError se categorias for array vazio (RF28)', async () => {

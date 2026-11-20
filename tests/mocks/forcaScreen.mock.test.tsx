@@ -60,6 +60,7 @@ const baseState: ForcaState = {
   confirmingExit: false,
   loading: false,
   error: null,
+  categoryWarning: null,
 };
 
 describe('ForcaScreen — Testes de Tela com Mocks de ViewModel (UC05)', () => {
@@ -139,6 +140,12 @@ describe('ForcaScreen — Testes de Tela com Mocks de ViewModel (UC05)', () => {
       readyBtn.props.onPress();
     });
     expect(actions.handleStartTurn).toHaveBeenCalledTimes(1);
+
+    const biblicoChip = tree.root.findByProps({ accessibilityLabel: 'Pacote Bíblico' } as any);
+    act(() => {
+      biblicoChip.props.onPress();
+    });
+    expect(actions.handleToggleCategory).toHaveBeenCalledWith('Bíblico');
 
     // 2. playing com teclado e botão Reiniciar Palavra
     spy.mockReturnValue([{ ...baseState, phase: 'playing' }, actions]);
