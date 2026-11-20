@@ -7,6 +7,7 @@ import type {
   QuizCategory,
   QuizQuestion,
 } from '@/model/entities/arenaChallenge';
+import type { ContentPack, ContentPackGameId } from '@/model/entities/contentPack';
 import type { Minigame } from '@/model/entities/minigame';
 import { DataSourceError } from '@/model/errors';
 
@@ -313,17 +314,193 @@ const DEFAULT_QUIZ_QUESTIONS: QuizQuestion[] = [
   },
 ];
 
+const DEFAULT_CONTENT_PACKS: ContentPack[] = [
+  // Mímica Expressiva
+  {
+    id: 'mimica-biblico',
+    gameId: 'mimica',
+    category: 'Bíblico',
+    label: 'Bíblico',
+    description: 'Histórias, personagens e cenas marcantes da Bíblia',
+    icon: 'book-cross',
+  },
+  {
+    id: 'mimica-filmes',
+    gameId: 'mimica',
+    category: 'Filmes e Séries',
+    label: 'Filmes e Séries',
+    description: 'Clássicos do cinema, animações e heróis conhecidos',
+    icon: 'movie-open',
+  },
+  {
+    id: 'mimica-animais',
+    gameId: 'mimica',
+    category: 'Animais',
+    label: 'Animais',
+    description: 'Bichos e comportamentos engraçados da natureza',
+    icon: 'paw',
+  },
+  {
+    id: 'mimica-profissoes',
+    gameId: 'mimica',
+    category: 'Profissões',
+    label: 'Profissões',
+    description: 'Ofícios e profissões em ação para encenar',
+    icon: 'briefcase',
+  },
+  {
+    id: 'mimica-esportes',
+    gameId: 'mimica',
+    category: 'Esportes',
+    label: 'Esportes',
+    description: 'Modalidades esportivas e lances famosos',
+    icon: 'soccer',
+  },
+  {
+    id: 'mimica-cotidiano',
+    gameId: 'mimica',
+    category: 'Ações do Dia a Dia',
+    label: 'Ações do Dia a Dia',
+    description: 'Situações cotidianas divertidas que todo mundo vive',
+    icon: 'coffee',
+  },
+  {
+    id: 'mimica-pop',
+    gameId: 'mimica',
+    category: 'Cultura Pop',
+    label: 'Cultura Pop',
+    description: 'Tendências, tecnologia e momentos em grupo',
+    icon: 'camera',
+  },
+  // Quiz Relâmpago
+  {
+    id: 'quiz-biblico',
+    gameId: 'quiz',
+    category: 'Bíblico',
+    label: 'Bíblico',
+    description: 'Perguntas sobre Antigo e Novo Testamento e personagens',
+    icon: 'book-cross',
+  },
+  {
+    id: 'quiz-gerais',
+    gameId: 'quiz',
+    category: 'Conhecimentos Gerais',
+    label: 'Conhecimentos Gerais',
+    description: 'Curiosidades variadas para testar o grupo',
+    icon: 'lightbulb-on',
+  },
+  {
+    id: 'quiz-geografia',
+    gameId: 'quiz',
+    category: 'Geografia',
+    label: 'Geografia',
+    description: 'Países, continentes e maravilhas do planeta',
+    icon: 'earth',
+  },
+  {
+    id: 'quiz-historia',
+    gameId: 'quiz',
+    category: 'História',
+    label: 'História',
+    description: 'Grandes marcos históricos do Brasil e do mundo',
+    icon: 'pillar',
+  },
+  {
+    id: 'quiz-ciencia',
+    gameId: 'quiz',
+    category: 'Ciência',
+    label: 'Ciência',
+    description: 'Astronomia, natureza, química e descobertas',
+    icon: 'atom',
+  },
+  {
+    id: 'quiz-musica-cinema',
+    gameId: 'quiz',
+    category: 'Música e Cinema',
+    label: 'Música e Cinema',
+    description: 'Instrumentos, trilhas sonoras e sétima arte',
+    icon: 'music',
+  },
+  {
+    id: 'quiz-esportes',
+    gameId: 'quiz',
+    category: 'Esportes',
+    label: 'Esportes',
+    description: 'Regras, recordes e curiosidades do mundo esportivo',
+    icon: 'trophy',
+  },
+  // Jogo da Forca
+  {
+    id: 'forca-biblico',
+    gameId: 'forca',
+    category: 'Bíblico',
+    label: 'Bíblico',
+    description: 'Personagens, livros e termos bíblicos com dica',
+    icon: 'book-cross',
+  },
+  {
+    id: 'forca-animais',
+    gameId: 'forca',
+    category: 'Animais',
+    label: 'Animais',
+    description: 'Fauna terrestre, aquática e aves',
+    icon: 'paw',
+  },
+  {
+    id: 'forca-paises',
+    gameId: 'forca',
+    category: 'Países e Cidades',
+    label: 'Países e Cidades',
+    description: 'Nações, capitais e lugares famosos',
+    icon: 'map-marker',
+  },
+  {
+    id: 'forca-comidas',
+    gameId: 'forca',
+    category: 'Frutas e Comidas',
+    label: 'Frutas e Comidas',
+    description: 'Sabores, frutas tropicais e culinária',
+    icon: 'food-apple',
+  },
+  {
+    id: 'forca-filmes',
+    gameId: 'forca',
+    category: 'Filmes',
+    label: 'Filmes',
+    description: 'Sucessos do cinema para descobrir letra a letra',
+    icon: 'filmstrip',
+  },
+  {
+    id: 'forca-profissoes',
+    gameId: 'forca',
+    category: 'Profissões',
+    label: 'Profissões',
+    description: 'Carreiras e vocações com dicas temáticas',
+    icon: 'briefcase',
+  },
+  {
+    id: 'forca-esportes',
+    gameId: 'forca',
+    category: 'Esportes',
+    label: 'Esportes',
+    description: 'Esportes olímpicos e populares',
+    icon: 'basketball',
+  },
+];
+
 export class MemoryGameCatalogDataSource implements IGameCatalogDataSource {
   private minigames: Minigame[];
   private mimicaCards: MimicaCard[];
   private forcaPuzzles: ForcaPuzzle[];
   private quizQuestions: QuizQuestion[];
+  private contentPacks: ContentPack[];
 
   constructor(
     initialCards: MimicaCard[] = DEFAULT_MIMICA_CARDS,
     initialPuzzles: ForcaPuzzle[] = DEFAULT_FORCA_PUZZLES,
     initialQuestions: QuizQuestion[] = DEFAULT_QUIZ_QUESTIONS,
-    initialMinigames: Minigame[] = DEFAULT_MINIGAMES
+    initialMinigames: Minigame[] = DEFAULT_MINIGAMES,
+    initialContentPacks: ContentPack[] = DEFAULT_CONTENT_PACKS
   ) {
     this.minigames = initialMinigames.map((game) => ({
       ...game,
@@ -335,6 +512,18 @@ export class MemoryGameCatalogDataSource implements IGameCatalogDataSource {
       ...q,
       options: q.options.map((opt) => ({ ...opt })),
     }));
+    this.contentPacks = initialContentPacks.map((pack) => ({ ...pack }));
+  }
+
+  async listContentPacks(gameId?: ContentPackGameId): Promise<ContentPack[]> {
+    try {
+      const filtered = gameId
+        ? this.contentPacks.filter((pack) => pack.gameId === gameId)
+        : this.contentPacks;
+      return filtered.map((pack) => ({ ...pack }));
+    } catch {
+      throw new DataSourceError('Não foi possível carregar os pacotes de conteúdo.');
+    }
   }
 
   async listMinigames(): Promise<Minigame[]> {

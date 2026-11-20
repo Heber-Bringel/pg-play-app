@@ -48,6 +48,7 @@ export type ForcaState = {
   confirmingExit: boolean;
   loading: boolean;
   error: string | null;
+  categoryWarning: string | null;
 };
 
 export type ForcaActions = {
@@ -128,11 +129,13 @@ export function useForcaViewModel(
   const [confirmingExit, setConfirmingExit] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [categoryWarning, setCategoryWarning] = useState<string | null>(null);
 
   const loadSession = useCallback(
     async (categoriesToLoad: ForcaCategory[]) => {
       setLoading(true);
       setError(null);
+      setCategoryWarning(null);
       try {
         const [loadedTeams, loadedPuzzles] = await Promise.all([
           useCases.listTeams(),
@@ -159,8 +162,8 @@ export function useForcaViewModel(
   );
 
   useEffect(() => {
-    void loadSession(selectedCategories);
-  }, [loadSession, selectedCategories]);
+    void loadSession(ALL_FORCA_CATEGORIES);
+  }, [loadSession]);
 
   const currentTeam = teams[currentTeamIndex] ?? null;
 
@@ -169,6 +172,7 @@ export function useForcaViewModel(
     : [];
 
   const handleStartTurn = useCallback(() => {
+    setCategoryWarning(null);
     setGuessedLetters([]);
     setRemainingAttempts(maxAttempts);
     setWordWon(false);
@@ -301,16 +305,26 @@ export function useForcaViewModel(
   const handleToggleCategory = useCallback(
     async (category: ForcaCategory) => {
       const exists = selectedCategories.includes(category);
-      if (exists && selectedCategories.length === 1) {
-        return;
-      }
       const updated = exists
         ? selectedCategories.filter((c) => c !== category)
         : [...selectedCategories, category];
-      setSelectedCategories(updated);
-      await loadSession(updated);
+
+      try {
+        setError(null);
+        setCategoryWarning(null);
+        const loadedPuzzles = await useCases.listForcaPuzzles(updated);
+        setSelectedCategories(updated);
+        setFreshDeck(loadedPuzzles);
+        setCurrentPuzzle(loadedPuzzles[0] ?? null);
+      } catch (err: unknown) {
+        if (err instanceof DomainError) {
+          setCategoryWarning(err.message);
+        } else {
+          setCategoryWarning('Não foi possível atualizar os pacotes de temas da Forca.');
+        }
+      }
     },
-    [loadSession, selectedCategories]
+    [selectedCategories, useCases]
   );
 
   const handleRequestExit = useCallback(() => {
@@ -355,6 +369,7 @@ export function useForcaViewModel(
       confirmingExit,
       loading,
       error,
+      categoryWarning,
     },
     {
       handleStartTurn,

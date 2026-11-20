@@ -151,6 +151,7 @@ describe('useHubViewModel — Hook do Hub de Jogos (UC01)', () => {
         }
         return baseUseCases.listMinigames(query, modality);
       },
+      listContentPacks: (g) => baseUseCases.listContentPacks(g),
       listTeams: () => baseUseCases.listTeams(),
       addTeam: (name) => baseUseCases.addTeam(name),
       removeTeam: (id) => baseUseCases.removeTeam(id),

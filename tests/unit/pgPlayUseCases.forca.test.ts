@@ -27,10 +27,22 @@ describe('PgPlayUseCases — Regras de Negócio do Jogo da Forca (UC05)', () => 
     const catalogDs = new MemoryGameCatalogDataSource();
     const useCases = new PgPlayUseCases(teamDs, catalogDs);
 
+    const packs = await useCases.listContentPacks('forca');
+    expect(packs).toHaveLength(7);
+    expect(packs.every((pack) => pack.gameId === 'forca')).toBe(true);
+
     const biblicalPuzzles = await useCases.listForcaPuzzles(['Bíblico']);
 
     expect(biblicalPuzzles.length).toBeGreaterThan(0);
     expect(biblicalPuzzles.every((p) => p.category === 'Bíblico')).toBe(true);
+
+    const combinedPuzzles = await useCases.listForcaPuzzles(['Bíblico', 'Animais']);
+    expect(combinedPuzzles.length).toBeGreaterThan(biblicalPuzzles.length);
+    expect(
+      combinedPuzzles.every(
+        (p) => p.category === 'Bíblico' || p.category === 'Animais'
+      )
+    ).toBe(true);
   });
 
   it('deve lançar ValidationError se categorias for array vazio (RF28)', async () => {

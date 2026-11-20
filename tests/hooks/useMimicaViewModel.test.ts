@@ -255,8 +255,24 @@ describe('useMimicaViewModel — Hook da Arena de Mímica Expressiva (UC03)', ()
     });
     expect(mockReplace).toHaveBeenCalledWith('/');
 
+    // Tentar desmarcar todas as categorias na Mímica deve preservar a última e exibir categoryWarning (RF28)
+    const allCats = [...harness.getState().selectedCategories];
+    for (let i = 0; i < allCats.length - 1; i += 1) {
+      await act(async () => {
+        await harness.getActions().handleToggleCategory(allCats[i]);
+      });
+    }
+    expect(harness.getState().selectedCategories).toHaveLength(1);
+    const lastCat = harness.getState().selectedCategories[0];
+    await act(async () => {
+      await harness.getActions().handleToggleCategory(lastCat);
+    });
+    expect(harness.getState().selectedCategories).toEqual([lastCat]);
+    expect(harness.getState().categoryWarning).toContain('Selecione pelo menos um pacote');
+
     const failingUseCases: IPgPlayUseCases = {
       listMinigames: async () => [],
+      listContentPacks: async () => [],
       listTeams: async () => {
         throw new ValidationError('Erro simulado ao carregar equipes.');
       },
