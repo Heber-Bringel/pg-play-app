@@ -28,6 +28,7 @@ export type QuizState = {
   currentQuestionIndex: number;
   totalQuestions: number;
   currentQuestion: QuizQuestion | null;
+  selectedCategories: QuizCategory[];
   selectedOptionKey: QuizOptionKey | null;
   isCorrect: boolean | null;
   secondsRemaining: number;
@@ -36,6 +37,7 @@ export type QuizState = {
   confirmingExit: boolean;
   loading: boolean;
   error: string | null;
+  categoryWarning: string | null;
 };
 
 export type QuizActions = {
@@ -44,6 +46,7 @@ export type QuizActions = {
   handleTick: () => void;
   handleNextQuestion: () => void;
   handleSelectDuration: (seconds: QuizDurationOption) => void;
+  handleToggleCategory: (category: QuizCategory) => Promise<void>;
   handleRequestExit: () => void;
   handleCancelExit: () => void;
   handleConfirmExit: () => void;
@@ -60,6 +63,8 @@ export function useQuizViewModel(
   const [phase, setPhase] = useState<QuizPhase>('pass-turn');
   const [teams, setTeams] = useState<Team[]>([]);
   const [currentTeamIndex, setCurrentTeamIndex] = useState<number>(0);
+  const [selectedCategories, setSelectedCategories] =
+    useState<QuizCategory[]>(ALL_QUIZ_CATEGORIES);
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
   const [selectedOptionKey, setSelectedOptionKey] = useState<QuizOptionKey | null>(null);
@@ -70,45 +75,50 @@ export function useQuizViewModel(
   const [confirmingExit, setConfirmingExit] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [categoryWarning, setCategoryWarning] = useState<string | null>(null);
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [loadedTeams, loadedQuestions] = await Promise.all([
-        useCase.listTeams(),
-        useCase.listQuizQuestions(),
-      ]);
+  const loadData = useCallback(
+    async (categoriesToLoad: QuizCategory[] = ALL_QUIZ_CATEGORIES) => {
+      setLoading(true);
+      setError(null);
+      setCategoryWarning(null);
+      try {
+        const [loadedTeams, loadedQuestions] = await Promise.all([
+          useCase.listTeams(),
+          useCase.listQuizQuestions(categoriesToLoad),
+        ]);
 
-      if (loadedTeams.length < 2) {
-        setError('São necessárias pelo menos 2 equipes para jogar o Quiz Relâmpago.');
+        if (loadedTeams.length < 2) {
+          setError('São necessárias pelo menos 2 equipes para jogar o Quiz Relâmpago.');
+          setTeams(loadedTeams);
+          return;
+        }
+
+        if (loadedQuestions.length === 0) {
+          setError('Nenhuma pergunta encontrada no banco de Quiz.');
+          return;
+        }
+
         setTeams(loadedTeams);
-        return;
+        setQuestions(loadedQuestions);
+        setCurrentTeamIndex(0);
+        setCurrentQuestionIndex(0);
+        setPhase('pass-turn');
+      } catch (err: unknown) {
+        if (err instanceof DomainError) {
+          setError(err.message);
+        } else {
+          setError('Não foi possível inicializar a Arena de Quiz.');
+        }
+      } finally {
+        setLoading(false);
       }
-
-      if (loadedQuestions.length === 0) {
-        setError('Nenhuma pergunta encontrada no banco de Quiz.');
-        return;
-      }
-
-      setTeams(loadedTeams);
-      setQuestions(loadedQuestions);
-      setCurrentTeamIndex(0);
-      setCurrentQuestionIndex(0);
-      setPhase('pass-turn');
-    } catch (err: unknown) {
-      if (err instanceof DomainError) {
-        setError(err.message);
-      } else {
-        setError('Não foi possível inicializar a Arena de Quiz.');
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [useCase]);
+    },
+    [useCase]
+  );
 
   useEffect(() => {
-    void loadData();
+    void loadData(ALL_QUIZ_CATEGORIES);
   }, [loadData]);
 
   const currentTeam: Team | null = teams[currentTeamIndex] ?? null;
@@ -142,6 +152,7 @@ export function useQuizViewModel(
       setError('Cadastre pelo menos 2 equipes antes de iniciar o Quiz.');
       return;
     }
+    setCategoryWarning(null);
     setSelectedOptionKey(null);
     setIsCorrect(null);
     setTurnScoreDelta(0);
@@ -195,6 +206,30 @@ export function useQuizViewModel(
     setSecondsRemaining(seconds);
   }, []);
 
+  const handleToggleCategory = useCallback(
+    async (category: QuizCategory) => {
+      const exists = selectedCategories.includes(category);
+      const nextCategories = exists
+        ? selectedCategories.filter((c) => c !== category)
+        : [...selectedCategories, category];
+
+      try {
+        setCategoryWarning(null);
+        const filteredQuestions = await useCase.listQuizQuestions(nextCategories);
+        setSelectedCategories(nextCategories);
+        setQuestions(filteredQuestions);
+        setCurrentQuestionIndex(0);
+      } catch (err: unknown) {
+        if (err instanceof DomainError) {
+          setCategoryWarning(err.message);
+        } else {
+          setCategoryWarning('Não foi possível atualizar os pacotes de perguntas.');
+        }
+      }
+    },
+    [selectedCategories, useCase]
+  );
+
   const handleRequestExit = useCallback(() => {
     setConfirmingExit(true);
   }, []);
@@ -216,6 +251,10 @@ export function useQuizViewModel(
     router.push('/teams');
   }, [router]);
 
+  const handleRetry = useCallback(async () => {
+    await loadData(selectedCategories);
+  }, [loadData, selectedCategories]);
+
   const state: QuizState = {
     phase,
     teams,
@@ -224,6 +263,7 @@ export function useQuizViewModel(
     currentQuestionIndex,
     totalQuestions: questions.length,
     currentQuestion,
+    selectedCategories,
     selectedOptionKey,
     isCorrect,
     secondsRemaining,
@@ -232,6 +272,7 @@ export function useQuizViewModel(
     confirmingExit,
     loading,
     error,
+    categoryWarning,
   };
 
   const actions: QuizActions = {
@@ -240,12 +281,13 @@ export function useQuizViewModel(
     handleTick,
     handleNextQuestion,
     handleSelectDuration,
+    handleToggleCategory,
     handleRequestExit,
     handleCancelExit,
     handleConfirmExit,
     handleGoToScoreboard,
     handleGoToTeams,
-    handleRetry: loadData,
+    handleRetry,
   };
 
   return [state, actions];

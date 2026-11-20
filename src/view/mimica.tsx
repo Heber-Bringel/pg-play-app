@@ -2,10 +2,11 @@ import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ConfirmModal } from '@/view/components/confirmModal';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
+import { ExpressiveChip } from '@/view/components/expressiveChip';
 import { ExpressiveTimer } from '@/view/components/expressiveTimer';
 import { GameCard } from '@/view/components/gameCard';
 import { border, card, color, elevation, font, radius, space, typography } from '@/view/theme';
-import { useMimicaViewModel } from '@/viewmodel/useMimicaViewModel';
+import { ALL_MIMICA_CATEGORIES, useMimicaViewModel } from '@/viewmodel/useMimicaViewModel';
 
 export const MimicaScreen = () => {
   const [state, actions] = useMimicaViewModel();
@@ -115,6 +116,40 @@ export const MimicaScreen = () => {
 
       {state.phase === 'pass-turn' && (
         <View style={styles.phaseContainer}>
+          {state.currentRound === 1 && state.currentTeamIndex === 0 && (
+            <View style={styles.packsCard}>
+              <Text allowFontScaling style={styles.packsTitle}>
+                Pacotes de Conteúdo
+              </Text>
+              <Text allowFontScaling style={styles.packsCaption}>
+                Toque nos chips para combinar os temas desta partida (mínimo 1 pacote).
+              </Text>
+              <View style={styles.chipsWrap}>
+                {ALL_MIMICA_CATEGORIES.map((category) => {
+                  const isSelected = state.selectedCategories.includes(category);
+                  return (
+                    <ExpressiveChip
+                      key={category}
+                      label={category}
+                      icon={isSelected ? 'check' : undefined}
+                      selected={isSelected}
+                      accessibilityLabel={`Pacote ${category}`}
+                      onPress={() => {
+                        void actions.handleToggleCategory(category);
+                      }}
+                    />
+                  );
+                })}
+              </View>
+              {state.categoryWarning && (
+                <View style={styles.warningBanner} accessibilityLiveRegion="polite">
+                  <Text allowFontScaling style={styles.warningText}>
+                    {state.categoryWarning}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
           <GameCard
             title="Passe o celular ao representante"
             description="A palavra secreta só aparecerá após tocar no botão abaixo!"
@@ -293,6 +328,46 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: space.md,
     justifyContent: 'center',
+  },
+  packsCard: {
+    backgroundColor: color.surfaceContainer,
+    borderColor: color.outline,
+    borderWidth: border.thin,
+    borderRadius: radius.lg,
+    padding: space.md,
+    gap: space.sm,
+  },
+  packsTitle: {
+    fontFamily: font.subtitle.family,
+    fontSize: font.subtitle.size,
+    fontWeight: font.subtitle.weight,
+    lineHeight: font.subtitle.lineHeight,
+    color: color.onSurface,
+  },
+  packsCaption: {
+    fontFamily: font.caption.family,
+    fontSize: font.caption.size,
+    fontWeight: font.caption.weight,
+    lineHeight: font.caption.lineHeight,
+    color: color.onSurfaceMuted,
+  },
+  chipsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: space.sm,
+  },
+  warningBanner: {
+    backgroundColor: color.errorContainer,
+    borderRadius: radius.md,
+    paddingHorizontal: space.md,
+    paddingVertical: space.sm,
+  },
+  warningText: {
+    fontFamily: font.caption.family,
+    fontSize: font.caption.size,
+    fontWeight: font.caption.weight,
+    lineHeight: font.caption.lineHeight,
+    color: color.onErrorContainer,
   },
   wordCard: {
     backgroundColor: card.bg,
