@@ -71,6 +71,18 @@ const DEFAULT_MINIGAMES: Minigame[] = [
     themes: ['misterio', 'blefe', 'narrador', 'multiplayer', 'papeis', 'sala'],
     available: true,
   },
+  {
+    id: 'termometro',
+    title: 'Termômetro de Pedidos',
+    description:
+      'Momento de pedidos de oração que fecha o encontro com tempo de fala acolhedor por pessoa.',
+    modality: '1 Celular',
+    playersTag: '1 Celular · Encerramento',
+    route: '/termometro',
+    icon: 'thermometer-lines',
+    themes: ['oracao', 'pedidos', 'encerramento', 'termometro', 'comunhao'],
+    available: true,
+  },
 ];
 
 const DEFAULT_MIMICA_CARDS: MimicaCard[] = [

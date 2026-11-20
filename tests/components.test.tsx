@@ -283,6 +283,75 @@ describe('Componentes do Sistema de Design PG Play Expressive (04-componentes/)'
         tree.root.findByType('MaterialCommunityIcons' as any).props.name
       ).toBe('bell-ring');
     });
+
+    it('renderiza variante thermometer com faixas fria (< 70%), quente (>= 70%) e concluída (100%) (UC11, RF39)', () => {
+      let tree!: renderer.ReactTestRenderer;
+      act(() => {
+        tree = renderer.create(
+          <ExpressiveTimer
+            variant="thermometer"
+            totalSeconds={60}
+            secondsRemaining={45}
+          />
+        );
+      });
+
+      let texts = tree.root.findAllByType('Text' as any);
+      expect(texts.some((t) => t.props.children === 'Tempo tranquilo')).toBe(true);
+      expect(texts.some((t) => t.props.children === '00:45')).toBe(true);
+      expect(
+        tree.root.findByType('MaterialCommunityIcons' as any).props.name
+      ).toBe('thermometer-low');
+
+      // Faixa >= 70% (restam 15s de 60s -> 75% decorrido)
+      act(() => {
+        tree.update(
+          <ExpressiveTimer
+            variant="thermometer"
+            totalSeconds={60}
+            secondsRemaining={15}
+          />
+        );
+      });
+      texts = tree.root.findAllByType('Text' as any);
+      expect(texts.some((t) => t.props.children === 'Pode ir concluindo')).toBe(
+        true
+      );
+      expect(
+        tree.root.findByType('MaterialCommunityIcons' as any).props.name
+      ).toBe('thermometer-high');
+
+      // Estado pausado
+      act(() => {
+        tree.update(
+          <ExpressiveTimer
+            variant="thermometer"
+            totalSeconds={60}
+            secondsRemaining={15}
+            paused
+          />
+        );
+      });
+      texts = tree.root.findAllByType('Text' as any);
+      expect(texts.some((t) => t.props.children === 'Pausado')).toBe(true);
+
+      // Estado concluído (00:00) com ícone heart sem erro
+      act(() => {
+        tree.update(
+          <ExpressiveTimer
+            variant="thermometer"
+            totalSeconds={60}
+            secondsRemaining={0}
+          />
+        );
+      });
+      texts = tree.root.findAllByType('Text' as any);
+      expect(texts.some((t) => t.props.children === 'Tempo concluído')).toBe(true);
+      expect(texts.some((t) => t.props.children === '00:00')).toBe(true);
+      expect(
+        tree.root.findByType('MaterialCommunityIcons' as any).props.name
+      ).toBe('heart');
+    });
   });
 
   describe('5. QuizOption (alternativa-quiz.md)', () => {

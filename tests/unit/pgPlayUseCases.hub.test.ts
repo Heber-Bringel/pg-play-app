@@ -13,15 +13,19 @@ describe('PgPlayUseCases — Catálogo e Hub de Jogos (UC01)', () => {
 
     const games = await useCases.listMinigames();
 
-    expect(games).toHaveLength(5);
+    expect(games).toHaveLength(6);
     expect(games.map((g) => g.id)).toEqual([
       'mimica',
       'quiz',
       'forca',
       'adedonha',
       'cidade-dorme',
+      'termometro',
     ]);
     expect(games.find((g) => g.id === 'cidade-dorme')?.available).toBe(true);
+    expect(games.find((g) => g.id === 'termometro')?.playersTag).toBe(
+      '1 Celular · Encerramento'
+    );
     expect(games.find((g) => g.id === 'mimica')?.available).toBe(true);
   });
 
@@ -48,7 +52,7 @@ describe('PgPlayUseCases — Catálogo e Hub de Jogos (UC01)', () => {
     );
 
     const onePhone = await useCases.listMinigames('', '1 Celular');
-    expect(onePhone).toHaveLength(3);
+    expect(onePhone).toHaveLength(4);
     expect(onePhone.every((g) => g.modality === '1 Celular')).toBe(true);
 
     const multiplayer = await useCases.listMinigames('', 'Multi-Celular');

@@ -7,14 +7,16 @@ export type MinigameRoute =
   | '/quiz'
   | '/forca'
   | '/adedonha'
-  | '/cidade-dorme';
+  | '/cidade-dorme'
+  | '/termometro';
 
 export type MinigameIconName =
   | 'drama-masks'
   | 'lightning-bolt'
   | 'alphabetical-variant'
   | 'format-list-checks'
-  | 'weather-night';
+  | 'weather-night'
+  | 'thermometer-lines';
 
 export type Minigame = {
   id: string;

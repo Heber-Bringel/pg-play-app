@@ -10,7 +10,9 @@ import { CidadeDormeUseCases } from '@/usecase/cidadeDormeUseCases';
 import type { IAdedonhaUseCases } from '@/usecase/iAdedonhaUseCases';
 import type { ICidadeDormeUseCases } from '@/usecase/iCidadeDormeUseCases';
 import type { IPgPlayUseCases } from '@/usecase/iPgPlayUseCases';
+import type { ITermometroUseCases } from '@/usecase/iTermometroUseCases';
 import { PgPlayUseCases } from '@/usecase/pgPlayUseCases';
+import { TermometroUseCases } from '@/usecase/termometroUseCases';
 
 // Equipes e placar persistem no aparelho (RF04–RF06); MemoryTeamDataSource segue para testes.
 const teamDataSource = new AsyncStorageTeamDataSource();
@@ -46,3 +48,7 @@ export const adedonhaUseCases: IAdedonhaUseCases = new AdedonhaUseCases(
 
 export const cidadeDormeUseCases: ICidadeDormeUseCases =
   new CidadeDormeUseCases(multiplayerRoomService, narratorAudioService);
+
+export const termometroUseCases: ITermometroUseCases = new TermometroUseCases(
+  teamDataSource
+);
