@@ -1,11 +1,11 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { AdedonhaRoom } from '@/model/entities/multiplayerSession';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
 import { ExpressiveTextField } from '@/view/components/expressiveTextField';
 import { ExpressiveTimer } from '@/view/components/expressiveTimer';
-import { tokens } from '@/view/theme';
+import { useTheme, type AppTokens } from '@/view/theme';
 
 export type AdedonhaFillingSectionProps = {
   room: AdedonhaRoom;
@@ -32,6 +32,8 @@ export const AdedonhaFillingSection = ({
   onFinalizeStopNow,
   onTimeOut,
 }: AdedonhaFillingSectionProps) => {
+  const activeTokens = useTheme();
+  const styles = useMemo(() => createStyles(activeTokens), [activeTokens]);
   const isStopCountdown = room.phase === 'stop_countdown';
 
   return (
@@ -44,14 +46,14 @@ export const AdedonhaFillingSection = ({
         >
           <Text
             allowFontScaling
-            maxFontSizeMultiplier={tokens.semantic.typography.maxScale}
+            maxFontSizeMultiplier={activeTokens.semantic.typography.maxScale}
             style={styles.heroLetterCaption}
           >
             LETRA
           </Text>
           <Text
             allowFontScaling
-            maxFontSizeMultiplier={tokens.semantic.typography.maxScale}
+            maxFontSizeMultiplier={activeTokens.semantic.typography.maxScale}
             style={styles.heroLetterText}
           >
             {room.currentLetter ?? '?'}
@@ -64,8 +66,8 @@ export const AdedonhaFillingSection = ({
         <View style={styles.stopAlertBanner} accessibilityLiveRegion="assertive">
           <MaterialCommunityIcons
             name="alert"
-            size={tokens.semantic.icon.md}
-            color={tokens.semantic.color.onErrorContainer}
+            size={activeTokens.semantic.icon.md}
+            color={activeTokens.component.banner.error.text}
           />
           <Text allowFontScaling style={styles.stopAlertText}>
             {`${room.stopTriggeredBy ?? 'Um jogador'} pediu ADEDONHA! Enviando respostas em ${secondsRemaining}s...`}
@@ -133,77 +135,81 @@ export const AdedonhaFillingSection = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    gap: tokens.semantic.space.lg,
-  },
-  roundHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: tokens.semantic.space.md,
-  },
-  heroLetterBadge: {
-    minWidth: tokens.semantic.space['3xl'],
-    minHeight: tokens.semantic.space['3xl'],
-    paddingHorizontal: tokens.semantic.space.lg,
-    paddingVertical: tokens.semantic.space.sm,
-    borderRadius: tokens.semantic.radius.xl,
-    backgroundColor: tokens.semantic.color.action,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: tokens.semantic.elevation.card,
-  },
-  heroLetterCaption: {
-    fontFamily: tokens.semantic.font.caption.family,
-    fontSize: tokens.semantic.font.caption.size,
-    lineHeight: tokens.semantic.font.caption.lineHeight,
-    fontWeight: tokens.semantic.font.caption.weight,
-    color: tokens.semantic.color.onAction,
-  },
-  heroLetterText: {
-    fontFamily: tokens.semantic.font.display.family,
-    fontSize: tokens.semantic.font.display.size,
-    lineHeight: tokens.semantic.font.display.lineHeight,
-    fontWeight: tokens.semantic.font.display.weight,
-    color: tokens.semantic.color.onAction,
-  },
-  stopAlertBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.semantic.space.sm,
-    padding: tokens.semantic.space.md,
-    borderRadius: tokens.semantic.radius.md,
-    borderWidth: tokens.semantic.border.thin,
-    borderColor: tokens.semantic.color.error,
-    backgroundColor: tokens.semantic.color.errorContainer,
-  },
-  stopAlertText: {
-    flex: 1,
-    fontFamily: tokens.semantic.font.label.family,
-    fontSize: tokens.semantic.font.body.size,
-    lineHeight: tokens.semantic.font.body.lineHeight,
-    fontWeight: tokens.semantic.font.label.weight,
-    color: tokens.semantic.color.onErrorContainer,
-  },
-  fieldsList: {
-    gap: tokens.semantic.space.md,
-  },
-  actionsContainer: {
-    gap: tokens.semantic.space.lg,
-    paddingTop: tokens.semantic.space.sm,
-  },
-  moderatorDivider: {
-    borderTopWidth: tokens.semantic.border.thin,
-    borderTopColor: tokens.semantic.color.outline,
-    paddingTop: tokens.semantic.space.md,
-    gap: tokens.semantic.space.sm,
-  },
-  moderatorHint: {
-    fontFamily: tokens.semantic.font.caption.family,
-    fontSize: tokens.semantic.font.caption.size,
-    lineHeight: tokens.semantic.font.caption.lineHeight,
-    fontWeight: tokens.semantic.font.caption.weight,
-    color: tokens.semantic.color.onSurfaceMuted,
-  },
-});
+const createStyles = (activeTokens: AppTokens) => {
+  const { color, font, radius, space, border, elevation } = activeTokens.semantic;
+  const { banner } = activeTokens.component;
+  return StyleSheet.create({
+    container: {
+      gap: space.lg,
+    },
+    roundHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: space.md,
+    },
+    heroLetterBadge: {
+      minWidth: space['3xl'],
+      minHeight: space['3xl'],
+      paddingHorizontal: space.lg,
+      paddingVertical: space.sm,
+      borderRadius: radius.xl,
+      backgroundColor: color.action,
+      alignItems: 'center',
+      justifyContent: 'center',
+      elevation: elevation.card,
+    },
+    heroLetterCaption: {
+      fontFamily: font.caption.family,
+      fontSize: font.caption.size,
+      lineHeight: font.caption.lineHeight,
+      fontWeight: font.caption.weight,
+      color: color.onAction,
+    },
+    heroLetterText: {
+      fontFamily: font.display.family,
+      fontSize: font.display.size,
+      lineHeight: font.display.lineHeight,
+      fontWeight: font.display.weight,
+      color: color.onAction,
+    },
+    stopAlertBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.sm,
+      padding: space.md,
+      borderRadius: radius.md,
+      borderWidth: border.thin,
+      borderColor: banner.error.border,
+      backgroundColor: banner.error.bg,
+    },
+    stopAlertText: {
+      flex: 1,
+      fontFamily: font.label.family,
+      fontSize: font.body.size,
+      lineHeight: font.body.lineHeight,
+      fontWeight: font.label.weight,
+      color: banner.error.text,
+    },
+    fieldsList: {
+      gap: space.md,
+    },
+    actionsContainer: {
+      gap: space.lg,
+      paddingTop: space.sm,
+    },
+    moderatorDivider: {
+      borderTopWidth: border.thin,
+      borderTopColor: activeTokens.component.card.border,
+      paddingTop: space.md,
+      gap: space.sm,
+    },
+    moderatorHint: {
+      fontFamily: font.caption.family,
+      fontSize: font.caption.size,
+      lineHeight: font.caption.lineHeight,
+      fontWeight: font.caption.weight,
+      color: color.onSurfaceMuted,
+    },
+  });
+};

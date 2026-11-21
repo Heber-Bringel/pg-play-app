@@ -1,14 +1,16 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ConfirmModal } from '@/view/components/confirmModal';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
 import { GameCard } from '@/view/components/gameCard';
-import { color, font, icon, radius, space } from '@/view/theme';
+import { useTheme, type AppTokens } from '@/view/theme';
 import { useScoreboardViewModel } from '@/viewmodel/useScoreboardViewModel';
 
 export const ScoreboardScreen = () => {
   const [state, actions] = useScoreboardViewModel();
+  const activeTokens = useTheme();
+  const styles = useMemo(() => createStyles(activeTokens), [activeTokens]);
 
   if (state.loading) {
     return (
@@ -31,6 +33,7 @@ export const ScoreboardScreen = () => {
           title="Erro no Placar"
           description={state.error}
           playersTag="Erro"
+          playersTagTone="error"
           icon="alert-circle"
         />
         <ExpressiveButton
@@ -75,8 +78,8 @@ export const ScoreboardScreen = () => {
           <View style={styles.trophyBadge}>
             <MaterialCommunityIcons
               name="trophy-award"
-              size={icon.lg}
-              color={color.onHighlight}
+              size={activeTokens.semantic.icon.lg}
+              color={activeTokens.semantic.color.onHighlight}
             />
           </View>
           <Text allowFontScaling style={styles.title}>
@@ -149,65 +152,68 @@ export const ScoreboardScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: color.surface,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: space.lg,
-    paddingTop: space.lg,
-    paddingBottom: space['3xl'],
-    justifyContent: 'space-between',
-    gap: space.xl,
-  },
-  topSection: {
-    gap: space.xl,
-  },
-  header: {
-    alignItems: 'center',
-    gap: space.sm,
-    paddingVertical: space.sm,
-  },
-  trophyBadge: {
-    width: space['3xl'],
-    height: space['3xl'],
-    borderRadius: radius.full,
-    backgroundColor: color.highlight,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: space.xs,
-  },
-  title: {
-    fontFamily: font.title.family,
-    fontSize: font.title.size,
-    fontWeight: font.title.weight,
-    lineHeight: font.title.lineHeight,
-    color: color.onSurface,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontFamily: font.body.family,
-    fontSize: font.body.size,
-    fontWeight: font.body.weight,
-    lineHeight: font.body.lineHeight,
-    color: color.onSurfaceMuted,
-    textAlign: 'center',
-  },
-  list: {
-    gap: space.lg,
-  },
-  teamItem: {
-    gap: space.sm,
-  },
-  bonusButtonWrapper: {
-    paddingHorizontal: space.xs,
-  },
-  actions: {
-    gap: space.md,
-    paddingTop: space.md,
-  },
-});
+const createStyles = (activeTokens: AppTokens) => {
+  const { color, font, radius, space } = activeTokens.semantic;
+  return StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: color.surface,
+    },
+    scrollContent: {
+      flexGrow: 1,
+      paddingHorizontal: space.lg,
+      paddingTop: space.lg,
+      paddingBottom: space['3xl'],
+      justifyContent: 'space-between',
+      gap: space.xl,
+    },
+    topSection: {
+      gap: space.xl,
+    },
+    header: {
+      alignItems: 'center',
+      gap: space.sm,
+      paddingVertical: space.sm,
+    },
+    trophyBadge: {
+      width: space['3xl'],
+      height: space['3xl'],
+      borderRadius: radius.full,
+      backgroundColor: color.highlight,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: space.xs,
+    },
+    title: {
+      fontFamily: font.title.family,
+      fontSize: font.title.size,
+      fontWeight: font.title.weight,
+      lineHeight: font.title.lineHeight,
+      color: color.onSurface,
+      textAlign: 'center',
+    },
+    subtitle: {
+      fontFamily: font.body.family,
+      fontSize: font.body.size,
+      fontWeight: font.body.weight,
+      lineHeight: font.body.lineHeight,
+      color: color.onSurfaceMuted,
+      textAlign: 'center',
+    },
+    list: {
+      gap: space.lg,
+    },
+    teamItem: {
+      gap: space.sm,
+    },
+    bonusButtonWrapper: {
+      paddingHorizontal: space.xs,
+    },
+    actions: {
+      gap: space.md,
+      paddingTop: space.md,
+    },
+  });
+};
 
 export default ScoreboardScreen;
