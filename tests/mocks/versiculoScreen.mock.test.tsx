@@ -27,7 +27,6 @@ const createMockActions = (): VersiculoActions => ({
   setAnswer: jest.fn(),
   revealHint: jest.fn(),
   submitAnswers: jest.fn(),
-  acceptByLeader: jest.fn(),
   nextTurn: jest.fn(async () => {}),
   restartMatch: jest.fn(),
   requestExit: jest.fn(),
@@ -177,7 +176,7 @@ describe('VersiculoScreen (Mocks)', () => {
     expect(actions.submitAnswers).toHaveBeenCalledTimes(1);
   });
 
-  it('renderiza conferência com referência revelada e botão Aceitar mesmo assim', () => {
+  it('renderiza conferência com referência revelada e sem botão Aceitar mesmo assim', () => {
     const actions = createMockActions();
     mockUseVersiculoViewModel.mockReturnValue([
       {
@@ -205,7 +204,6 @@ describe('VersiculoScreen (Mocks)', () => {
             userAnswer: 'ajuda',
             expectedAnswer: 'fortalece',
             isCorrect: false,
-            acceptedByLeader: false,
             pointsAwarded: 0,
           },
         ],
@@ -219,12 +217,13 @@ describe('VersiculoScreen (Mocks)', () => {
       tree = renderer.create(<VersiculoScreen />);
     });
 
-    const acceptBtn = tree.root.findByProps({
-      accessibilityLabel: 'Aceitar mesmo assim',
-    } as any);
-    act(() => {
-      acceptBtn.props.onPress();
-    });
-    expect(actions.acceptByLeader).toHaveBeenCalledWith(1);
+    const texts = tree.root
+      .findAllByType('Text' as any)
+      .map((n) => n.props.children);
+    expect(texts).toContain('Filipenses 4:13 · Bíblia Livre');
+    expect(texts).toContain('Palavra correta: fortalece');
+    expect(
+      tree.root.findAllByProps({ accessibilityLabel: 'Aceitar mesmo assim' } as any)
+    ).toHaveLength(0);
   });
 });

@@ -134,10 +134,8 @@ describe('useVersiculoViewModel', () => {
     act(() => {
       hook.actions.submitAnswers();
     });
-    act(() => {
-      hook.actions.acceptByLeader(1);
-    });
-    expect(hook.state.results[0].acceptedByLeader).toBe(true);
+    expect(hook.state.phase).toBe('review');
+    expect(hook.state.turnPoints).toBe(0);
 
     await act(async () => {
       await hook.actions.nextTurn();
@@ -146,7 +144,7 @@ describe('useVersiculoViewModel', () => {
     expect(hook.state.phase).toBe('finished');
     const savedTeams = await teamDs.listTeams();
     expect(savedTeams[0].score).toBe(firstPassage.blanks.length * 5);
-    expect(savedTeams[1].score).toBe(10);
+    expect(savedTeams[1].score).toBe(0);
 
     act(() => {
       hook.actions.goToScoreboard();

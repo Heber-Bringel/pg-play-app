@@ -116,24 +116,10 @@ describe('VersiculoUseCases', () => {
     expect(results[1].pointsAwarded).toBe(0);
   });
 
-  it('permite ao líder aceitar resposta equivalente mantendo regra de dica e atualiza placar', async () => {
-    const { useCases, verseDataSource, teamDataSource } = buildSut();
-    const [joao316] = await verseDataSource.listPassages(['Evangelhos']);
+  it('registra a pontuação da equipe no placar', async () => {
+    const { useCases, teamDataSource } = buildSut();
 
-    const initial = useCases.evaluateAnswers(
-      joao316,
-      { 1: 'único', 2: 'morra' },
-      true
-    );
-    const updated = useCases.acceptBlankByLeader(initial, 1, true);
-
-    expect(updated[0].isCorrect).toBe(true);
-    expect(updated[0].acceptedByLeader).toBe(true);
-    expect(updated[0].pointsAwarded).toBe(5);
-    expect(updated[1].isCorrect).toBe(false);
-
-    const savedTeam = await useCases.recordTeamScore('team-1', 15);
-    expect(savedTeam).toBeUndefined();
+    await useCases.recordTeamScore('team-1', 15);
     const stored = await teamDataSource.listTeams();
     expect(stored[0].score).toBe(15);
   });
