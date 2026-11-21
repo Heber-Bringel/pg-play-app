@@ -16,7 +16,7 @@ import type {
   CidadeDormeRole,
   CidadeDormeRoom,
 } from '@/model/entities/multiplayerSession';
-import { AuthError, DataSourceError, ValidationError } from '@/model/errors';
+import { AuthError, ConflictError, DataSourceError, ValidationError } from '@/model/errors';
 import type { IMultiplayerRoomService } from '@/model/services/iMultiplayerRoomService';
 
 export type SupabaseServiceConfig = {
@@ -42,6 +42,8 @@ type DbRoomRow = {
   host_id: string;
   status: string;
   phase: string;
+  version?: number;
+  phase_ends_at?: string | null;
   config: StoredRoomConfig | null;
   current_round: number;
   current_letter: string | null;
@@ -285,6 +287,8 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
       gameType: 'adedonha',
       hostId: row.host_id,
       phase: (row.phase || 'lobby') as AdedonhaPhase,
+      version: row.version ?? 0,
+      phaseEndsAt: row.phase_ends_at ?? null,
       config: {
         columns: rawConfig.columns ?? [...DEFAULT_COLUMNS],
         roundDurationSeconds: rawConfig.roundDurationSeconds ?? 90,
@@ -403,9 +407,15 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
       void client.removeChannel(previousChannel);
     }
 
+    let latestSeq = 0;
     const refresh = () => {
+      const seq = ++latestSeq;
       void this.loadRoomSnapshot(roomId)
-        .then((snapshot) => onRoomUpdated(snapshot))
+        .then((snapshot) => {
+          if (seq === latestSeq) {
+            onRoomUpdated(snapshot);
+          }
+        })
         .catch(() => {
           // Atualizações em segundo plano ignoram falhas transitórias de rede.
         });
@@ -574,7 +584,7 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
 
       const { data: roomData, error: roomError } = await client
         .from('rooms')
-        .select('id, host_id')
+        .select('id, host_id, phase')
         .eq('code', normalizedCode)
         .eq('game_type', 'adedonha')
         .single();
@@ -585,7 +595,7 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
         );
       }
 
-      const targetRoom = roomData as { id: string; host_id: string };
+      const targetRoom = roomData as { id: string; host_id: string; phase: string };
       const cleanNickname = nickname.trim();
 
       const { data: existingPlayersData, error: existingPlayersError } =
@@ -630,6 +640,11 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
           }
         }
       } else {
+        if (targetRoom.phase !== 'lobby') {
+          throw new ValidationError(
+            'A partida já começou. Novos jogadores só podem entrar no Lobby.'
+          );
+        }
         const { error: insertError } = await client.from('room_players').insert({
           room_id: targetRoom.id,
           user_id: userId,
@@ -794,18 +809,29 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
     }
   }
 
-  async openRoundFilling(roomId: string): Promise<AdedonhaRoom> {
+  async openRoundFilling(
+    roomId: string,
+    expectedPhase?: AdedonhaPhase
+  ): Promise<AdedonhaRoom> {
     this.ensureCredentials();
     if (this.delegateService) {
-      return this.delegateService.openRoundFilling(roomId);
+      return this.delegateService.openRoundFilling(roomId, expectedPhase);
     }
 
     try {
       const client = this.getClient();
-      const { error } = await client
+      const { roomRow } = await this.fetchRawRoomState(roomId);
+      const duration = roomRow.config?.roundDurationSeconds ?? 90;
+      const phaseEndsAt = new Date(Date.now() + duration * 1000).toISOString();
+
+      let query = client
         .from('rooms')
-        .update({ phase: 'filling', status: 'playing' })
+        .update({ phase: 'filling', status: 'playing', phase_ends_at: phaseEndsAt })
         .eq('id', roomId);
+      if (expectedPhase) {
+        query = query.eq('phase', expectedPhase);
+      }
+      const { error } = await query;
 
       if (error) {
         throw new DataSourceError('Falha ao iniciar preenchimento da rodada.');
@@ -919,13 +945,15 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
 
   async startTallyPhase(
     roomId: string,
-    classifiedSubmissions: AdedonhaSubmission[]
+    classifiedSubmissions: AdedonhaSubmission[],
+    expectedPhase?: AdedonhaPhase
   ): Promise<AdedonhaRoom> {
     this.ensureCredentials();
     if (this.delegateService) {
       return this.delegateService.startTallyPhase(
         roomId,
-        classifiedSubmissions
+        classifiedSubmissions,
+        expectedPhase
       );
     }
 
@@ -1081,10 +1109,13 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
     }
   }
 
-  async advanceToNextRound(roomId: string): Promise<AdedonhaRoom> {
+  async advanceToNextRound(
+    roomId: string,
+    expectedPhase?: AdedonhaPhase
+  ): Promise<AdedonhaRoom> {
     this.ensureCredentials();
     if (this.delegateService) {
-      return this.delegateService.advanceToNextRound(roomId);
+      return this.delegateService.advanceToNextRound(roomId, expectedPhase);
     }
 
     try {
@@ -1269,6 +1300,7 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
       gameType: 'cidade-dorme',
       hostId: row.host_id,
       phase,
+      version: row.version ?? 0,
       config: resolvedConfig,
       currentRound,
       phaseEndsAt:
@@ -1635,6 +1667,11 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
           }
         }
       } else {
+        if (targetRoom.phase !== 'lobby') {
+          throw new ValidationError(
+            'A partida já começou. Novos jogadores só podem entrar no Lobby.'
+          );
+        }
         const { error: insertError } = await client.from('room_players').insert({
           room_id: targetRoom.id,
           user_id: userId,
@@ -2087,9 +2124,15 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
       void client.removeChannel(previousChannel);
     }
 
+    let latestSeq = 0;
     const refresh = () => {
+      const seq = ++latestSeq;
       void this.getCidadeDormeRoom(roomId)
-        .then((snapshot) => onRoomUpdated(snapshot))
+        .then((snapshot) => {
+          if (seq === latestSeq) {
+            onRoomUpdated(snapshot);
+          }
+        })
         .catch(() => {
           // Ignora falhas transitórias de rede em background.
         });

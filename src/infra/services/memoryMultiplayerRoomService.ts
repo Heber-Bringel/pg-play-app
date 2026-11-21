@@ -15,7 +15,7 @@ import type {
   CidadeDormeRoom,
   CidadeDormeVoteReport,
 } from '@/model/entities/multiplayerSession';
-import { DataSourceError, ValidationError } from '@/model/errors';
+import { ConflictError, DataSourceError, ValidationError } from '@/model/errors';
 import type { IMultiplayerRoomService } from '@/model/services/iMultiplayerRoomService';
 
 export const DEFAULT_ADEDONHA_COLUMNS: string[] = [
@@ -79,6 +79,8 @@ function createDefaultRoom(): AdedonhaRoom {
     gameType: 'adedonha',
     hostId: 'player-host',
     phase: 'lobby',
+    version: 0,
+    phaseEndsAt: null,
     config: {
       columns: [...DEFAULT_ADEDONHA_COLUMNS],
       roundDurationSeconds: 90,
@@ -201,6 +203,7 @@ function createDefaultCidadeDormeRoom(): CidadeDormeRoom {
     gameType: 'cidade-dorme',
     hostId: 'cd-player-1',
     phase: 'lobby',
+    version: 0,
     config: {
       narratorVoice: 'masculina',
       assassinCount: 1,
@@ -303,9 +306,10 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
   }
 
   private saveAndNotify(room: AdedonhaRoom): AdedonhaRoom {
-    this.rooms.set(room.id, room);
-    const snapshot = cloneRoom(room);
-    const roomListeners = this.listeners.get(room.id);
+    const versioned: AdedonhaRoom = { ...room, version: (room.version ?? 0) + 1 };
+    this.rooms.set(versioned.id, versioned);
+    const snapshot = cloneRoom(versioned);
+    const roomListeners = this.listeners.get(versioned.id);
     if (roomListeners) {
       roomListeners.forEach((listener) => listener(cloneRoom(snapshot)));
     }
@@ -353,6 +357,8 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
         gameType: 'adedonha',
         hostId: 'player-host',
         phase: 'lobby',
+        version: 0,
+        phaseEndsAt: null,
         config: {
           columns: [...initialColumns],
           roundDurationSeconds: 90,
@@ -418,6 +424,12 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
       this.activeRoomId = found.id;
       this.localPlayerIdByRoom.set(found.id, existingPlayer.id);
       return cloneRoom(found);
+    }
+
+    if (found.phase !== 'lobby') {
+      throw new ValidationError(
+        'A partida já começou. Novos jogadores só podem entrar no Lobby.'
+      );
     }
 
     this.playerIdCounter += 1;
@@ -506,11 +518,20 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
     return this.saveAndNotify(updated);
   }
 
-  async openRoundFilling(roomId: string): Promise<AdedonhaRoom> {
+  async openRoundFilling(
+    roomId: string,
+    expectedPhase?: AdedonhaPhase
+  ): Promise<AdedonhaRoom> {
     const room = this.resolveRoom(roomId);
+    if (expectedPhase && room.phase !== expectedPhase) {
+      throw new ConflictError('A sala mudou de fase antes de abrir o preenchimento.');
+    }
     const updated: AdedonhaRoom = {
       ...room,
       phase: 'filling',
+      phaseEndsAt: new Date(
+        Date.now() + room.config.roundDurationSeconds * 1000
+      ).toISOString(),
     };
     return this.saveAndNotify(updated);
   }
@@ -521,6 +542,9 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
     answers: Record<string, string>
   ): Promise<AdedonhaRoom> {
     const room = this.resolveRoom(roomId);
+    if (room.phase !== 'filling' && room.phase !== 'stop_countdown') {
+      throw new ConflictError('Envio de respostas encerrado para esta rodada.');
+    }
     const player = room.players.find((p) => p.id === playerId);
     if (!player) {
       throw new DataSourceError('Jogador não encontrado na sala.');
@@ -598,6 +622,12 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
     playerId: string
   ): Promise<AdedonhaRoom> {
     const room = this.resolveRoom(roomId);
+    if (room.phase === 'stop_countdown') {
+      return cloneRoom(room);
+    }
+    if (room.phase !== 'filling') {
+      throw new ConflictError('ADEDONHA só pode ser acionado durante o preenchimento.');
+    }
     const player = room.players.find((p) => p.id === playerId);
     if (!player) {
       throw new DataSourceError('Jogador não encontrado para acionar ADEDONHA.');
@@ -610,6 +640,7 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
     const updated: AdedonhaRoom = {
       ...room,
       phase: 'stop_countdown',
+      phaseEndsAt: new Date(Date.now() + 5000).toISOString(),
       stopTriggeredBy: player.nickname,
       players: updatedPlayers,
     };
@@ -618,9 +649,13 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
 
   async startTallyPhase(
     roomId: string,
-    classifiedSubmissions: AdedonhaSubmission[]
+    classifiedSubmissions: AdedonhaSubmission[],
+    expectedPhase?: AdedonhaPhase
   ): Promise<AdedonhaRoom> {
     const room = this.resolveRoom(roomId);
+    if (expectedPhase && room.phase !== expectedPhase) {
+      throw new ConflictError('A sala já avançou para outra fase.');
+    }
     const recalculatedPlayers = this.recalculatePlayersScore(
       room.players,
       classifiedSubmissions
@@ -629,6 +664,7 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
     const updated: AdedonhaRoom = {
       ...room,
       phase: 'tally',
+      phaseEndsAt: null,
       currentTallyColumnIndex: 0,
       submissions: classifiedSubmissions.map((s) => ({ ...s })),
       players: recalculatedPlayers,
@@ -704,8 +740,14 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
     return this.saveAndNotify(updated);
   }
 
-  async advanceToNextRound(roomId: string): Promise<AdedonhaRoom> {
+  async advanceToNextRound(
+    roomId: string,
+    expectedPhase?: AdedonhaPhase
+  ): Promise<AdedonhaRoom> {
     const room = this.resolveRoom(roomId);
+    if (expectedPhase && room.phase !== expectedPhase) {
+      throw new ConflictError('A rodada já foi avançada.');
+    }
     if (room.currentRound >= room.config.totalRounds) {
       const finished: AdedonhaRoom = {
         ...room,
@@ -888,16 +930,20 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
     room: CidadeDormeRoom,
     viewerPlayerId?: string
   ): CidadeDormeRoom {
-    this.cidadeDormeRooms.set(room.id, room);
-    const localSnapshot = this.buildFilteredCidadeDormeSnapshot(room);
-    const roomListeners = this.cidadeDormeListeners.get(room.id);
+    const versioned: CidadeDormeRoom = {
+      ...room,
+      version: (room.version ?? 0) + 1,
+    };
+    this.cidadeDormeRooms.set(versioned.id, versioned);
+    const localSnapshot = this.buildFilteredCidadeDormeSnapshot(versioned);
+    const roomListeners = this.cidadeDormeListeners.get(versioned.id);
     if (roomListeners) {
       roomListeners.forEach((listener) =>
         listener(cloneCidadeDormeRoom(localSnapshot))
       );
     }
     return viewerPlayerId
-      ? this.buildFilteredCidadeDormeSnapshot(room, viewerPlayerId)
+      ? this.buildFilteredCidadeDormeSnapshot(versioned, viewerPlayerId)
       : localSnapshot;
   }
 
@@ -920,6 +966,7 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
         gameType: 'cidade-dorme',
         hostId: 'cd-player-1',
         phase: 'lobby',
+        version: 0,
         config: {
           narratorVoice: 'masculina',
           assassinCount: 1,
@@ -977,6 +1024,12 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
       this.activeCidadeDormeRoomId = found.id;
       this.localPlayerIdByRoom.set(found.id, existing.id);
       return this.buildFilteredCidadeDormeSnapshot(found, existing.id);
+    }
+
+    if (found.phase !== 'lobby') {
+      throw new ValidationError(
+        'A partida já começou. Novos jogadores só podem entrar no Lobby.'
+      );
     }
 
     this.playerIdCounter += 1;
