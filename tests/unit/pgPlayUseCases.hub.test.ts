@@ -13,16 +13,18 @@ describe('PgPlayUseCases — Catálogo e Hub de Jogos (UC01)', () => {
 
     const games = await useCases.listMinigames();
 
-    expect(games).toHaveLength(5);
+    expect(games).toHaveLength(6);
     expect(games.map((g) => g.id)).toEqual([
       'mimica',
       'quiz',
       'forca',
       'adedonha',
       'cidade-dorme',
+      'versiculo',
     ]);
     expect(games.find((g) => g.id === 'cidade-dorme')?.available).toBe(true);
     expect(games.find((g) => g.id === 'mimica')?.available).toBe(true);
+    expect(games.find((g) => g.id === 'versiculo')?.available).toBe(true);
   });
 
   it('deve filtrar minigames por texto ignorando acentos, espaços e caixa (RF03)', async () => {
@@ -35,7 +37,11 @@ describe('PgPlayUseCases — Catálogo e Hub de Jogos (UC01)', () => {
     expect(mimicaResult.map((g) => g.id)).toEqual(['mimica']);
 
     const biblicoResult = await useCases.listMinigames('BIBLICA');
-    expect(biblicoResult.map((g) => g.id)).toEqual(['quiz', 'adedonha']);
+    expect(biblicoResult.map((g) => g.id)).toEqual([
+      'quiz',
+      'adedonha',
+      'versiculo',
+    ]);
 
     const themeResult = await useCases.listMinigames('roleta');
     expect(themeResult.map((g) => g.id)).toEqual(['adedonha']);
@@ -48,7 +54,7 @@ describe('PgPlayUseCases — Catálogo e Hub de Jogos (UC01)', () => {
     );
 
     const onePhone = await useCases.listMinigames('', '1 Celular');
-    expect(onePhone).toHaveLength(3);
+    expect(onePhone).toHaveLength(4);
     expect(onePhone.every((g) => g.modality === '1 Celular')).toBe(true);
 
     const multiplayer = await useCases.listMinigames('', 'Multi-Celular');
@@ -63,7 +69,12 @@ describe('PgPlayUseCases — Catálogo e Hub de Jogos (UC01)', () => {
     );
 
     const combined = await useCases.listMinigames('biblico', '1 Celular');
-    expect(combined.map((g) => g.id)).toEqual(['mimica', 'quiz', 'forca']);
+    expect(combined.map((g) => g.id)).toEqual([
+      'mimica',
+      'quiz',
+      'forca',
+      'versiculo',
+    ]);
 
     const emptyResult = await useCases.listMinigames('xadrez', 'Todos');
     expect(emptyResult).toHaveLength(0);
