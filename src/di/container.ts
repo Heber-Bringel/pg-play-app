@@ -1,3 +1,4 @@
+import { AsyncStorageMatchSettingsDataSource } from '@/infra/datasources/asyncStorageMatchSettingsDataSource';
 import { AsyncStorageTeamDataSource } from '@/infra/datasources/asyncStorageTeamDataSource';
 import { HelloAoVerseDataSource } from '@/infra/datasources/helloAoVerseDataSource';
 import { MemoryGameCatalogDataSource } from '@/infra/datasources/memoryGameCatalogDataSource';
@@ -20,6 +21,7 @@ import { VersiculoUseCases } from '@/usecase/versiculoUseCases';
 const teamDataSource = new AsyncStorageTeamDataSource();
 const gameCatalogDataSource = new MemoryGameCatalogDataSource();
 const verseDataSource = new HelloAoVerseDataSource(new MemoryVerseDataSource());
+const matchSettingsDataSource = new AsyncStorageMatchSettingsDataSource();
 const narratorAudioService: INarratorAudioService =
   new ExpoSpeechNarratorAudioService();
 
@@ -42,7 +44,8 @@ export const isSupabaseMultiplayerEnabled: boolean = Boolean(
 
 export const pgPlayUseCases: IPgPlayUseCases = new PgPlayUseCases(
   teamDataSource,
-  gameCatalogDataSource
+  gameCatalogDataSource,
+  matchSettingsDataSource
 );
 
 export const adedonhaUseCases: IAdedonhaUseCases = new AdedonhaUseCases(
