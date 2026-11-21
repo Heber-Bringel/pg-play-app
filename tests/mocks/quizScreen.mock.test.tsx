@@ -11,6 +11,7 @@ const createMockActions = (): QuizActions => ({
   handleTick: jest.fn(),
   handleNextQuestion: jest.fn(),
   handleSelectDuration: jest.fn(),
+  handleSelectQuestionCount: jest.fn(),
   handleRequestExit: jest.fn(),
   handleCancelExit: jest.fn(),
   handleConfirmExit: jest.fn(),
@@ -28,7 +29,10 @@ const baseState: QuizState = {
   currentTeamIndex: 0,
   currentTeam: { id: 't1', name: 'Tribo de Judá', score: 0 },
   currentQuestionIndex: 0,
-  totalQuestions: 10,
+  totalQuestions: 4,
+  questionsPerTeam: 2,
+  configuredQuestionCount: 5,
+  questionCountNotice: null,
   currentQuestion: {
     id: 'q1',
     question: 'Quem construiu a arca sob instrução de Deus?',
@@ -228,5 +232,33 @@ describe('QuizScreen — Testes de Tela com Mocks de ViewModel (UC04)', () => {
       scoreboardBtn.props.onPress();
     });
     expect(actions.handleGoToScoreboard).toHaveBeenCalled();
+  });
+
+  it('deve repassar os parâmetros e exibir o aviso de perguntas por equipe (RF29)', () => {
+    const actions = createMockActions();
+    jest.spyOn(quizVmModule, 'useQuizViewModel').mockReturnValue([
+      {
+        ...baseState,
+        questionCountNotice: 'Serão 4 perguntas, 2 por equipe, para todas responderem a mesma quantidade.',
+      },
+      actions,
+    ]);
+
+    let tree!: renderer.ReactTestRenderer;
+    act(() => {
+      tree = renderer.create(<QuizScreen />);
+    });
+
+    const chip30 = tree.root.findAllByProps({ accessibilityLabel: '30 segundos por pergunta' })[0];
+    const chip15 = tree.root.findAllByProps({ accessibilityLabel: '15 perguntas' })[0];
+    act(() => {
+      chip30.props.onPress();
+      chip15.props.onPress();
+    });
+    expect(actions.handleSelectDuration).toHaveBeenCalledWith(30);
+    expect(actions.handleSelectQuestionCount).toHaveBeenCalledWith(15);
+
+    const texts = tree.root.findAllByType('Text' as any);
+    expect(texts.some((t) => String(t.props.children).includes('2 por equipe'))).toBe(true);
   });
 });

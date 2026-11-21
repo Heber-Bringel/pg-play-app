@@ -2,6 +2,7 @@ import { MemoryGameCatalogDataSource } from '@/infra/datasources/memoryGameCatal
 import { MemoryTeamDataSource } from '@/infra/datasources/memoryTeamDataSource';
 import { ValidationError } from '@/model/errors';
 import { PgPlayUseCases } from '@/usecase/pgPlayUseCases';
+import { MemoryMatchSettingsDataSource } from '@/infra/datasources/memoryMatchSettingsDataSource';
 
 describe('PgPlayUseCases — Regras de Negócio do Placar e Ranking do PG (UC06)', () => {
   it('deve retornar o placar ordenado decrescentemente pela pontuação acumulada (RF16)', async () => {
@@ -11,7 +12,7 @@ describe('PgPlayUseCases — Regras de Negócio do Placar e Ranking do PG (UC06)
       { id: 'team-3', name: 'Mensageiros', score: 25 },
     ]);
     const catalogDs = new MemoryGameCatalogDataSource();
-    const useCases = new PgPlayUseCases(teamDs, catalogDs);
+    const useCases = new PgPlayUseCases(teamDs, catalogDs, new MemoryMatchSettingsDataSource());
 
     const ranked = await useCases.getScoreboard();
 
@@ -29,7 +30,7 @@ describe('PgPlayUseCases — Regras de Negócio do Placar e Ranking do PG (UC06)
       { id: 'team-2', name: 'Leões da Fé', score: 20 },
     ]);
     const catalogDs = new MemoryGameCatalogDataSource();
-    const useCases = new PgPlayUseCases(teamDs, catalogDs);
+    const useCases = new PgPlayUseCases(teamDs, catalogDs, new MemoryMatchSettingsDataSource());
 
     const updated = await useCases.awardBonusPoints('team-1');
 
@@ -40,7 +41,7 @@ describe('PgPlayUseCases — Regras de Negócio do Placar e Ranking do PG (UC06)
   it('deve lançar ValidationError ao conceder bônus inválido ou para equipe inexistente', async () => {
     const teamDs = new MemoryTeamDataSource();
     const catalogDs = new MemoryGameCatalogDataSource();
-    const useCases = new PgPlayUseCases(teamDs, catalogDs);
+    const useCases = new PgPlayUseCases(teamDs, catalogDs, new MemoryMatchSettingsDataSource());
 
     await expect(useCases.awardBonusPoints('   ')).rejects.toThrow(ValidationError);
     await expect(useCases.awardBonusPoints('team-inexistente')).rejects.toThrow(ValidationError);
@@ -53,7 +54,7 @@ describe('PgPlayUseCases — Regras de Negócio do Placar e Ranking do PG (UC06)
       { id: 'team-2', name: 'Leões da Fé', score: 30 },
     ]);
     const catalogDs = new MemoryGameCatalogDataSource();
-    const useCases = new PgPlayUseCases(teamDs, catalogDs);
+    const useCases = new PgPlayUseCases(teamDs, catalogDs, new MemoryMatchSettingsDataSource());
 
     const reset = await useCases.resetScoreboard();
 

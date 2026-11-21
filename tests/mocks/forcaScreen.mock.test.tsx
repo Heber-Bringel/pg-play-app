@@ -222,4 +222,32 @@ describe('ForcaScreen — Testes de Tela com Mocks de ViewModel (UC05)', () => {
 
     dimSpy.mockRestore();
   });
+
+  it('deve exibir os Parâmetros da Partida só no 1º turno e repassar a escolha (RF29)', () => {
+    const actions = createMockActions();
+    const spy = jest
+      .spyOn(forcaVmModule, 'useForcaViewModel')
+      .mockReturnValue([{ ...baseState, phase: 'pass-turn' }, actions]);
+
+    let tree!: renderer.ReactTestRenderer;
+    act(() => {
+      tree = renderer.create(<ForcaScreen />);
+    });
+
+    const chip8 = tree.root.findAllByProps({ accessibilityLabel: '8 tentativas por palavra' })[0];
+    const chip1 = tree.root.findAllByProps({ accessibilityLabel: '1 palavra por equipe' })[0];
+    act(() => {
+      chip8.props.onPress();
+      chip1.props.onPress();
+    });
+    expect(actions.handleSelectAttempts).toHaveBeenCalledWith(8);
+    expect(actions.handleSelectRounds).toHaveBeenCalledWith(1);
+
+    spy.mockReturnValue([{ ...baseState, phase: 'pass-turn', currentRound: 2 }, actions]);
+    act(() => {
+      tree.update(<ForcaScreen />);
+    });
+    const texts = tree.root.findAllByType('Text' as any);
+    expect(texts.some((t) => t.props.children === 'Parâmetros da Partida')).toBe(false);
+  });
 });

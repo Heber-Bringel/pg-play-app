@@ -11,6 +11,7 @@ import {
   type ForcaState,
 } from '@/viewmodel/useForcaViewModel';
 import { mockPush, mockReplace } from '../__mocks__/expo-router';
+import { MemoryMatchSettingsDataSource } from '@/infra/datasources/memoryMatchSettingsDataSource';
 
 function createHookHarness(useCases: IPgPlayUseCases) {
   let latestState!: ForcaState;
@@ -49,7 +50,7 @@ describe('useForcaViewModel — Hook da Arena do Jogo da Forca (UC05)', () => {
   it('deve inicializar na fase pass-turn com palavra mascarada e tentativas configuradas (RF09, RF15)', async () => {
     const teamDs = new MemoryTeamDataSource();
     const catalogDs = new MemoryGameCatalogDataSource();
-    const useCases = new PgPlayUseCases(teamDs, catalogDs);
+    const useCases = new PgPlayUseCases(teamDs, catalogDs, new MemoryMatchSettingsDataSource());
     const harness = createHookHarness(useCases);
 
     await harness.mount();
@@ -58,8 +59,8 @@ describe('useForcaViewModel — Hook da Arena do Jogo da Forca (UC05)', () => {
     expect(state.phase).toBe('pass-turn');
     expect(state.teams).toHaveLength(2);
     expect(state.currentTeam?.name).toBe('Tribo de Judá');
-    expect(state.maxAttempts).toBe(5);
-    expect(state.remainingAttempts).toBe(5);
+    expect(state.maxAttempts).toBe(6);
+    expect(state.remainingAttempts).toBe(6);
     expect(state.currentPuzzle?.word).toBe('COMUNHÃO');
     expect(state.maskedWord.length).toBe('COMUNHÃO'.length);
     expect(state.maskedWord.every((l) => !l.revealed)).toBe(true);
@@ -70,7 +71,7 @@ describe('useForcaViewModel — Hook da Arena do Jogo da Forca (UC05)', () => {
   it('deve transitar para playing ao acionar handleStartTurn (RF24)', async () => {
     const teamDs = new MemoryTeamDataSource();
     const catalogDs = new MemoryGameCatalogDataSource();
-    const useCases = new PgPlayUseCases(teamDs, catalogDs);
+    const useCases = new PgPlayUseCases(teamDs, catalogDs, new MemoryMatchSettingsDataSource());
     const harness = createHookHarness(useCases);
 
     await harness.mount();
@@ -80,7 +81,7 @@ describe('useForcaViewModel — Hook da Arena do Jogo da Forca (UC05)', () => {
     });
 
     expect(harness.getState().phase).toBe('playing');
-    expect(harness.getState().remainingAttempts).toBe(5);
+    expect(harness.getState().remainingAttempts).toBe(6);
 
     harness.unmount();
   });
@@ -88,7 +89,7 @@ describe('useForcaViewModel — Hook da Arena do Jogo da Forca (UC05)', () => {
   it('deve registrar acerto (Hit) e normalizar acentos ao adivinhar letra correta (RF15)', async () => {
     const teamDs = new MemoryTeamDataSource();
     const catalogDs = new MemoryGameCatalogDataSource();
-    const useCases = new PgPlayUseCases(teamDs, catalogDs);
+    const useCases = new PgPlayUseCases(teamDs, catalogDs, new MemoryMatchSettingsDataSource());
     const harness = createHookHarness(useCases);
 
     await harness.mount();
@@ -105,7 +106,7 @@ describe('useForcaViewModel — Hook da Arena do Jogo da Forca (UC05)', () => {
     expect(state.guessedLetters).toContain('C');
     expect(state.maskedWord[0].revealed).toBe(true);
     expect(state.maskedWord[0].original).toBe('C');
-    expect(state.remainingAttempts).toBe(5);
+    expect(state.remainingAttempts).toBe(6);
 
     await act(async () => {
       await harness.getActions().handleGuessLetter('A');
@@ -124,7 +125,7 @@ describe('useForcaViewModel — Hook da Arena do Jogo da Forca (UC05)', () => {
   it('deve registrar erro (Miss) e decrementar tentativa ao errar letra (RF15)', async () => {
     const teamDs = new MemoryTeamDataSource();
     const catalogDs = new MemoryGameCatalogDataSource();
-    const useCases = new PgPlayUseCases(teamDs, catalogDs);
+    const useCases = new PgPlayUseCases(teamDs, catalogDs, new MemoryMatchSettingsDataSource());
     const harness = createHookHarness(useCases);
 
     await harness.mount();
@@ -139,7 +140,7 @@ describe('useForcaViewModel — Hook da Arena do Jogo da Forca (UC05)', () => {
 
     const state = harness.getState();
     expect(state.guessedLetters).toContain('Z');
-    expect(state.remainingAttempts).toBe(4);
+    expect(state.remainingAttempts).toBe(5);
     expect(state.phase).toBe('playing');
 
     harness.unmount();
@@ -148,7 +149,7 @@ describe('useForcaViewModel — Hook da Arena do Jogo da Forca (UC05)', () => {
   it('deve declarar derrota e revelar a palavra quando tentativas esgotam (RF27)', async () => {
     const teamDs = new MemoryTeamDataSource();
     const catalogDs = new MemoryGameCatalogDataSource();
-    const useCases = new PgPlayUseCases(teamDs, catalogDs);
+    const useCases = new PgPlayUseCases(teamDs, catalogDs, new MemoryMatchSettingsDataSource());
     const harness = createHookHarness(useCases);
 
     await harness.mount();
@@ -157,7 +158,7 @@ describe('useForcaViewModel — Hook da Arena do Jogo da Forca (UC05)', () => {
       harness.getActions().handleStartTurn();
     });
 
-    const wrongLetters = ['Z', 'X', 'V', 'K', 'J'];
+    const wrongLetters = ['Z', 'X', 'V', 'K', 'J', 'W'];
     for (const char of wrongLetters) {
       await act(async () => {
         await harness.getActions().handleGuessLetter(char);
@@ -177,7 +178,7 @@ describe('useForcaViewModel — Hook da Arena do Jogo da Forca (UC05)', () => {
   it('deve somar +30 pts mais bônus de tentativas restantes na vitória (RF27)', async () => {
     const teamDs = new MemoryTeamDataSource();
     const catalogDs = new MemoryGameCatalogDataSource();
-    const useCases = new PgPlayUseCases(teamDs, catalogDs);
+    const useCases = new PgPlayUseCases(teamDs, catalogDs, new MemoryMatchSettingsDataSource());
     const harness = createHookHarness(useCases);
 
     await harness.mount();
@@ -197,12 +198,12 @@ describe('useForcaViewModel — Hook da Arena do Jogo da Forca (UC05)', () => {
     const state = harness.getState();
     expect(state.wordWon).toBe(true);
     expect(state.phase).toBe('word-result');
-    expect(state.remainingAttempts).toBe(5);
-    expect(state.bonusPoints).toBe(10); // 5 * 2
-    expect(state.earnedPoints).toBe(40); // 30 + 10
+    expect(state.remainingAttempts).toBe(6);
+    expect(state.bonusPoints).toBe(12); // 6 * 2
+    expect(state.earnedPoints).toBe(42); // 30 + 12
 
     const team = state.teams.find((t) => t.id === 'team-1');
-    expect(team?.score).toBe(40);
+    expect(team?.score).toBe(42);
 
     harness.unmount();
   });
@@ -210,7 +211,7 @@ describe('useForcaViewModel — Hook da Arena do Jogo da Forca (UC05)', () => {
   it('deve reiniciar a palavra com handleResetWord restaurando tentativas e palpites', async () => {
     const teamDs = new MemoryTeamDataSource();
     const catalogDs = new MemoryGameCatalogDataSource();
-    const useCases = new PgPlayUseCases(teamDs, catalogDs);
+    const useCases = new PgPlayUseCases(teamDs, catalogDs, new MemoryMatchSettingsDataSource());
     const harness = createHookHarness(useCases);
 
     await harness.mount();
@@ -226,7 +227,7 @@ describe('useForcaViewModel — Hook da Arena do Jogo da Forca (UC05)', () => {
       await harness.getActions().handleGuessLetter('Z');
     });
 
-    expect(harness.getState().remainingAttempts).toBe(4);
+    expect(harness.getState().remainingAttempts).toBe(5);
     expect(harness.getState().guessedLetters).toHaveLength(2);
 
     act(() => {
@@ -234,7 +235,7 @@ describe('useForcaViewModel — Hook da Arena do Jogo da Forca (UC05)', () => {
     });
 
     const resetState = harness.getState();
-    expect(resetState.remainingAttempts).toBe(5);
+    expect(resetState.remainingAttempts).toBe(6);
     expect(resetState.guessedLetters).toHaveLength(0);
     expect(resetState.maskedWord.every((l) => !l.revealed)).toBe(true);
 
@@ -244,13 +245,13 @@ describe('useForcaViewModel — Hook da Arena do Jogo da Forca (UC05)', () => {
   it('deve avançar equipes com handleNextWord e finalizar ao terminar rodadas (RF12)', async () => {
     const teamDs = new MemoryTeamDataSource();
     const catalogDs = new MemoryGameCatalogDataSource();
-    const useCases = new PgPlayUseCases(teamDs, catalogDs);
+    const useCases = new PgPlayUseCases(teamDs, catalogDs, new MemoryMatchSettingsDataSource());
     const harness = createHookHarness(useCases);
 
     await harness.mount();
 
-    act(() => {
-      harness.getActions().handleSelectRounds(1);
+    await act(async () => {
+      await harness.getActions().handleSelectRounds(1);
     });
 
     act(() => {
@@ -275,7 +276,7 @@ describe('useForcaViewModel — Hook da Arena do Jogo da Forca (UC05)', () => {
   it('deve gerenciar confirmação de saída com handleRequestExit e handleConfirmExit (RF11)', async () => {
     const teamDs = new MemoryTeamDataSource();
     const catalogDs = new MemoryGameCatalogDataSource();
-    const useCases = new PgPlayUseCases(teamDs, catalogDs);
+    const useCases = new PgPlayUseCases(teamDs, catalogDs, new MemoryMatchSettingsDataSource());
     const harness = createHookHarness(useCases);
 
     await harness.mount();
@@ -321,6 +322,21 @@ describe('useForcaViewModel — Hook da Arena do Jogo da Forca (UC05)', () => {
       getScoreboard: async () => [],
       awardBonusPoints: async () => [],
       resetScoreboard: async () => [],
+      getMatchSettings: async () => ({
+        mimica: { durationSeconds: 60, totalRounds: 3 },
+        quiz: { durationSeconds: 20, questionCount: 5 },
+        forca: { maxAttempts: 5, totalRounds: 3 },
+      }),
+      updateMimicaSettings: async () => {
+        throw new ValidationError('Erro simulado.');
+      },
+      updateQuizSettings: async () => {
+        throw new ValidationError('Erro simulado.');
+      },
+      updateForcaSettings: async () => {
+        throw new ValidationError('Erro simulado.');
+      },
+      planQuizMatch: () => ({ totalQuestions: 0, questionsPerTeam: 0, limitedByBank: false }),
     };
     const errorHarness = createHookHarness(failingUseCases);
     await errorHarness.mount();

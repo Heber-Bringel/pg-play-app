@@ -2,12 +2,13 @@ import { MemoryGameCatalogDataSource } from '@/infra/datasources/memoryGameCatal
 import { MemoryTeamDataSource } from '@/infra/datasources/memoryTeamDataSource';
 import { ValidationError } from '@/model/errors';
 import { PgPlayUseCases } from '@/usecase/pgPlayUseCases';
+import { MemoryMatchSettingsDataSource } from '@/infra/datasources/memoryMatchSettingsDataSource';
 
 describe('PgPlayUseCases — Gestão e Configuração de Equipes (UC01 / UC02)', () => {
   it('deve listar as 2 equipes sugeridas padrão no primeiro uso (RF05)', async () => {
     const teamDs = new MemoryTeamDataSource();
     const catalogDs = new MemoryGameCatalogDataSource();
-    const useCases = new PgPlayUseCases(teamDs, catalogDs);
+    const useCases = new PgPlayUseCases(teamDs, catalogDs, new MemoryMatchSettingsDataSource());
 
     const teams = await useCases.listTeams();
 
@@ -20,7 +21,7 @@ describe('PgPlayUseCases — Gestão e Configuração de Equipes (UC01 / UC02)',
   it('deve adicionar uma nova equipe com sucesso com pontuação inicial zero (RF06)', async () => {
     const teamDs = new MemoryTeamDataSource();
     const catalogDs = new MemoryGameCatalogDataSource();
-    const useCases = new PgPlayUseCases(teamDs, catalogDs);
+    const useCases = new PgPlayUseCases(teamDs, catalogDs, new MemoryMatchSettingsDataSource());
 
     const created = await useCases.addTeam('Guerreiros da Fé');
 
@@ -35,7 +36,7 @@ describe('PgPlayUseCases — Gestão e Configuração de Equipes (UC01 / UC02)',
   it('deve rejeitar nome de equipe com menos de 2 caracteres (RF06)', async () => {
     const teamDs = new MemoryTeamDataSource();
     const catalogDs = new MemoryGameCatalogDataSource();
-    const useCases = new PgPlayUseCases(teamDs, catalogDs);
+    const useCases = new PgPlayUseCases(teamDs, catalogDs, new MemoryMatchSettingsDataSource());
 
     await expect(useCases.addTeam('A')).rejects.toThrow(ValidationError);
     await expect(useCases.addTeam('  ')).rejects.toThrow(
@@ -46,7 +47,7 @@ describe('PgPlayUseCases — Gestão e Configuração de Equipes (UC01 / UC02)',
   it('deve rejeitar nome de equipe com mais de 20 caracteres (RF06)', async () => {
     const teamDs = new MemoryTeamDataSource();
     const catalogDs = new MemoryGameCatalogDataSource();
-    const useCases = new PgPlayUseCases(teamDs, catalogDs);
+    const useCases = new PgPlayUseCases(teamDs, catalogDs, new MemoryMatchSettingsDataSource());
 
     const longName = 'Equipe Com Nome Gigantesco Mais De Vinte';
     await expect(useCases.addTeam(longName)).rejects.toThrow(
@@ -57,7 +58,7 @@ describe('PgPlayUseCases — Gestão e Configuração de Equipes (UC01 / UC02)',
   it('deve rejeitar nome de equipe duplicado mesmo com variação de caixa e espaços (RF06)', async () => {
     const teamDs = new MemoryTeamDataSource();
     const catalogDs = new MemoryGameCatalogDataSource();
-    const useCases = new PgPlayUseCases(teamDs, catalogDs);
+    const useCases = new PgPlayUseCases(teamDs, catalogDs, new MemoryMatchSettingsDataSource());
 
     await expect(useCases.addTeam('  tribo de judá  ')).rejects.toThrow(
       'Já existe uma equipe cadastrada com este nome.'
@@ -67,7 +68,7 @@ describe('PgPlayUseCases — Gestão e Configuração de Equipes (UC01 / UC02)',
   it('deve impedir adicionar mais de 6 equipes por sessão', async () => {
     const teamDs = new MemoryTeamDataSource();
     const catalogDs = new MemoryGameCatalogDataSource();
-    const useCases = new PgPlayUseCases(teamDs, catalogDs);
+    const useCases = new PgPlayUseCases(teamDs, catalogDs, new MemoryMatchSettingsDataSource());
 
     // Já existem 2 equipes (Tribo de Judá e Leões da Fé)
     await useCases.addTeam('Equipe 3');
@@ -84,7 +85,7 @@ describe('PgPlayUseCases — Gestão e Configuração de Equipes (UC01 / UC02)',
   it('deve remover equipe existente e retornar lista atualizada (RF07)', async () => {
     const teamDs = new MemoryTeamDataSource();
     const catalogDs = new MemoryGameCatalogDataSource();
-    const useCases = new PgPlayUseCases(teamDs, catalogDs);
+    const useCases = new PgPlayUseCases(teamDs, catalogDs, new MemoryMatchSettingsDataSource());
 
     const initialTeams = await useCases.listTeams();
     const idToRemove = initialTeams[0].id;
@@ -98,7 +99,7 @@ describe('PgPlayUseCases — Gestão e Configuração de Equipes (UC01 / UC02)',
   it('deve lançar ValidationError ao tentar remover equipe inexistente', async () => {
     const teamDs = new MemoryTeamDataSource();
     const catalogDs = new MemoryGameCatalogDataSource();
-    const useCases = new PgPlayUseCases(teamDs, catalogDs);
+    const useCases = new PgPlayUseCases(teamDs, catalogDs, new MemoryMatchSettingsDataSource());
 
     await expect(useCases.removeTeam('id-fantasma')).rejects.toThrow(
       'Equipe não encontrada para remoção.'
@@ -108,7 +109,7 @@ describe('PgPlayUseCases — Gestão e Configuração de Equipes (UC01 / UC02)',
   it('deve lançar ValidationError ao passar identificador vazio para remoção', async () => {
     const teamDs = new MemoryTeamDataSource();
     const catalogDs = new MemoryGameCatalogDataSource();
-    const useCases = new PgPlayUseCases(teamDs, catalogDs);
+    const useCases = new PgPlayUseCases(teamDs, catalogDs, new MemoryMatchSettingsDataSource());
 
     await expect(useCases.removeTeam('   ')).rejects.toThrow(
       'Identificador da equipe é obrigatório para remoção.'

@@ -3,12 +3,14 @@ import { MemoryTeamDataSource } from '@/infra/datasources/memoryTeamDataSource';
 import type { GameModalityFilter } from '@/model/entities/minigame';
 import { ValidationError } from '@/model/errors';
 import { PgPlayUseCases } from '@/usecase/pgPlayUseCases';
+import { MemoryMatchSettingsDataSource } from '@/infra/datasources/memoryMatchSettingsDataSource';
 
 describe('PgPlayUseCases — Catálogo e Hub de Jogos (UC01)', () => {
   it('deve listar os 5 minigames oficiais do catálogo no Hub (RF01)', async () => {
     const useCases = new PgPlayUseCases(
       new MemoryTeamDataSource(),
-      new MemoryGameCatalogDataSource()
+      new MemoryGameCatalogDataSource(),
+      new MemoryMatchSettingsDataSource()
     );
 
     const games = await useCases.listMinigames();
@@ -30,7 +32,8 @@ describe('PgPlayUseCases — Catálogo e Hub de Jogos (UC01)', () => {
   it('deve filtrar minigames por texto ignorando acentos, espaços e caixa (RF03)', async () => {
     const useCases = new PgPlayUseCases(
       new MemoryTeamDataSource(),
-      new MemoryGameCatalogDataSource()
+      new MemoryGameCatalogDataSource(),
+      new MemoryMatchSettingsDataSource()
     );
 
     const mimicaResult = await useCases.listMinigames('  mimica ');
@@ -50,7 +53,8 @@ describe('PgPlayUseCases — Catálogo e Hub de Jogos (UC01)', () => {
   it('deve filtrar minigames por modalidade 1 Celular e Multi-Celular', async () => {
     const useCases = new PgPlayUseCases(
       new MemoryTeamDataSource(),
-      new MemoryGameCatalogDataSource()
+      new MemoryGameCatalogDataSource(),
+      new MemoryMatchSettingsDataSource()
     );
 
     const onePhone = await useCases.listMinigames('', '1 Celular');
@@ -65,7 +69,8 @@ describe('PgPlayUseCases — Catálogo e Hub de Jogos (UC01)', () => {
   it('deve combinar busca textual com filtro de modalidade e retornar vazio sem correspondência (RF03, RF04)', async () => {
     const useCases = new PgPlayUseCases(
       new MemoryTeamDataSource(),
-      new MemoryGameCatalogDataSource()
+      new MemoryGameCatalogDataSource(),
+      new MemoryMatchSettingsDataSource()
     );
 
     const combined = await useCases.listMinigames('biblico', '1 Celular');
@@ -83,7 +88,8 @@ describe('PgPlayUseCases — Catálogo e Hub de Jogos (UC01)', () => {
   it('deve lançar ValidationError se a modalidade de filtro for inválida', async () => {
     const useCases = new PgPlayUseCases(
       new MemoryTeamDataSource(),
-      new MemoryGameCatalogDataSource()
+      new MemoryGameCatalogDataSource(),
+      new MemoryMatchSettingsDataSource()
     );
 
     const invalidModality = 'Online' as GameModalityFilter;

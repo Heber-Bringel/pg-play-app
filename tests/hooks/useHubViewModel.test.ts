@@ -11,6 +11,7 @@ import {
   type HubState,
 } from '@/viewmodel/useHubViewModel';
 import { mockPush } from '../__mocks__/expo-router';
+import { MemoryMatchSettingsDataSource } from '@/infra/datasources/memoryMatchSettingsDataSource';
 
 function createHookHarness(useCases: IPgPlayUseCases) {
   let latestState!: HubState;
@@ -48,7 +49,7 @@ describe('useHubViewModel — Hook do Hub de Jogos (UC01)', () => {
   it('deve carregar os 5 minigames e a equipe líder ordenada ao montar (RF01, RF02)', async () => {
     const teamDs = new MemoryTeamDataSource();
     await teamDs.addScore('team-2', 40);
-    const useCases = new PgPlayUseCases(teamDs, new MemoryGameCatalogDataSource());
+    const useCases = new PgPlayUseCases(teamDs, new MemoryGameCatalogDataSource(), new MemoryMatchSettingsDataSource());
 
     const harness = createHookHarness(useCases);
     await harness.mount();
@@ -69,7 +70,8 @@ describe('useHubViewModel — Hook do Hub de Jogos (UC01)', () => {
   it('deve filtrar jogos em tempo real por busca e modalidade e limpar filtros (RF03, RF04)', async () => {
     const useCases = new PgPlayUseCases(
       new MemoryTeamDataSource(),
-      new MemoryGameCatalogDataSource()
+      new MemoryGameCatalogDataSource(),
+      new MemoryMatchSettingsDataSource()
     );
 
     const harness = createHookHarness(useCases);
@@ -100,7 +102,8 @@ describe('useHubViewModel — Hook do Hub de Jogos (UC01)', () => {
   it('deve navegar para minigames disponíveis, equipes e placar, ignorando jogos indisponíveis', async () => {
     const useCases = new PgPlayUseCases(
       new MemoryTeamDataSource(),
-      new MemoryGameCatalogDataSource()
+      new MemoryGameCatalogDataSource(),
+      new MemoryMatchSettingsDataSource()
     );
 
     const harness = createHookHarness(useCases);
@@ -141,7 +144,8 @@ describe('useHubViewModel — Hook do Hub de Jogos (UC01)', () => {
     let shouldFail = true;
     const baseUseCases = new PgPlayUseCases(
       new MemoryTeamDataSource(),
-      new MemoryGameCatalogDataSource()
+      new MemoryGameCatalogDataSource(),
+      new MemoryMatchSettingsDataSource()
     );
 
     const flakyUseCases: IPgPlayUseCases = {
@@ -164,6 +168,12 @@ describe('useHubViewModel — Hook do Hub de Jogos (UC01)', () => {
       getScoreboard: () => baseUseCases.getScoreboard(),
       awardBonusPoints: (id, pts) => baseUseCases.awardBonusPoints(id, pts),
       resetScoreboard: () => baseUseCases.resetScoreboard(),
+      getMatchSettings: () => baseUseCases.getMatchSettings(),
+      updateMimicaSettings: (s) => baseUseCases.updateMimicaSettings(s),
+      updateQuizSettings: (s) => baseUseCases.updateQuizSettings(s),
+      updateForcaSettings: (s) => baseUseCases.updateForcaSettings(s),
+      planQuizMatch: (count, available, teamCount) =>
+        baseUseCases.planQuizMatch(count, available, teamCount),
     };
 
     const harness = createHookHarness(flakyUseCases);

@@ -10,6 +10,7 @@ import {
   type QuizState,
 } from '@/viewmodel/useQuizViewModel';
 import { mockPush, mockReplace } from '../__mocks__/expo-router';
+import { MemoryMatchSettingsDataSource } from '@/infra/datasources/memoryMatchSettingsDataSource';
 
 function createHookHarness(useCases: IPgPlayUseCases) {
   let latestState!: QuizState;
@@ -48,7 +49,8 @@ describe('useQuizViewModel — Hook da Arena de Quiz Relâmpago (UC04)', () => {
   it('deve carregar dados, iniciar em pass-turn com 2 equipes e pergunta carregada (RF09)', async () => {
     const useCases = new PgPlayUseCases(
       new MemoryTeamDataSource(),
-      new MemoryGameCatalogDataSource()
+      new MemoryGameCatalogDataSource(),
+      new MemoryMatchSettingsDataSource()
     );
     const harness = createHookHarness(useCases);
     await harness.mount();
@@ -58,8 +60,34 @@ describe('useQuizViewModel — Hook da Arena de Quiz Relâmpago (UC04)', () => {
     expect(state.phase).toBe('pass-turn');
     expect(state.teams).toHaveLength(2);
     expect(state.currentTeam?.name).toBe('Tribo de Judá');
-    expect(state.totalQuestions).toBeGreaterThanOrEqual(10);
+    // Padrão da doc do jogo: 10 perguntas, 5 por equipe com 2 equipes.
+    expect(state.totalQuestions).toBe(10);
+    expect(state.questionsPerTeam).toBe(5);
+    expect(state.configuredQuestionCount).toBe(10);
+    expect(state.questionCountNotice).toBeNull();
     expect(state.currentQuestion).toBeDefined();
+
+    // 5 perguntas com 2 equipes viram 4 (2 por equipe) para a alternância ser justa.
+    await act(async () => {
+      await harness.getActions().handleSelectQuestionCount(5);
+    });
+    expect(harness.getState().totalQuestions).toBe(4);
+    expect(harness.getState().questionsPerTeam).toBe(2);
+    expect(harness.getState().questionCountNotice).toContain('2 por equipe');
+
+    // Toques seguidos não podem sobrescrever um ao outro (fila no UseCase).
+    await act(async () => {
+      await Promise.all([
+        harness.getActions().handleSelectDuration(30),
+        harness.getActions().handleSelectQuestionCount(10),
+      ]);
+    });
+    expect(harness.getState().turnDurationSeconds).toBe(30);
+    expect(harness.getState().configuredQuestionCount).toBe(10);
+    expect(harness.getState().totalQuestions).toBe(10);
+    expect(harness.getState().questionCountNotice).toBeNull();
+    const persisted = await useCases.getMatchSettings();
+    expect(persisted.quiz).toEqual({ durationSeconds: 30, questionCount: 10 });
 
     harness.unmount();
   });
@@ -67,7 +95,8 @@ describe('useQuizViewModel — Hook da Arena de Quiz Relâmpago (UC04)', () => {
   it('deve transitar para playing ao acionar handleStartTurn (RF09, RF10)', async () => {
     const useCases = new PgPlayUseCases(
       new MemoryTeamDataSource(),
-      new MemoryGameCatalogDataSource()
+      new MemoryGameCatalogDataSource(),
+      new MemoryMatchSettingsDataSource()
     );
     const harness = createHookHarness(useCases);
     await harness.mount();
@@ -87,7 +116,8 @@ describe('useQuizViewModel — Hook da Arena de Quiz Relâmpago (UC04)', () => {
   it('deve pontuar +10 pts ao selecionar a alternativa correta (RF14, RF26)', async () => {
     const useCases = new PgPlayUseCases(
       new MemoryTeamDataSource(),
-      new MemoryGameCatalogDataSource()
+      new MemoryGameCatalogDataSource(),
+      new MemoryMatchSettingsDataSource()
     );
     const harness = createHookHarness(useCases);
     await harness.mount();
@@ -115,7 +145,8 @@ describe('useQuizViewModel — Hook da Arena de Quiz Relâmpago (UC04)', () => {
   it('deve marcar erro e não pontuar ao selecionar alternativa incorreta (RF14, RF26)', async () => {
     const useCases = new PgPlayUseCases(
       new MemoryTeamDataSource(),
-      new MemoryGameCatalogDataSource()
+      new MemoryGameCatalogDataSource(),
+      new MemoryMatchSettingsDataSource()
     );
     const harness = createHookHarness(useCases);
     await harness.mount();
@@ -144,7 +175,8 @@ describe('useQuizViewModel — Hook da Arena de Quiz Relâmpago (UC04)', () => {
   it('deve bloquear novos toques após responder a pergunta', async () => {
     const useCases = new PgPlayUseCases(
       new MemoryTeamDataSource(),
-      new MemoryGameCatalogDataSource()
+      new MemoryGameCatalogDataSource(),
+      new MemoryMatchSettingsDataSource()
     );
     const harness = createHookHarness(useCases);
     await harness.mount();
@@ -172,7 +204,8 @@ describe('useQuizViewModel — Hook da Arena de Quiz Relâmpago (UC04)', () => {
   it('deve esgotar o tempo ao chamar handleTick repetidamente e marcar erro (RF10)', async () => {
     const useCases = new PgPlayUseCases(
       new MemoryTeamDataSource(),
-      new MemoryGameCatalogDataSource()
+      new MemoryGameCatalogDataSource(),
+      new MemoryMatchSettingsDataSource()
     );
     const harness = createHookHarness(useCases);
     await harness.mount();
@@ -199,7 +232,8 @@ describe('useQuizViewModel — Hook da Arena de Quiz Relâmpago (UC04)', () => {
   it('deve avançar para a próxima equipe e pergunta ao chamar handleNextQuestion', async () => {
     const useCases = new PgPlayUseCases(
       new MemoryTeamDataSource(),
-      new MemoryGameCatalogDataSource()
+      new MemoryGameCatalogDataSource(),
+      new MemoryMatchSettingsDataSource()
     );
     const harness = createHookHarness(useCases);
     await harness.mount();
@@ -242,7 +276,7 @@ describe('useQuizViewModel — Hook da Arena de Quiz Relâmpago (UC04)', () => {
     ];
 
     const catalogDs = new MemoryGameCatalogDataSource(undefined, undefined, customQuestions);
-    const useCases = new PgPlayUseCases(new MemoryTeamDataSource(), catalogDs);
+    const useCases = new PgPlayUseCases(new MemoryTeamDataSource(), catalogDs, new MemoryMatchSettingsDataSource());
     const harness = createHookHarness(useCases);
     await harness.mount();
 
@@ -266,7 +300,8 @@ describe('useQuizViewModel — Hook da Arena de Quiz Relâmpago (UC04)', () => {
   it('deve tratar saída segura e navegação ao placar (RF11, RF12)', async () => {
     const useCases = new PgPlayUseCases(
       new MemoryTeamDataSource(),
-      new MemoryGameCatalogDataSource()
+      new MemoryGameCatalogDataSource(),
+      new MemoryMatchSettingsDataSource()
     );
     const harness = createHookHarness(useCases);
     await harness.mount();
