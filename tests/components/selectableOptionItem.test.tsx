@@ -1,6 +1,6 @@
 import React from 'react';
 import renderer, { act } from 'react-test-renderer';
-import { StyleSheet } from 'react-native';
+import { Animated, StyleSheet } from 'react-native';
 import { SelectableOptionItem } from '@/view/components/selectableOptionItem';
 import { darkTokens, tokens } from '@/view/theme';
 
@@ -99,5 +99,22 @@ describe('SelectableOptionItem (design-system + UC07 #43)', () => {
     const focusedStyle = StyleSheet.flatten(pressable.props.style);
     expect(focusedStyle.borderColor).toBe(darkTokens.semantic.color.focus);
     expect(focusedStyle.borderWidth).toBe(darkTokens.semantic.border.focus);
+  });
+
+  it('não dispara Animated.spring quando reduceMotion=true (RNF09)', () => {
+    const springSpy = jest.spyOn(Animated, 'spring');
+    act(() => {
+      renderer.create(
+        <SelectableOptionItem
+          index={1}
+          label="Lucas"
+          selected
+          reduceMotion
+          onPress={jest.fn()}
+        />
+      );
+    });
+    expect(springSpy).not.toHaveBeenCalled();
+    springSpy.mockRestore();
   });
 });
