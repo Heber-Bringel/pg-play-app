@@ -64,7 +64,6 @@ export type VersiculoActions = {
   setAnswer: (blankIndex: number, text: string) => void;
   revealHint: () => void;
   submitAnswers: () => void;
-  acceptByLeader: (blankIndex: number) => void;
   nextTurn: () => Promise<void>;
   restartMatch: () => void;
   requestExit: () => void;
@@ -277,18 +276,6 @@ export function useVersiculoViewModel(
     evaluateCurrentTurn(currentPassage, answersByIndex, usedHint);
   }, [answersByIndex, currentPassage, evaluateCurrentTurn, phase, usedHint]);
 
-  const acceptByLeader = useCallback(
-    (blankIndex: number) => {
-      if (phase !== 'review') {
-        return;
-      }
-      setResults((prev) =>
-        useCase.acceptBlankByLeader(prev, blankIndex, usedHint)
-      );
-    },
-    [phase, useCase, usedHint]
-  );
-
   const nextTurn = useCallback(async () => {
     if (!currentTeam) {
       return;
@@ -410,7 +397,6 @@ export function useVersiculoViewModel(
       setAnswer,
       revealHint,
       submitAnswers,
-      acceptByLeader,
       nextTurn,
       restartMatch,
       requestExit,
