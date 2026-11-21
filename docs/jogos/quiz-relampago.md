@@ -25,6 +25,8 @@ Referências: `UC04` e `RF09`–`RF12`, `RF14` em [`requisitos-e-casos-de-uso-pg
 | Erro ou tempo esgotado | `0 pts` | fixo |
 | Pacotes de perguntas | Todos (misto) | seleção múltipla por chips (Bíblico, Conhecimentos Gerais, Geografia, História, Ciência, Música e Cinema, Esportes) |
 
+> **Alternância justa:** como as equipes se revezam a cada pergunta, o total jogado é arredondado para baixo até um múltiplo do número de equipes, para que todas respondam a mesma quantidade (ex.: `5` perguntas com `2` equipes viram `4`, `2` por equipe). O total também respeita o tamanho do pacote escolhido. Quando o total efetivo difere do escolhido, a seção *"Parâmetros da Partida"* mostra um aviso com o total e a quantidade por equipe.
+
 ---
 
 ## 3. Fluxo Completo da Partida
