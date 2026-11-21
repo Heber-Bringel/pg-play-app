@@ -166,7 +166,6 @@ describe('useHubViewModel — Hook do Hub de Jogos (UC01)', () => {
       listQuizQuestions: (c) => baseUseCases.listQuizQuestions(c),
       scoreQuizAnswer: (id, ok, pts) => baseUseCases.scoreQuizAnswer(id, ok, pts),
       getScoreboard: () => baseUseCases.getScoreboard(),
-      awardBonusPoints: (id, pts) => baseUseCases.awardBonusPoints(id, pts),
       resetScoreboard: () => baseUseCases.resetScoreboard(),
       getMatchSettings: () => baseUseCases.getMatchSettings(),
       updateMimicaSettings: (s) => baseUseCases.updateMimicaSettings(s),

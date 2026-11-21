@@ -320,7 +320,6 @@ describe('useForcaViewModel — Hook da Arena do Jogo da Forca (UC05)', () => {
       listQuizQuestions: async () => [],
       scoreQuizAnswer: async () => [],
       getScoreboard: async () => [],
-      awardBonusPoints: async () => [],
       resetScoreboard: async () => [],
       getMatchSettings: async () => ({
         mimica: { durationSeconds: 60, totalRounds: 3 },

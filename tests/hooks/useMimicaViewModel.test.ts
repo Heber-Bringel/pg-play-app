@@ -280,7 +280,6 @@ describe('useMimicaViewModel — Hook da Arena de Mímica Expressiva (UC03)', ()
       listQuizQuestions: async () => [],
       scoreQuizAnswer: async () => [],
       getScoreboard: async () => [],
-      awardBonusPoints: async () => [],
       resetScoreboard: async () => [],
       getMatchSettings: async () => ({
         mimica: { durationSeconds: 60, totalRounds: 3 },

@@ -5,13 +5,18 @@ import { ConfirmModal } from '@/view/components/confirmModal';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
 import { ExpressiveChip } from '@/view/components/expressiveChip';
 import { ExpressiveTextField } from '@/view/components/expressiveTextField';
-import { GameCard } from '@/view/components/gameCard';
 import { ExpressiveTimer } from '@/view/components/expressiveTimer';
-import { QuizOption } from '@/view/components/quizOption';
+import { GameCard } from '@/view/components/gameCard';
 import { LetterKey } from '@/view/components/letterKey';
+import { QuizOption } from '@/view/components/quizOption';
+import { setInputModalityForTest } from '@/view/components/useKeyboardFocus';
 import { tokens } from '@/view/theme';
 
-describe('Componentes do Sistema de Design PG Play Expressive (04-componentes/)', () => {
+describe('Componentes do Sistema de Design PG Play Expressive v1.1.0 (04-componentes/)', () => {
+  beforeEach(() => {
+    setInputModalityForTest('keyboard');
+  });
+
   describe('1. ExpressiveButton (botao.md)', () => {
     it('renderiza variante primária padrão com tokens corretos e ícone opcional', () => {
       const onPress = jest.fn();
@@ -35,7 +40,7 @@ describe('Componentes do Sistema de Design PG Play Expressive (04-componentes/)'
       expect(icon.props.name).toBe('play');
     });
 
-    it('aplica Shape Morphing (9999dp -> 16dp) ao pressionar e anel de foco ao focar', () => {
+    it('não exibe anel de foco ao tocar/clicar, mas exibe anel duplo M3 ao focar por teclado', () => {
       const onPress = jest.fn();
       let tree!: renderer.ReactTestRenderer;
       act(() => {
@@ -44,6 +49,7 @@ describe('Componentes do Sistema de Design PG Play Expressive (04-componentes/)'
 
       const pressable = tree.root.findByType('Pressable' as any);
 
+      // Toque/clique: shape morphing ativo, mas SEM anel de foco
       act(() => {
         pressable.props.onPressIn();
         pressable.props.onFocus();
@@ -52,27 +58,40 @@ describe('Componentes do Sistema de Design PG Play Expressive (04-componentes/)'
       const pressedStyle = StyleSheet.flatten(pressable.props.style);
       expect(pressedStyle.borderRadius).toBe(tokens.component.button.radiusPressed);
       expect(pressedStyle.backgroundColor).toBe(tokens.component.button.bgPressed);
-      expect(pressedStyle.borderColor).toBe(tokens.semantic.color.focus);
+      expect(pressedStyle.outlineColor).toBeUndefined();
+      expect(pressedStyle.borderColor).toBe(tokens.semantic.color.transparent);
 
       act(() => {
         pressable.props.onPressOut();
         pressable.props.onBlur();
         pressable.props.onPress();
       });
-
-      const releasedStyle = StyleSheet.flatten(pressable.props.style);
-      expect(releasedStyle.borderRadius).toBe(tokens.component.button.radius);
-      expect(releasedStyle.borderColor).toBe(tokens.semantic.color.transparent);
       expect(onPress).toHaveBeenCalledTimes(1);
+
+      // Navegação por teclado: anel externo de foco ativo
+      act(() => {
+        pressable.props.onFocus();
+      });
+      const keyboardFocusedStyle = StyleSheet.flatten(pressable.props.style);
+      expect(keyboardFocusedStyle.outlineColor).toBe(tokens.semantic.color.focus);
+      expect(keyboardFocusedStyle.outlineWidth).toBe(tokens.semantic.border.focus);
+      expect(keyboardFocusedStyle.outlineOffset).toBe(tokens.semantic.space.xs);
+
+      act(() => {
+        pressable.props.onBlur();
+      });
+      const blurredStyle = StyleSheet.flatten(pressable.props.style);
+      expect(blurredStyle.outlineColor).toBeUndefined();
     });
 
-    it('renderiza todas as variantes (primaryJumbo, successJumbo, secondary, tonal, outlined e disabled)', () => {
+    it('renderiza todas as variantes incluindo text, icon e disabled', () => {
       const variants = [
         { variant: 'primaryJumbo' as const, bg: tokens.component.button.bg, height: 64 },
         { variant: 'successJumbo' as const, bg: tokens.semantic.color.success, height: 64 },
         { variant: 'secondary' as const, bg: tokens.semantic.color.secondary, height: 48 },
         { variant: 'tonal' as const, bg: tokens.semantic.color.actionContainer, height: 48 },
         { variant: 'outlined' as const, bg: tokens.semantic.color.surfaceContainer, height: 48 },
+        { variant: 'text' as const, bg: tokens.semantic.color.transparent, height: 48 },
       ];
 
       for (const item of variants) {
@@ -87,6 +106,28 @@ describe('Componentes do Sistema de Design PG Play Expressive (04-componentes/)'
         expect(flatStyle.backgroundColor).toBe(item.bg);
         expect(flatStyle.minHeight).toBe(item.height);
       }
+
+      let iconTree!: renderer.ReactTestRenderer;
+      act(() => {
+        iconTree = renderer.create(
+          <ExpressiveButton
+            variant="icon"
+            tone="danger"
+            icon="trash-can-outline"
+            accessibilityLabel="Remover item"
+            onPress={jest.fn()}
+          />
+        );
+      });
+      const iconPressable = iconTree.root.findByType('Pressable' as any);
+      const iconStyle = StyleSheet.flatten(iconPressable.props.style);
+      expect(iconStyle.width).toBe(48);
+      expect(iconStyle.height).toBe(48);
+      expect(iconPressable.props.accessibilityLabel).toBe('Remover item');
+      expect(iconTree.root.findAllByType('Text' as any)).toHaveLength(0);
+      expect(
+        iconTree.root.findByType('MaterialCommunityIcons' as any).props.color
+      ).toBe(tokens.semantic.color.error);
 
       let disabledTree!: renderer.ReactTestRenderer;
       act(() => {
@@ -123,16 +164,11 @@ describe('Componentes do Sistema de Design PG Play Expressive (04-componentes/)'
       expect(textInput.props.maxLength).toBe(20);
 
       const labels = tree.root.findAllByType('Text' as any);
-      const counterText = labels.find((l) => l.props.children === 'Leões'.length + '/20');
-      expect(counterText).toBeDefined();
-
-      const helper = labels.find((l) => l.props.children === 'Máximo 20 caracteres');
-      expect(helper).toBeDefined();
+      expect(labels.some((l) => l.props.children === '5/20')).toBe(true);
+      expect(labels.some((l) => l.props.children === 'Máximo 20 caracteres')).toBe(true);
 
       act(() => {
         textInput.props.onFocus();
-      });
-      act(() => {
         textInput.props.onChangeText('Leões do Vale');
       });
       expect(onChangeText).toHaveBeenCalledWith('Leões do Vale');
@@ -153,18 +189,17 @@ describe('Componentes do Sistema de Design PG Play Expressive (04-componentes/)'
       });
 
       const icon = tree.root.findByProps({ name: 'alert-circle' } as any);
-      expect(icon).toBeDefined();
       expect(icon.props.color).toBe(tokens.semantic.color.error);
-
-      const errorLabel = tree.root
-        .findAllByType('Text' as any)
-        .find((l) => l.props.children === 'O nome deve conter pelo menos 2 letras.');
-      expect(errorLabel).toBeDefined();
+      expect(
+        tree.root
+          .findAllByType('Text' as any)
+          .some((l) => l.props.children === 'O nome deve conter pelo menos 2 letras.')
+      ).toBe(true);
     });
   });
 
   describe('3. GameCard (card-de-jogo.md)', () => {
-    it('renderiza card interativo com emblema, tag de jogadores e mudança de forma ao pressionar', () => {
+    it('renderiza card interativo com ExpressiveTag e mudança de forma ao pressionar', () => {
       const onPress = jest.fn();
       let tree!: renderer.ReactTestRenderer;
       act(() => {
@@ -190,7 +225,7 @@ describe('Componentes do Sistema de Design PG Play Expressive (04-componentes/)'
       });
       const pressedStyle = StyleSheet.flatten(pressable.props.style);
       expect(pressedStyle.borderRadius).toBe(tokens.semantic.radius.md);
-      expect(pressedStyle.borderColor).toBe(tokens.semantic.color.action);
+      expect(pressedStyle.borderColor).toBe(tokens.component.card.borderPressed);
 
       act(() => {
         pressable.props.onPressOut();
@@ -201,7 +236,7 @@ describe('Componentes do Sistema de Design PG Play Expressive (04-componentes/)'
       expect(releasedStyle.elevation).toBe(tokens.semantic.elevation.card);
     });
 
-    it('renderiza variante pódio líder com borda destacada e sem clique quando não fornecido onPress', () => {
+    it('renderiza variante pódio líder com card.borderLeader (contraste >= 4,70:1)', () => {
       let tree!: renderer.ReactTestRenderer;
       act(() => {
         tree = renderer.create(
@@ -220,7 +255,7 @@ describe('Componentes do Sistema de Design PG Play Expressive (04-componentes/)'
       const flatStyle = StyleSheet.flatten(pressable.props.style);
       expect(pressable.props.accessibilityRole).toBe('summary');
       expect(flatStyle.backgroundColor).toBe(tokens.semantic.color.disabledBg);
-      expect(flatStyle.borderColor).toBe(tokens.semantic.color.highlight);
+      expect(flatStyle.borderColor).toBe(tokens.component.card.borderLeader);
       expect(flatStyle.elevation).toBe(tokens.semantic.elevation.none);
     });
   });
@@ -236,8 +271,8 @@ describe('Componentes do Sistema de Design PG Play Expressive (04-componentes/)'
       const flatStyle = StyleSheet.flatten(container.props.style);
       expect(container.props.accessibilityRole).toBe('timer');
       expect(container.props.accessibilityLiveRegion).toBe('none');
-      expect(flatStyle.backgroundColor).toBe(tokens.component.timer.bgNormal);
-      expect(flatStyle.borderRadius).toBe(tokens.component.timer.radiusNormal);
+      expect(flatStyle.backgroundColor).toBe(tokens.component.timer.bg.normal);
+      expect(flatStyle.borderRadius).toBe(tokens.component.timer.radius.normal);
 
       const icon = tree.root.findByType('MaterialCommunityIcons' as any);
       expect(icon.props.name).toBe('timer-outline');
@@ -252,8 +287,8 @@ describe('Componentes do Sistema de Design PG Play Expressive (04-componentes/)'
       const container = tree.root.findByType('View' as any);
       const flatStyle = StyleSheet.flatten(container.props.style);
       expect(container.props.accessibilityLiveRegion).toBe('assertive');
-      expect(flatStyle.backgroundColor).toBe(tokens.component.timer.bgCritical);
-      expect(flatStyle.borderRadius).toBe(tokens.component.timer.radiusCritical);
+      expect(flatStyle.backgroundColor).toBe(tokens.component.timer.bg.critical);
+      expect(flatStyle.borderRadius).toBe(tokens.component.timer.radius.critical);
       expect(flatStyle.transform).toBeDefined();
 
       const icon = tree.root.findByType('MaterialCommunityIcons' as any);
@@ -306,22 +341,24 @@ describe('Componentes do Sistema de Design PG Play Expressive (04-componentes/)'
         const flatStyle = StyleSheet.flatten(pressable.props.style);
 
         if (status === 'correct') {
-          expect(flatStyle.backgroundColor).toBe(tokens.component.quiz.optionCorrectBg);
+          expect(flatStyle.backgroundColor).toBe(tokens.component.quiz.option.correct.bg);
           expect(flatStyle.borderRadius).toBe(tokens.semantic.radius.md);
           expect(pressable.props.accessibilityLabel).toContain('resposta correta');
-          const icon = tree.root.findByType('MaterialCommunityIcons' as any);
-          expect(icon.props.name).toBe('check-circle');
+          expect(tree.root.findByType('MaterialCommunityIcons' as any).props.name).toBe(
+            'check-circle'
+          );
         } else if (status === 'wrong') {
-          expect(flatStyle.backgroundColor).toBe(tokens.component.quiz.optionWrongBg);
+          expect(flatStyle.backgroundColor).toBe(tokens.component.quiz.option.wrong.bg);
           expect(flatStyle.borderRadius).toBe(tokens.semantic.radius.sm);
           expect(pressable.props.accessibilityLabel).toContain('resposta incorreta');
-          const icon = tree.root.findByType('MaterialCommunityIcons' as any);
-          expect(icon.props.name).toBe('close-circle');
+          expect(tree.root.findByType('MaterialCommunityIcons' as any).props.name).toBe(
+            'close-circle'
+          );
         } else if (status === 'selected') {
           expect(flatStyle.backgroundColor).toBe(tokens.semantic.color.actionContainer);
-          expect(flatStyle.borderColor).toBe(tokens.semantic.color.action);
+          expect(flatStyle.borderColor).toBe(tokens.component.option.border.selected);
         } else {
-          expect(flatStyle.backgroundColor).toBe(tokens.component.quiz.optionBg);
+          expect(flatStyle.backgroundColor).toBe(tokens.component.quiz.option.bg);
         }
       }
     });
@@ -372,8 +409,8 @@ describe('Componentes do Sistema de Design PG Play Expressive (04-componentes/)'
     });
   });
 
-  describe('7. ConfirmModal (Modal de Confirmação de Saída)', () => {
-    it('não renderiza conteúdo quando visible=false e dispara onCancel/onConfirm quando visible=true', () => {
+  describe('7. ConfirmModal (modal-confirmacao.md)', () => {
+    it('suporta modo 2 botões (confirmação) e não renderiza quando visible=false', () => {
       const onCancel = jest.fn();
       const onConfirm = jest.fn();
 
@@ -418,10 +455,40 @@ describe('Componentes do Sistema de Design PG Play Expressive (04-componentes/)'
       expect(onCancel).toHaveBeenCalledTimes(1);
       expect(onConfirm).toHaveBeenCalledTimes(1);
     });
+
+    it('suporta modo 1 botão (encerramento/aviso sem cancelar, #54)', () => {
+      const onConfirm = jest.fn();
+      let tree!: renderer.ReactTestRenderer;
+      act(() => {
+        tree = renderer.create(
+          <ConfirmModal
+            visible
+            title="Encontro encerrado"
+            description="Obrigado por compartilhar. Nenhum nome foi salvo."
+            confirmLabel="Voltar ao Hub"
+            onConfirm={onConfirm}
+          />
+        );
+      });
+
+      const pressables = tree.root.findAllByType('Pressable' as any);
+      expect(pressables).toHaveLength(1);
+      expect(pressables[0].props.accessibilityLabel).toBe('Voltar ao Hub');
+
+      const liveRegion = tree.root.findByProps({
+        accessibilityLiveRegion: 'polite',
+      } as any);
+      expect(liveRegion).toBeDefined();
+
+      act(() => {
+        pressables[0].props.onPress();
+      });
+      expect(onConfirm).toHaveBeenCalledTimes(1);
+    });
   });
 
-  describe('8. ExpressiveChip (Chip Semântico com Foco e Shape Morphing)', () => {
-    it('garante alvo mínimo de 48dp, foco visível e shape morphing ao pressionar', () => {
+  describe('8. ExpressiveChip (chip.md)', () => {
+    it('mantém borda de estado no clique sem anel coral e exibe anel duplo apenas por teclado', () => {
       const onPress = jest.fn();
       let tree!: renderer.ReactTestRenderer;
       act(() => {
@@ -439,21 +506,33 @@ describe('Componentes do Sistema de Design PG Play Expressive (04-componentes/)'
       const initialStyle = StyleSheet.flatten(pressable.props.style);
       expect(initialStyle.minHeight).toBe(48);
       expect(initialStyle.backgroundColor).toBe(tokens.semantic.color.success);
-      expect(initialStyle.borderRadius).toBe(tokens.semantic.radius.full);
+      expect(initialStyle.borderColor).toBe(tokens.component.chip.border.success);
+      expect(initialStyle.borderRadius).toBe(tokens.component.chip.radius);
 
+      // Toque/clique não exibe anel de foco e preserva borda de sucesso
       act(() => {
         pressable.props.onPressIn();
         pressable.props.onFocus();
       });
-      const activeStyle = StyleSheet.flatten(pressable.props.style);
-      expect(activeStyle.borderRadius).toBe(tokens.semantic.radius.md);
-      expect(activeStyle.borderColor).toBe(tokens.semantic.color.focus);
-      expect(activeStyle.borderWidth).toBe(tokens.semantic.border.focus);
+      const pressedStyle = StyleSheet.flatten(pressable.props.style);
+      expect(pressedStyle.borderRadius).toBe(tokens.component.chip.radiusPressed);
+      expect(pressedStyle.borderColor).toBe(tokens.component.chip.border.success);
+      expect(pressedStyle.outlineColor).toBeUndefined();
 
       act(() => {
+        pressable.props.onPressOut();
         pressable.props.onPress();
       });
       expect(onPress).toHaveBeenCalledTimes(1);
+
+      // Foco por teclado exibe anel duplo externo preservando a borda verde do estado
+      act(() => {
+        pressable.props.onFocus();
+      });
+      const keyboardStyle = StyleSheet.flatten(pressable.props.style);
+      expect(keyboardStyle.borderColor).toBe(tokens.component.chip.border.success);
+      expect(keyboardStyle.outlineColor).toBe(tokens.component.chip.border.focus);
+      expect(keyboardStyle.outlineWidth).toBe(tokens.semantic.border.focus);
     });
   });
 });

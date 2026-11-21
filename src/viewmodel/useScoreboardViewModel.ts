@@ -15,7 +15,6 @@ export type ScoreboardState = {
 };
 
 export type ScoreboardActions = {
-  handleAwardBonus: (teamId: string, bonusPoints?: number) => Promise<void>;
   handleRequestReset: () => void;
   handleCancelReset: () => void;
   handleResetScoreboard: () => Promise<void>;
@@ -53,23 +52,6 @@ export function useScoreboardViewModel(
   useEffect(() => {
     void loadScoreboard();
   }, [loadScoreboard]);
-
-  const handleAwardBonus = useCallback(
-    async (teamId: string, bonusPoints?: number) => {
-      try {
-        setError(null);
-        const updatedTeams = await useCase.awardBonusPoints(teamId, bonusPoints);
-        setTeams(updatedTeams);
-      } catch (err: unknown) {
-        if (err instanceof DomainError) {
-          setError(err.message);
-        } else {
-          setError('Não foi possível conceder o bônus para a equipe.');
-        }
-      }
-    },
-    [useCase]
-  );
 
   const handleRequestReset = useCallback(() => {
     setConfirmingReset(true);
@@ -121,7 +103,6 @@ export function useScoreboardViewModel(
   };
 
   const actions: ScoreboardActions = {
-    handleAwardBonus,
     handleRequestReset,
     handleCancelReset,
     handleResetScoreboard,

@@ -42,7 +42,6 @@ function normalizeSearchText(value: string): string {
 
 export const DEFAULT_MIMICA_HIT_POINTS = 20;
 export const DEFAULT_MIMICA_SKIP_PENALTY = 5;
-export const DEFAULT_SCOREBOARD_BONUS_POINTS = 10;
 export const DEFAULT_FORCA_WIN_POINTS = 30;
 export const DEFAULT_FORCA_ATTEMPT_BONUS = 2;
 export const DEFAULT_QUIZ_CORRECT_POINTS = 10;
@@ -309,28 +308,6 @@ export class PgPlayUseCases implements IPgPlayUseCases {
   async getScoreboard(): Promise<Team[]> {
     const teams = await this.teamDataSource.listTeams();
     return [...teams].sort((a, b) => b.score - a.score);
-  }
-
-  async awardBonusPoints(
-    teamId: string,
-    bonusPoints: number = DEFAULT_SCOREBOARD_BONUS_POINTS
-  ): Promise<Team[]> {
-    const cleanTeamId = teamId.trim();
-    if (!cleanTeamId) {
-      throw new ValidationError('Identificador da equipe é obrigatório para conceder bônus.');
-    }
-    if (bonusPoints <= 0) {
-      throw new ValidationError('A pontuação de bônus deve ser maior que zero.');
-    }
-
-    const teams = await this.teamDataSource.listTeams();
-    const target = teams.find((team) => team.id === cleanTeamId);
-    if (!target) {
-      throw new ValidationError('Equipe não encontrada na sessão atual.');
-    }
-
-    await this.teamDataSource.addScore(cleanTeamId, bonusPoints);
-    return this.getScoreboard();
   }
 
   async resetScoreboard(): Promise<Team[]> {
