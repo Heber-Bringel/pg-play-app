@@ -6,7 +6,7 @@ import type {
   AdedonhaSubmission,
   AdedonhaTallyVerdict,
 } from '@/model/entities/multiplayerSession';
-import { ValidationError } from '@/model/errors';
+import { ConflictError, ValidationError } from '@/model/errors';
 import type { IMultiplayerRoomService } from '@/model/services/iMultiplayerRoomService';
 import type { IAdedonhaUseCases } from '@/usecase/iAdedonhaUseCases';
 
@@ -212,7 +212,14 @@ export class AdedonhaUseCases implements IAdedonhaUseCases {
     }
 
     await this.roomService.spinAlphabetRoulette(room.id, chosenLetter);
-    return this.roomService.openRoundFilling(room.id);
+    try {
+      return await this.roomService.openRoundFilling(room.id, 'roulette');
+    } catch (err: unknown) {
+      if (err instanceof ConflictError) {
+        return this.roomService.getAdedonhaRoom(room.id);
+      }
+      throw err;
+    }
   }
 
   validateAnswerInitial(
@@ -400,7 +407,14 @@ export class AdedonhaUseCases implements IAdedonhaUseCases {
   }
 
   async advanceToNextRound(roomId: string): Promise<AdedonhaRoom> {
-    return this.roomService.advanceToNextRound(roomId);
+    try {
+      return await this.roomService.advanceToNextRound(roomId);
+    } catch (err: unknown) {
+      if (err instanceof ConflictError) {
+        return this.roomService.getAdedonhaRoom(roomId);
+      }
+      throw err;
+    }
   }
 
   getAwards(room: AdedonhaRoom): AdedonhaAwards {

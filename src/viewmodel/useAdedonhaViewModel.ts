@@ -79,6 +79,7 @@ export function useAdedonhaViewModel(
   const [secondsRemaining, setSecondsRemaining] = useState<number>(90);
   const lastRoundKeyRef = useRef<string | null>(null);
   const lastStopKeyRef = useRef<string | null>(null);
+  const lastVersionRef = useRef<number>(-1);
   const answersRef = useRef<Record<string, string>>({});
   answersRef.current = answers;
 
@@ -159,6 +160,10 @@ export function useAdedonhaViewModel(
   useEffect(() => {
     if (!room?.id) return;
     const unsubscribe = useCase.subscribeToRoom(room.id, (updatedRoom) => {
+      if (updatedRoom.version < lastVersionRef.current) {
+        return;
+      }
+      lastVersionRef.current = updatedRoom.version;
       const roundKey = `${updatedRoom.currentRound}:${updatedRoom.currentLetter ?? ''}`;
       if (
         updatedRoom.phase === 'filling' &&
@@ -186,12 +191,22 @@ export function useAdedonhaViewModel(
     if (!room) return;
     try {
       setError(null);
-      const updated = await useCase.finishRoundByTimeOut(
-        room.id,
-        activePlayerId,
-        answers
-      );
-      setRoom(updated);
+      const isHost = !currentPlayerId || room.hostId === currentPlayerId;
+      if (isHost) {
+        const updated = await useCase.finishRoundByTimeOut(
+          room.id,
+          activePlayerId,
+          answers
+        );
+        setRoom(updated);
+      } else {
+        const updated = await useCase.submitAnswers(
+          room.id,
+          activePlayerId,
+          answers
+        );
+        setRoom(updated);
+      }
     } catch (err: unknown) {
       if (err instanceof DomainError) {
         setError(err.message);
