@@ -49,7 +49,6 @@ O sistema exibe **"Vez da Equipe [Nome]"**, **"Passagem N de M"** e o botão **"
    - lacuna correta: `color.success`, raio `16 dp`, ícone `check-circle`;
    - lacuna errada ou vazia: `color.error`, raio `8 dp`, ícone `close-circle`, com a **palavra correta revelada** ao lado.
 2. O versículo completo aparece com a **referência e a tradução**.
-3. **Validação do Líder:** se a equipe usou um sinônimo ou outra tradução (ex.: *"único"* em vez de *"unigênito"*), o Líder pode tocar em **"Aceitar mesmo assim"** na lacuna. A decisão final é humana, como na apuração da Adedonha.
 
 ### ➡️ Fase 4 — Próxima Equipe e Encerramento (RF37)
 1. **"Próxima Passagem"** passa a vez à equipe seguinte.
@@ -85,5 +84,4 @@ O sistema exibe **"Vez da Equipe [Nome]"**, **"Passagem N de M"** e o botão **"
 - **Dado** uma resposta com acento ou maiúscula diferente, **então** ela é aceita como correta.
 - **Dado** que a equipe usou "Ver Dica", **então** cada lacuna correta vale `+5 pts`.
 - **Dado** que o tempo zerou, **então** as respostas são conferidas como estão e as corretas são reveladas.
-- **Dado** uma resposta marcada como errada, **quando** o Líder toca em "Aceitar mesmo assim", **então** a lacuna passa a contar como correta.
 - **Dado** o fim da passagem, **então** o versículo completo aparece com a referência e a tradução.
