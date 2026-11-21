@@ -25,7 +25,6 @@ export type VerseBlankResult = {
   userAnswer: string;
   expectedAnswer: string;
   isCorrect: boolean;
-  acceptedByLeader: boolean;
   pointsAwarded: number;
 };
 
