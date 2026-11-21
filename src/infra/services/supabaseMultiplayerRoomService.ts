@@ -1168,6 +1168,7 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
       code: string;
       host_id: string;
       phase: string;
+      version?: number;
       current_round: number;
       phase_ends_at?: string | null;
       narrator_caption?: string | null;

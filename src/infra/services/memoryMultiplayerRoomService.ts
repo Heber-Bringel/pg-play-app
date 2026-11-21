@@ -1,5 +1,6 @@
 import type {
   AdedonhaConfig,
+  AdedonhaPhase,
   AdedonhaPlayer,
   AdedonhaRoom,
   AdedonhaSubmission,
