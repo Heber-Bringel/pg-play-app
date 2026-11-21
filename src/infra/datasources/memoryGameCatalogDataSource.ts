@@ -71,6 +71,18 @@ const DEFAULT_MINIGAMES: Minigame[] = [
     themes: ['misterio', 'blefe', 'narrador', 'multiplayer', 'papeis', 'sala'],
     available: true,
   },
+  {
+    id: 'versiculo',
+    title: 'Complete o Versículo',
+    description:
+      'Leia a passagem bíblica com lacunas e complete as palavras-chave antes do tempo acabar.',
+    modality: '1 Celular',
+    playersTag: '1 Celular · 2+ equipes',
+    route: '/versiculo',
+    icon: 'book-open-variant',
+    themes: ['biblico', 'versiculo', 'memoria', 'equipes', 'passa-celular'],
+    available: true,
+  },
 ];
 
 const DEFAULT_MIMICA_CARDS: MimicaCard[] = [
