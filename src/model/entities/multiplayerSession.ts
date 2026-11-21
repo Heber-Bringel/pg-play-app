@@ -60,6 +60,8 @@ export type AdedonhaRoom = {
   gameType: 'adedonha';
   hostId: string;
   phase: AdedonhaPhase;
+  version: number;
+  phaseEndsAt: string | null;
   config: AdedonhaConfig;
   currentRound: number;
   currentLetter: string | null;
@@ -161,6 +163,7 @@ export type CidadeDormeRoom = {
   gameType: 'cidade-dorme';
   hostId: string;
   phase: CidadeDormePhase;
+  version: number;
   config: CidadeDormeConfig;
   currentRound: number;
   phaseEndsAt: string | null;
