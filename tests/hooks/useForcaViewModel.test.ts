@@ -319,7 +319,6 @@ describe('useForcaViewModel — Hook da Arena do Jogo da Forca (UC05)', () => {
       listQuizQuestions: async () => [],
       scoreQuizAnswer: async () => [],
       getScoreboard: async () => [],
-      awardBonusPoints: async () => [],
       resetScoreboard: async () => [],
     };
     const errorHarness = createHookHarness(failingUseCases);
