@@ -392,15 +392,6 @@ const VersiculoScreen = () => {
                   <Text allowFontScaling style={styles.expectedText}>
                     {`Palavra correta: ${item.expectedAnswer}`}
                   </Text>
-
-                  {!item.isCorrect ? (
-                    <ExpressiveButton
-                      label="Aceitar mesmo assim"
-                      icon="hand-okay"
-                      variant="secondary"
-                      onPress={() => actions.acceptByLeader(item.index)}
-                    />
-                  ) : null}
                 </View>
               ))}
             </View>
