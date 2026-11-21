@@ -3,10 +3,18 @@ import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-n
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ConfirmModal } from '@/view/components/confirmModal';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
+import { ExpressiveChip } from '@/view/components/expressiveChip';
 import { GameCard } from '@/view/components/gameCard';
 import { LetterKey } from '@/view/components/letterKey';
-import { border, color, font, icon, key, radius, space } from '@/view/theme';
-import { normalizeChar, useForcaViewModel } from '@/viewmodel/useForcaViewModel';
+import { border, card, color, font, icon, key, radius, space } from '@/view/theme';
+import {
+  normalizeChar,
+  useForcaViewModel,
+  type ForcaAttemptsOption,
+} from '@/viewmodel/useForcaViewModel';
+
+const FORCA_ATTEMPTS: ForcaAttemptsOption[] = [5, 6, 8];
+const FORCA_ROUNDS = [1, 2, 3, 4, 5];
 
 const ALL_LETTERS = [
   'A', 'B', 'C', 'D', 'E', 'F',
@@ -139,6 +147,41 @@ export const ForcaScreen = () => {
             playersTag="Passa-Celular"
             icon="account-group"
           />
+          {state.currentRound === 1 && state.currentTeamIndex === 0 ? (
+            <View style={styles.settingsCard}>
+              <Text allowFontScaling style={styles.settingsTitle}>
+                Parâmetros da Partida
+              </Text>
+              <Text allowFontScaling style={styles.settingsLabel}>
+                Tentativas por palavra
+              </Text>
+              <View style={styles.chipRow}>
+                {FORCA_ATTEMPTS.map((attempts) => (
+                  <ExpressiveChip
+                    key={attempts}
+                    label={`${attempts}`}
+                    accessibilityLabel={`${attempts} tentativas por palavra`}
+                    selected={state.maxAttempts === attempts}
+                    onPress={() => actions.handleSelectAttempts(attempts)}
+                  />
+                ))}
+              </View>
+              <Text allowFontScaling style={styles.settingsLabel}>
+                Palavras por equipe
+              </Text>
+              <View style={styles.chipRow}>
+                {FORCA_ROUNDS.map((rounds) => (
+                  <ExpressiveChip
+                    key={rounds}
+                    label={`${rounds}`}
+                    accessibilityLabel={`${rounds} ${rounds === 1 ? 'palavra' : 'palavras'} por equipe`}
+                    selected={state.totalRounds === rounds}
+                    onPress={() => actions.handleSelectRounds(rounds)}
+                  />
+                ))}
+              </View>
+            </View>
+          ) : null}
           <View style={styles.actionBlock}>
             <ExpressiveButton
               label="Estou Pronto!"
@@ -400,6 +443,33 @@ const styles = StyleSheet.create({
     lineHeight: font.title.lineHeight,
     color: color.onSurface,
     textAlign: 'center',
+  },
+  settingsCard: {
+    backgroundColor: card.bg,
+    borderColor: card.border,
+    borderWidth: border.thin,
+    borderRadius: card.radius,
+    padding: card.padding,
+    gap: space.sm,
+  },
+  settingsTitle: {
+    fontFamily: font.subtitle.family,
+    fontSize: font.subtitle.size,
+    fontWeight: font.subtitle.weight,
+    lineHeight: font.subtitle.lineHeight,
+    color: color.onSurface,
+  },
+  settingsLabel: {
+    fontFamily: font.label.family,
+    fontSize: font.label.size,
+    fontWeight: font.label.weight,
+    lineHeight: font.label.lineHeight,
+    color: color.onSurfaceMuted,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: space.sm,
   },
 });
 

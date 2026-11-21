@@ -8,11 +8,19 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ConfirmModal } from '@/view/components/confirmModal';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
+import { ExpressiveChip } from '@/view/components/expressiveChip';
 import { ExpressiveTimer } from '@/view/components/expressiveTimer';
 import { GameCard } from '@/view/components/gameCard';
 import { QuizOption } from '@/view/components/quizOption';
-import { border, color, font, icon, radius, space } from '@/view/theme';
-import { useQuizViewModel } from '@/viewmodel/useQuizViewModel';
+import { border, card, color, font, icon, radius, space } from '@/view/theme';
+import {
+  useQuizViewModel,
+  type QuizDurationOption,
+  type QuizQuestionCountOption,
+} from '@/viewmodel/useQuizViewModel';
+
+const QUIZ_DURATIONS: QuizDurationOption[] = [15, 20, 30];
+const QUIZ_QUESTION_COUNTS: QuizQuestionCountOption[] = [5, 10, 15];
 
 export const QuizScreen = () => {
   const [state, actions] = useQuizViewModel();
@@ -151,9 +159,55 @@ export const QuizScreen = () => {
               </Text>
             </View>
 
+            {state.currentQuestionIndex === 0 ? (
+              <View style={styles.settingsCard}>
+                <Text allowFontScaling style={styles.settingsTitle}>
+                  Parâmetros da Partida
+                </Text>
+                <Text allowFontScaling style={styles.settingsLabel}>
+                  Tempo por pergunta
+                </Text>
+                <View style={styles.chipRow}>
+                  {QUIZ_DURATIONS.map((seconds) => (
+                    <ExpressiveChip
+                      key={seconds}
+                      label={`${seconds}s`}
+                      accessibilityLabel={`${seconds} segundos por pergunta`}
+                      selected={state.turnDurationSeconds === seconds}
+                      onPress={() => actions.handleSelectDuration(seconds)}
+                    />
+                  ))}
+                </View>
+                <Text allowFontScaling style={styles.settingsLabel}>
+                  Quantidade de perguntas
+                </Text>
+                <View style={styles.chipRow}>
+                  {QUIZ_QUESTION_COUNTS.map((count) => (
+                    <ExpressiveChip
+                      key={count}
+                      label={`${count}`}
+                      accessibilityLabel={`${count} perguntas`}
+                      selected={state.configuredQuestionCount === count}
+                      onPress={() => actions.handleSelectQuestionCount(count)}
+                    />
+                  ))}
+                </View>
+                {state.questionCountNotice ? (
+                  <Text
+                    allowFontScaling
+                    accessibilityLiveRegion="polite"
+                    style={styles.settingsNotice}
+                  >
+                    {state.questionCountNotice}
+                  </Text>
+                ) : null}
+              </View>
+            ) : null}
+
             <Text allowFontScaling style={styles.instructionNotice}>
-              A equipe terá 20 segundos para responder após tocar no botão abaixo.
+              {`A equipe terá ${state.turnDurationSeconds} segundos para responder após tocar no botão abaixo.`}
             </Text>
+
           </View>
         </ScrollView>
 
@@ -499,6 +553,41 @@ const styles = StyleSheet.create({
     backgroundColor: color.highlight,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  settingsCard: {
+    width: '100%',
+    backgroundColor: card.bg,
+    borderColor: card.border,
+    borderWidth: border.thin,
+    borderRadius: card.radius,
+    padding: card.padding,
+    gap: space.sm,
+  },
+  settingsTitle: {
+    fontFamily: font.subtitle.family,
+    fontSize: font.subtitle.size,
+    fontWeight: font.subtitle.weight,
+    lineHeight: font.subtitle.lineHeight,
+    color: color.onSurface,
+  },
+  settingsLabel: {
+    fontFamily: font.label.family,
+    fontSize: font.label.size,
+    fontWeight: font.label.weight,
+    lineHeight: font.label.lineHeight,
+    color: color.onSurfaceMuted,
+  },
+  settingsNotice: {
+    fontFamily: font.body.family,
+    fontSize: font.body.size,
+    fontWeight: font.body.weight,
+    lineHeight: font.body.lineHeight,
+    color: color.onSurfaceMuted,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: space.sm,
   },
 });
 
