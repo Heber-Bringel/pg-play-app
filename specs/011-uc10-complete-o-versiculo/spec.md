@@ -33,8 +33,7 @@ A **Equipe da Vez** pode solicitar uma dica durante a passagem (reduzindo a pont
 **Cenários de Aceitação (Dado / Quando / Então):**
 
 1. **Dado** uma passagem em andamento, **Quando** a equipe toca em *"Ver Dica"*, **Então** o sistema revela a primeira letra e o número de letras de cada lacuna (ex.: `U _ _ _ _ _ _ _ _`) e marca a dica como usada, fazendo cada lacuna correta valer `+5 pts` em vez de `+10 pts` (`RF35`, `RF37`).
-2. **Dado** que o cronômetro atinge `00:00`, **Quando** o tempo se esgota, **Então** o sistema confere automaticamente as respostas digitadas até o momento, marca lacunas erradas ou vazias com cor + forma + ícone (`close-circle`) e revela as palavras corretas, o versículo completo, a referência e a tradução (`RF36`).
-3. **Dado** uma lacuna marcada como errada na conferência, **Quando** o Líder toca em *"Aceitar mesmo assim"* (sinônimo ou outra tradução bíblica), **Então** a lacuna passa a contar como correta (`+10 pts` sem dica ou `+5 pts` com dica) e atualiza a pontuação da equipe na rodada (`RF36`).
+2. **Dado** que o cronômetro atinge `00:00`, **Quando** o tempo se esgota, **Então** o sistema confere automaticamente as respostas marcadas até o momento, marca lacunas erradas ou vazias com cor + forma + ícone (`close-circle`) e revela as palavras corretas, o versículo completo, a referência e a tradução (`RF36`).
 
 ---
 
@@ -64,7 +63,7 @@ O **Líder do PG** pode escolher quais pacotes bíblicos entram no sorteio (`RF2
 
 ### Requisitos Funcionais (`RF`)
 - **`RF-01` (`RF35`)**: Exibir passagem bíblica famosa com `1` a `2` lacunas numeradas em palavras-chave, mantendo a referência oculta durante a resposta, com um `ExpressiveTextField` por lacuna e botão *"Ver Dica"*.
-- **`RF-02` (`RF36`)**: Conferir respostas ao tocar em *"Conferir"* ou ao zerar o tempo, normalizando acentos e caixa alta/baixa, revelando palavras corretas, versículo completo, referência e tradução, e permitindo ao Líder *"Aceitar mesmo assim"* em lacunas marcadas como erradas.
+- **`RF-02` (`RF36`)**: Conferir respostas ao tocar em *"Conferir"* ou ao zerar o tempo, normalizando acentos e caixa alta/baixa, revelando palavras corretas, versículo completo, referência e tradução.
 - **`RF-03` (`RF37`)**: Pontuar `+10 pts` por lacuna correta sem dica, `+5 pts` com dica e `0 pts` para errada/vazia, somando os pontos da equipe ao placar geral ao fim da partida (`RF31`).
 - **`RF-04` (`RF28`, `RF29`, `RF30`)**: Permitir seleção múltipla de pacotes (*Salmos e Provérbios*, *Evangelhos*, *Cartas de Paulo*, *Antigo Testamento*), tempo (`30s`, `45s`, `60s`) e passagens por equipe (`1` a `5`), garantindo sorteio sem repetição e lançando `ValidationError` no `UseCase` para configurações inválidas.
 - **`RF-05` (`RF01`, `RF09`, `RF10`, `RF11`)**: Ativar o card **Complete o Versículo** no catálogo do Hub (`/versiculo`), manter passagem de turno entre equipes, alerta crítico nos últimos `10s` do `ExpressiveTimer` e saída segura com `ConfirmModal`.
@@ -73,7 +72,7 @@ O **Líder do PG** pode escolher quais pacotes bíblicos entram no sorteio (`RF2
 - **`VersePack`**: `'Salmos e Provérbios' | 'Evangelhos' | 'Cartas de Paulo' | 'Antigo Testamento'`
 - **`VerseBlank`**: `{ index: number; answer: string }`
 - **`VersePassage`**: `{ id: string; pack: VersePack; textWithBlanks: string; fullText: string; blanks: VerseBlank[]; reference: string; translation: string }`
-- **`VerseBlankResult`**: `{ index: number; userAnswer: string; expectedAnswer: string; isCorrect: boolean; acceptedByLeader: boolean; pointsAwarded: number }`
+- **`VerseBlankResult`**: `{ index: number; userAnswer: string; expectedAnswer: string; isCorrect: boolean; pointsAwarded: number }`
 - **`MinigameRoute` / `MinigameIconName` (`minigame.ts`)**: incluir rota `'/versiculo'` e ícone `'book-open-variant'`.
 
 ---

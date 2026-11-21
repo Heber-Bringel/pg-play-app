@@ -9,7 +9,7 @@
 
 ## 1. Resumo Técnico
 
-A funcionalidade **Complete o Versículo (`UC10`)** será implementada seguindo estritamente as 7 camadas do MVVM Sofisticado: o domínio puro definirá `VersePassage` e `IVerseDataSource` em `src/model/`; na infraestrutura, `HelloAoVerseDataSource` consumirá a **Free Use Bible API** (`https://bible.helloao.org/api/por_blj/{book}/{chapter}.simple.json`, tradução *Bíblia Livre* em pt-BR) para montar dinamicamente as passagens famosas com lacunas, com fallback automático para `MemoryVerseDataSource` em modo offline/testes; `VersiculoUseCases` concentrará o sorteio sem repetição, a normalização de respostas (ignorando acentos e maiúsculas), o cálculo de pontuação (`+10`/`+5`/`0`), o aceite manual do Líder e o envio dos pontos ao `ITeamDataSource`; o `src/di/container.ts` injetará as dependências; e `useVersiculoViewModel.ts` + `src/view/versiculo.tsx` + rota fina `src/app/versiculo.tsx` entregarão a experiência acessível com componentes do `PG Play Expressive`.
+A funcionalidade **Complete o Versículo (`UC10`)** será implementada seguindo estritamente as 7 camadas do MVVM Sofisticado: o domínio puro definirá `VersePassage` e `IVerseDataSource` em `src/model/`; na infraestrutura, `HelloAoVerseDataSource` consumirá a **Free Use Bible API** (`https://bible.helloao.org/api/por_blj/{book}/{chapter}.simple.json`, tradução *Bíblia Livre* em pt-BR) para montar dinamicamente as passagens famosas com lacunas, com fallback automático para `MemoryVerseDataSource` em modo offline/testes; `VersiculoUseCases` concentrará o sorteio sem repetição, a normalização de respostas (ignorando acentos e maiúsculas), o cálculo de pontuação (`+10`/`+5`/`0`) e o envio dos pontos ao `ITeamDataSource`; o `src/di/container.ts` injetará as dependências; e `useVersiculoViewModel.ts` + `src/view/versiculo.tsx` + rota fina `src/app/versiculo.tsx` entregarão a experiência acessível com componentes do `PG Play Expressive`.
 
 ---
 
@@ -75,7 +75,7 @@ src/
   - Validação de criação de sessão (`ValidationError` com < 2 equipes, 0 pacotes, tempo/passagens inválidos).
   - Sorteio sem repetição respeitando os pacotes selecionados.
   - Normalização de resposta ignorando acentos e maiúsculas/minúsculas.
-  - Cálculo de pontuação (`+10` sem dica, `+5` com dica, `0` errada/vazia) e reavaliação com *"Aceitar mesmo assim"*.
+  - Cálculo de pontuação (`+10` sem dica, `+5` com dica, `0` errada/vazia).
   - Registro dos pontos no `MemoryTeamDataSource` ao encerrar a partida.
 - **Testes de Hook (`tests/hooks/useVersiculoViewModel.test.ts`)**:
   - Transições `[state, actions]` (`setup` -> `handoff` -> `playing` -> `review` -> `finished`), temporizador, dica, conferência, aceite do líder e navegação.

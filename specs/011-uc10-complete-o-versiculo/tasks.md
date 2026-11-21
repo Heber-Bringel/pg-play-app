@@ -28,7 +28,7 @@
 *Objetivo: Concentrar regras de negócio, validações e pontuação no UseCase e conectá-lo no container.*
 
 - [x] **T006** Definir contrato `export interface IVersiculoUseCases` em `src/usecase/iVersiculoUseCases.ts`
-- [x] **T007** Implementar `export class VersiculoUseCases implements IVersiculoUseCases` em `src/usecase/versiculoUseCases.ts` (validação com `ValidationError`, sorteio sem repetição, dica com primeira letra + contagem, normalização sem acentos/maiúsculas, pontuação `+10`/`+5`/`0`, aceite manual do líder e persistência dos pontos no `ITeamDataSource`)
+- [x] **T007** Implementar `export class VersiculoUseCases implements IVersiculoUseCases` em `src/usecase/versiculoUseCases.ts` (validação com `ValidationError`, sorteio sem repetição, dica 50/50, normalização sem acentos/maiúsculas, pontuação `+10`/`+5`/`0` e persistência dos pontos no `ITeamDataSource`)
 - [x] **T008** Registrar `HelloAoVerseDataSource` (com fallback `MemoryVerseDataSource`) e exportar `versiculoUseCases` em `src/di/container.ts`
 
 ---
