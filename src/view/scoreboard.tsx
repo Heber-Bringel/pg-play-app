@@ -64,6 +64,14 @@ export const ScoreboardScreen = () => {
     );
   }
 
+  const teamsCountLabel =
+    state.teams.length === 1 ? '1 equipe' : `${state.teams.length} equipes`;
+  const summaryStatus = state.leaderTeam
+    ? `Líder: ${state.leaderTeam.name}`
+    : state.totalPoints > 0
+      ? 'Empate na liderança'
+      : 'Jogue uma dinâmica para começar a pontuar';
+
   return (
     <ScrollView
       style={styles.screen}
@@ -87,31 +95,29 @@ export const ScoreboardScreen = () => {
           </Text>
         </View>
 
+        <View style={styles.summaryCard}>
+          <Text allowFontScaling style={styles.summaryMetric}>
+            {`${teamsCountLabel} · ${state.totalPoints} pts no encontro`}
+          </Text>
+          <Text allowFontScaling style={styles.summaryStatus}>
+            {summaryStatus}
+          </Text>
+        </View>
+
         <View style={styles.list}>
           {state.teams.map((team, index) => {
             const isLeader = state.leaderTeam?.id === team.id;
             return (
-              <View key={team.id} style={styles.teamItem}>
-                <GameCard
-                  title={`${index + 1}º · ${team.name} — ${team.score} pts`}
-                  playersTag={isLeader ? 'Líder' : `${index + 1}º lugar`}
-                  description={
-                    isLeader ? 'Equipe na liderança do encontro' : 'Equipe participante'
-                  }
-                  icon={isLeader ? 'crown' : 'account-group'}
-                  highlightLeader={isLeader}
-                />
-                <View style={styles.bonusButtonWrapper}>
-                  <ExpressiveButton
-                    label={`Bônus +10 pts · ${team.name}`}
-                    variant="tonal"
-                    icon="star-circle"
-                    onPress={() => {
-                      void actions.handleAwardBonus(team.id);
-                    }}
-                  />
-                </View>
-              </View>
+              <GameCard
+                key={team.id}
+                title={`${index + 1}º · ${team.name} — ${team.score} pts`}
+                playersTag={isLeader ? 'Líder' : `${index + 1}º lugar`}
+                description={
+                  isLeader ? 'Equipe na liderança do encontro' : 'Equipe participante'
+                }
+                icon={isLeader ? 'crown' : 'account-group'}
+                highlightLeader={isLeader}
+              />
             );
           })}
         </View>
@@ -128,6 +134,7 @@ export const ScoreboardScreen = () => {
           label="Zerar Placar do PG"
           icon="refresh"
           variant="outlined"
+          disabled={state.totalPoints === 0}
           onPress={actions.handleRequestReset}
         />
       </View>
@@ -159,16 +166,39 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.lg,
     paddingTop: space.lg,
     paddingBottom: space['3xl'],
-    justifyContent: 'space-between',
     gap: space.xl,
   },
   topSection: {
-    gap: space.xl,
+    gap: space.lg,
   },
   header: {
     alignItems: 'center',
     gap: space.sm,
     paddingVertical: space.sm,
+  },
+  summaryCard: {
+    backgroundColor: color.surfaceVariant,
+    borderRadius: radius.lg,
+    paddingVertical: space.md,
+    paddingHorizontal: space.lg,
+    alignItems: 'center',
+    gap: space.xs,
+  },
+  summaryMetric: {
+    fontFamily: font.label.family,
+    fontSize: font.label.size,
+    fontWeight: font.label.weight,
+    lineHeight: font.label.lineHeight,
+    color: color.onSurface,
+    textAlign: 'center',
+  },
+  summaryStatus: {
+    fontFamily: font.body.family,
+    fontSize: font.body.size,
+    fontWeight: font.body.weight,
+    lineHeight: font.body.lineHeight,
+    color: color.onSurfaceMuted,
+    textAlign: 'center',
   },
   trophyBadge: {
     width: space['3xl'],
@@ -197,12 +227,6 @@ const styles = StyleSheet.create({
   },
   list: {
     gap: space.lg,
-  },
-  teamItem: {
-    gap: space.sm,
-  },
-  bonusButtonWrapper: {
-    paddingHorizontal: space.xs,
   },
   actions: {
     gap: space.md,
