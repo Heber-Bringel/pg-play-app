@@ -5,9 +5,13 @@ import { tokens } from '@/view/theme';
 
 export type ExpressiveTimerProps = {
   secondsRemaining: number;
+  reduceMotion?: boolean;
 };
 
-export const ExpressiveTimer = ({ secondsRemaining }: ExpressiveTimerProps) => {
+export const ExpressiveTimer = ({
+  secondsRemaining,
+  reduceMotion = false,
+}: ExpressiveTimerProps) => {
   const safeSeconds = Math.max(0, Math.floor(secondsRemaining));
   const isCritical = safeSeconds <= 10;
   const isExpired = safeSeconds === 0;
@@ -18,7 +22,7 @@ export const ExpressiveTimer = ({ secondsRemaining }: ExpressiveTimerProps) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    if (isCritical && !isExpired) {
+    if (isCritical && !isExpired && !reduceMotion) {
       scaleAnim.setValue(1.08);
       Animated.spring(scaleAnim, {
         toValue: 1,
@@ -29,7 +33,7 @@ export const ExpressiveTimer = ({ secondsRemaining }: ExpressiveTimerProps) => {
     } else {
       scaleAnim.setValue(1);
     }
-  }, [safeSeconds, isCritical, isExpired, scaleAnim]);
+  }, [safeSeconds, isCritical, isExpired, reduceMotion, scaleAnim]);
 
   return (
     <Animated.View

@@ -1,5 +1,5 @@
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type {
   CidadeDormePlayer,
@@ -17,6 +17,7 @@ export type CidadeDormeNightSectionProps = {
   selectedNightTargetId: string | null;
   hasSubmittedNightAction?: boolean;
   secondsRemaining: number;
+  reduceMotion?: boolean;
   onSelectNightTarget: (targetPlayerId: string) => void;
   onConfirmAssassinTarget: () => Promise<void>;
   onConfirmAngelProtection: () => Promise<void>;
@@ -29,11 +30,26 @@ export const CidadeDormeNightSection = ({
   selectedNightTargetId,
   hasSubmittedNightAction = false,
   secondsRemaining,
+  reduceMotion = false,
   onSelectNightTarget,
   onConfirmAssassinTarget,
   onConfirmAngelProtection,
   onConfirmDetectiveInvestigation,
 }: CidadeDormeNightSectionProps) => {
+  const narratorFadeAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (reduceMotion) {
+      narratorFadeAnim.setValue(1);
+      return;
+    }
+    narratorFadeAnim.setValue(0.6);
+    Animated.timing(narratorFadeAnim, {
+      toValue: 1,
+      duration: darkTokens.semantic.motion.duration.short,
+      useNativeDriver: true,
+    }).start();
+  }, [narratorFadeAnim, reduceMotion, room.narratorCaption]);
   const alivePlayers = room.players.filter((p) => p.isAlive);
   const isAlive = Boolean(currentPlayer?.isAlive);
   const myRole = currentPlayer?.role ?? null;
@@ -103,8 +119,8 @@ export const CidadeDormeNightSection = ({
 
   return (
     <View style={styles.container}>
-      <View
-        style={styles.narratorBanner}
+      <Animated.View
+        style={[styles.narratorBanner, { opacity: narratorFadeAnim }]}
         accessibilityRole="text"
         accessibilityLabel={`Legenda do Narrador: ${room.narratorCaption}`}
       >
@@ -121,7 +137,7 @@ export const CidadeDormeNightSection = ({
             {room.narratorCaption}
           </Text>
         </View>
-      </View>
+      </Animated.View>
 
       {!isAlive && (
         <View
@@ -141,7 +157,10 @@ export const CidadeDormeNightSection = ({
       )}
 
       <View style={styles.timerRow}>
-        <ExpressiveTimer secondsRemaining={secondsRemaining} />
+        <ExpressiveTimer
+          secondsRemaining={secondsRemaining}
+          reduceMotion={reduceMotion}
+        />
       </View>
 
       <GameCard
@@ -260,6 +279,7 @@ export const CidadeDormeNightSection = ({
                 index={index + 1}
                 label={player.nickname}
                 themeMode="dark"
+                reduceMotion={reduceMotion}
                 selected={selectedNightTargetId === player.id}
                 onPress={() => onSelectNightTarget(player.id)}
               />

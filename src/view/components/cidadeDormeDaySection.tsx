@@ -1,5 +1,5 @@
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type {
   CidadeDormePlayer,
@@ -19,12 +19,23 @@ const ROLE_LABELS: Record<CidadeDormeRole, string> = {
   detetive: 'Detetive',
 };
 
+const ROLE_ICONS: Record<
+  CidadeDormeRole,
+  keyof typeof MaterialCommunityIcons.glyphMap
+> = {
+  assassino: 'incognito',
+  anjo: 'shield-check',
+  detetive: 'magnify',
+  cidadao: 'home-account',
+};
+
 export type CidadeDormeDaySectionProps = {
   room: CidadeDormeRoom;
   currentPlayer: CidadeDormePlayer | null;
   isCurrentPlayerHost: boolean;
   selectedVoteTargetId: string | null;
   secondsRemaining: number;
+  reduceMotion?: boolean;
   onStartVotingPhase: () => Promise<void>;
   onSelectVoteTarget: (targetIdOrSkip: string) => void;
   onCastVote: () => Promise<void>;
@@ -40,6 +51,7 @@ export const CidadeDormeDaySection = ({
   isCurrentPlayerHost,
   selectedVoteTargetId,
   secondsRemaining,
+  reduceMotion = false,
   onStartVotingPhase,
   onSelectVoteTarget,
   onCastVote,
@@ -48,6 +60,72 @@ export const CidadeDormeDaySection = ({
   onRestartMatch,
   onExitArena,
 }: CidadeDormeDaySectionProps) => {
+  const narratorFadeAnim = useRef(new Animated.Value(1)).current;
+  const dawnSlideAnim = useRef(new Animated.Value(0)).current;
+  const dawnOpacityAnim = useRef(new Animated.Value(1)).current;
+  const voteBarAnim = useRef(new Animated.Value(1)).current;
+  const winnerScaleAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (reduceMotion) {
+      narratorFadeAnim.setValue(1);
+      return;
+    }
+    narratorFadeAnim.setValue(0.6);
+    Animated.timing(narratorFadeAnim, {
+      toValue: 1,
+      duration: tokens.semantic.motion.duration.short,
+      useNativeDriver: true,
+    }).start();
+  }, [narratorFadeAnim, reduceMotion, room.narratorCaption]);
+
+  useEffect(() => {
+    if (room.phase !== 'day_debate' || reduceMotion) {
+      dawnSlideAnim.setValue(0);
+      dawnOpacityAnim.setValue(1);
+      return;
+    }
+    dawnSlideAnim.setValue(-16);
+    dawnOpacityAnim.setValue(0);
+    Animated.spring(dawnSlideAnim, {
+      toValue: 0,
+      damping: tokens.semantic.motion.spring.spatial.damping,
+      stiffness: tokens.semantic.motion.spring.spatial.stiffness,
+      useNativeDriver: true,
+    }).start();
+    Animated.timing(dawnOpacityAnim, {
+      toValue: 1,
+      duration: tokens.semantic.motion.duration.medium,
+      useNativeDriver: true,
+    }).start();
+  }, [dawnOpacityAnim, dawnSlideAnim, reduceMotion, room.currentRound, room.phase]);
+
+  useEffect(() => {
+    if (room.phase !== 'vote_result' || reduceMotion) {
+      voteBarAnim.setValue(1);
+      return;
+    }
+    voteBarAnim.setValue(0);
+    Animated.timing(voteBarAnim, {
+      toValue: 1,
+      duration: tokens.semantic.motion.duration.medium,
+      useNativeDriver: false,
+    }).start();
+  }, [reduceMotion, room.currentRound, room.phase, voteBarAnim]);
+
+  useEffect(() => {
+    if (room.phase !== 'finished' || reduceMotion) {
+      winnerScaleAnim.setValue(1);
+      return;
+    }
+    winnerScaleAnim.setValue(0.92);
+    Animated.spring(winnerScaleAnim, {
+      toValue: 1,
+      damping: tokens.semantic.motion.spring.spatial.damping,
+      stiffness: tokens.semantic.motion.spring.spatial.stiffness,
+      useNativeDriver: true,
+    }).start();
+  }, [reduceMotion, room.phase, winnerScaleAnim]);
   const alivePlayers = room.players.filter((p) => p.isAlive);
   const votingCandidates = alivePlayers.filter(
     (player) => !currentPlayer || player.id !== currentPlayer.id
@@ -78,8 +156,8 @@ export const CidadeDormeDaySection = ({
 
   return (
     <View style={styles.container}>
-      <View
-        style={styles.narratorBanner}
+      <Animated.View
+        style={[styles.narratorBanner, { opacity: narratorFadeAnim }]}
         accessibilityRole="text"
         accessibilityLabel={`Legenda do Narrador: ${room.narratorCaption}`}
       >
@@ -96,7 +174,7 @@ export const CidadeDormeDaySection = ({
             {room.narratorCaption}
           </Text>
         </View>
-      </View>
+      </Animated.View>
 
       {!isAlive && room.phase !== 'finished' && (
         <View
@@ -118,15 +196,42 @@ export const CidadeDormeDaySection = ({
       {room.phase === 'day_debate' && (
         <View style={styles.sectionBlock}>
           <View style={styles.timerRow}>
-            <ExpressiveTimer secondsRemaining={secondsRemaining} />
+            <ExpressiveTimer
+              secondsRemaining={secondsRemaining}
+              reduceMotion={reduceMotion}
+            />
           </View>
 
-          <GameCard
-            title={dawnTitle}
-            description={dawnDescription}
-            playersTag={`${alivePlayers.length} vivos · Debate Presencial`}
-            icon="weather-sunny"
-          />
+          <Animated.View
+            style={{
+              opacity: dawnOpacityAnim,
+              transform: [{ translateY: dawnSlideAnim }],
+            }}
+          >
+            <GameCard
+              title={dawnTitle}
+              description={dawnDescription}
+              playersTag={`${alivePlayers.length} vivos · Debate Presencial`}
+              icon="weather-sunny"
+            />
+          </Animated.View>
+
+          {room.dawnReport?.savedByAngel && (
+            <View
+              style={styles.angelShieldBanner}
+              accessibilityRole="text"
+              accessibilityLabel="Proteção do Anjo: ninguém foi eliminado"
+            >
+              <MaterialCommunityIcons
+                name="shield-check"
+                size={tokens.semantic.icon.md}
+                color={tokens.semantic.color.onSuccess}
+              />
+              <Text allowFontScaling style={styles.angelShieldText}>
+                Escudo do Anjo ativado: ninguém foi eliminado nesta noite!
+              </Text>
+            </View>
+          )}
 
           <View style={styles.cardBox}>
             <Text allowFontScaling style={styles.sectionTitle}>
@@ -182,6 +287,7 @@ export const CidadeDormeDaySection = ({
                     key={player.id}
                     index={index + 1}
                     label={player.nickname}
+                    reduceMotion={reduceMotion}
                     selected={selectedVoteTargetId === player.id}
                     onPress={() => onSelectVoteTarget(player.id)}
                   />
@@ -191,6 +297,7 @@ export const CidadeDormeDaySection = ({
                   icon="hand-back-left-outline"
                   label="Abster-se / Pular Voto"
                   accessibilityLabel="Abster-se / Pular Voto"
+                  reduceMotion={reduceMotion}
                   selected={selectedVoteTargetId === 'skip'}
                   onPress={() => onSelectVoteTarget('skip')}
                 />
@@ -250,6 +357,91 @@ export const CidadeDormeDaySection = ({
             icon="weather-night"
           />
 
+          {room.voteReport && (
+            <View style={styles.cardBox}>
+              <Text allowFontScaling style={styles.sectionTitle}>
+                Contagem de Votos (Sigilo Preservado)
+              </Text>
+              <View style={styles.tallyBarsList}>
+                {Object.entries(room.voteReport.voteCounts).map(
+                  ([playerId, count]) => {
+                    const target = room.players.find((p) => p.id === playerId);
+                    const maxCount = Math.max(
+                      1,
+                      room.voteReport?.skipCount ?? 0,
+                      ...Object.values(room.voteReport?.voteCounts ?? {})
+                    );
+                    const pct = Math.round((count / maxCount) * 100);
+                    const barWidth = voteBarAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['0%', `${pct}%`],
+                    });
+                    return (
+                      <View
+                        key={playerId}
+                        style={styles.tallyBarItem}
+                        accessibilityRole="text"
+                        accessibilityLabel={`${target?.nickname ?? 'Jogador'}: ${count} voto(s)`}
+                      >
+                        <View style={styles.tallyBarHeader}>
+                          <Text allowFontScaling style={styles.tallyBarName}>
+                            {target?.nickname ?? 'Jogador'}
+                          </Text>
+                          <Text allowFontScaling style={styles.tallyBarCount}>
+                            {`${count} voto(s)`}
+                          </Text>
+                        </View>
+                        <View style={styles.tallyTrack}>
+                          <Animated.View
+                            style={[styles.tallyFill, { width: barWidth }]}
+                          />
+                        </View>
+                      </View>
+                    );
+                  }
+                )}
+                <View
+                  style={styles.tallyBarItem}
+                  accessibilityRole="text"
+                  accessibilityLabel={`Abster-se / Pular Voto: ${room.voteReport.skipCount} voto(s)`}
+                >
+                  <View style={styles.tallyBarHeader}>
+                    <Text allowFontScaling style={styles.tallyBarName}>
+                      Abster-se / Pular Voto
+                    </Text>
+                    <Text allowFontScaling style={styles.tallyBarCount}>
+                      {`${room.voteReport.skipCount} voto(s)`}
+                    </Text>
+                  </View>
+                  <View style={styles.tallyTrack}>
+                    <Animated.View
+                      style={[
+                        styles.tallyFillSkip,
+                        {
+                          width: voteBarAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [
+                              '0%',
+                              `${Math.round(
+                                (room.voteReport.skipCount /
+                                  Math.max(
+                                    1,
+                                    room.voteReport.skipCount,
+                                    ...Object.values(room.voteReport.voteCounts)
+                                  )) *
+                                  100
+                              )}%`,
+                            ],
+                          }),
+                        },
+                      ]}
+                    />
+                  </View>
+                </View>
+              </View>
+            </View>
+          )}
+
           <View style={styles.cardBox}>
             {isCurrentPlayerHost ? (
               <ExpressiveButton
@@ -278,12 +470,13 @@ export const CidadeDormeDaySection = ({
 
       {room.phase === 'finished' && (
         <View style={styles.sectionBlock}>
-          <View
+          <Animated.View
             style={[
               styles.winnerBanner,
               room.winner === 'cidade'
                 ? styles.winnerBannerCity
                 : styles.winnerBannerAssassins,
+              { transform: [{ scale: winnerScaleAnim }] },
             ]}
           >
             <MaterialCommunityIcons
@@ -324,7 +517,7 @@ export const CidadeDormeDaySection = ({
                   : 'Os Assassinos atingiram paridade numérica com os cidadãos inocentes!'}
               </Text>
             </View>
-          </View>
+          </Animated.View>
 
           <View style={styles.cardBox}>
             <Text allowFontScaling style={styles.sectionTitle}>
@@ -333,7 +526,8 @@ export const CidadeDormeDaySection = ({
 
             <View style={styles.rolesSummaryList}>
               {room.players.map((player) => {
-                const isAssassin = player.role === 'assassino';
+                const roleKey: CidadeDormeRole = player.role ?? 'cidadao';
+                const isAssassin = roleKey === 'assassino';
                 return (
                   <View
                     key={player.id}
@@ -344,9 +538,7 @@ export const CidadeDormeDaySection = ({
                   >
                     <View style={styles.roleSummaryLeft}>
                       <MaterialCommunityIcons
-                        name={
-                          isAssassin ? 'alert-octagon' : 'shield-check-outline'
-                        }
+                        name={ROLE_ICONS[roleKey]}
                         size={tokens.semantic.icon.md}
                         color={
                           isAssassin
@@ -604,5 +796,62 @@ const styles = StyleSheet.create({
     fontSize: tokens.semantic.font.body.size,
     lineHeight: tokens.semantic.font.body.lineHeight,
     color: tokens.semantic.color.onActionContainer,
+  },
+  angelShieldBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: tokens.semantic.space.sm,
+    padding: tokens.semantic.space.md,
+    borderRadius: tokens.semantic.radius.lg,
+    backgroundColor: tokens.semantic.color.success,
+  },
+  angelShieldText: {
+    flex: 1,
+    fontFamily: tokens.semantic.font.label.family,
+    fontSize: tokens.semantic.font.label.size,
+    lineHeight: tokens.semantic.font.label.lineHeight,
+    fontWeight: tokens.semantic.font.label.weight,
+    color: tokens.semantic.color.onSuccess,
+  },
+  tallyBarsList: {
+    gap: tokens.semantic.space.sm,
+  },
+  tallyBarItem: {
+    gap: tokens.semantic.space.xs,
+  },
+  tallyBarHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  tallyBarName: {
+    fontFamily: tokens.semantic.font.label.family,
+    fontSize: tokens.semantic.font.label.size,
+    lineHeight: tokens.semantic.font.label.lineHeight,
+    fontWeight: tokens.semantic.font.label.weight,
+    color: tokens.semantic.color.onSurface,
+  },
+  tallyBarCount: {
+    fontFamily: tokens.semantic.font.caption.family,
+    fontSize: tokens.semantic.font.caption.size,
+    lineHeight: tokens.semantic.font.caption.lineHeight,
+    fontWeight: tokens.semantic.font.caption.weight,
+    color: tokens.semantic.color.onSurfaceMuted,
+  },
+  tallyTrack: {
+    height: tokens.semantic.space.sm,
+    borderRadius: tokens.semantic.radius.full,
+    backgroundColor: tokens.semantic.color.surfaceVariant,
+    overflow: 'hidden',
+  },
+  tallyFill: {
+    height: tokens.semantic.space.sm,
+    borderRadius: tokens.semantic.radius.full,
+    backgroundColor: tokens.semantic.color.action,
+  },
+  tallyFillSkip: {
+    height: tokens.semantic.space.sm,
+    borderRadius: tokens.semantic.radius.full,
+    backgroundColor: tokens.semantic.color.onSurfaceMuted,
   },
 });
