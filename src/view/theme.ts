@@ -1,3 +1,6 @@
+import React, { createContext, useContext, useMemo } from 'react';
+import { useColorScheme } from 'react-native';
+
 export type ThemeMode = 'light' | 'dark';
 
 const primitive = {
@@ -17,6 +20,7 @@ const primitive = {
     coral950: '#431407',
     gold100: '#FEF9C3',
     gold400: '#FACC15',
+    gold700: '#A16207',
     gold950: '#422006',
     green100: '#DCFCE7',
     green300: '#86EFAC',
@@ -31,6 +35,8 @@ const primitive = {
     neutral100: '#F3EDF7',
     neutral200: '#E6E0E9',
     neutral300: '#CAC4D0',
+    neutral400: '#938F99',
+    neutral500: '#79747E',
     neutral600: '#49454F',
     neutral800: '#2B2930',
     neutral900: '#1D1B20',
@@ -67,21 +73,27 @@ export function createTokens(mode: ThemeMode = 'light') {
     onSecondaryContainer: isDark ? primitive.color.coral100 : primitive.color.coral950,
     highlight: primitive.color.gold400,
     onHighlight: primitive.color.neutral900,
+    highlightContainer: isDark ? primitive.color.gold950 : primitive.color.gold100,
+    onHighlightContainer: isDark ? primitive.color.gold100 : primitive.color.neutral900,
+    highlightBorder: isDark ? primitive.color.gold400 : primitive.color.gold700,
     surface: isDark ? primitive.color.neutral950 : primitive.color.neutral50,
     surfaceContainer: isDark ? primitive.color.neutral900 : primitive.color.neutral0,
     surfaceVariant: isDark ? primitive.color.neutral800 : primitive.color.neutral100,
     onSurface: isDark ? primitive.color.neutral200 : primitive.color.neutral900,
     onSurfaceMuted: isDark ? primitive.color.neutral300 : primitive.color.neutral600,
-    outline: isDark ? primitive.color.neutral600 : primitive.color.neutral300,
+    outline: isDark ? primitive.color.neutral400 : primitive.color.neutral500,
     success: isDark ? primitive.color.green300 : primitive.color.green700,
     onSuccess: isDark ? primitive.color.green950 : primitive.color.neutral0,
+    successContainer: isDark ? primitive.color.green950 : primitive.color.green100,
+    onSuccessContainer: isDark ? primitive.color.green100 : primitive.color.green950,
     error: isDark ? primitive.color.red300 : primitive.color.red700,
     onError: isDark ? primitive.color.red950 : primitive.color.neutral0,
     errorContainer: isDark ? primitive.color.red950 : primitive.color.red100,
     onErrorContainer: isDark ? primitive.color.red300 : primitive.color.red950,
-    focus: isDark ? primitive.color.gold400 : primitive.color.coral700,
+    focus: isDark ? primitive.color.neutral200 : primitive.color.neutral900,
+    focusOffset: isDark ? primitive.color.neutral950 : primitive.color.neutral50,
     disabledBg: isDark ? primitive.color.neutral800 : primitive.color.neutral200,
-    disabledText: primitive.color.neutral600,
+    disabledText: isDark ? primitive.color.neutral400 : primitive.color.neutral600,
     scrim: primitive.color.scrim,
     transparent: primitive.color.transparent,
   };
@@ -92,10 +104,8 @@ export function createTokens(mode: ThemeMode = 'light') {
     md: primitive.space.space16,
     lg: primitive.space.space24,
     xl: primitive.space.space32,
-    xxl: primitive.space.space48,
     '2xl': primitive.space.space48,
     container: primitive.space.space56,
-    xxxl: primitive.space.space64,
     '3xl': primitive.space.space64,
   };
 
@@ -109,37 +119,43 @@ export function createTokens(mode: ThemeMode = 'light') {
 
   const semanticFont = {
     display: {
-      family: 'Plus Jakarta Sans',
+      family: 'PlusJakartaSans_800ExtraBold',
       size: 30,
       weight: '800' as const,
       lineHeight: 36,
     },
     title: {
-      family: 'Plus Jakarta Sans',
+      family: 'PlusJakartaSans_800ExtraBold',
       size: 24,
       weight: '800' as const,
       lineHeight: 32,
     },
     subtitle: {
-      family: 'Plus Jakarta Sans',
+      family: 'PlusJakartaSans_700Bold',
       size: 18,
       weight: '700' as const,
       lineHeight: 24,
     },
     body: {
-      family: 'Roboto',
+      family: 'PlusJakartaSans_400Regular',
       size: 16,
       weight: '400' as const,
       lineHeight: 24,
     },
     label: {
-      family: 'Plus Jakarta Sans',
+      family: 'PlusJakartaSans_700Bold',
       size: 16,
       weight: '700' as const,
       lineHeight: 20,
     },
+    tag: {
+      family: 'PlusJakartaSans_700Bold',
+      size: 14,
+      weight: '700' as const,
+      lineHeight: 18,
+    },
     caption: {
-      family: 'Roboto',
+      family: 'PlusJakartaSans_700Bold',
       size: 12,
       weight: '700' as const,
       lineHeight: 16,
@@ -189,10 +205,14 @@ export function createTokens(mode: ThemeMode = 'light') {
       bgPressed: semantic.color.actionPressed,
       bgDisabled: semantic.color.disabledBg,
       labelDisabled: semantic.color.disabledText,
+      border: {
+        outlined: semantic.color.outline,
+        focus: semantic.color.focus,
+      },
       radius: semantic.radius.full,
       radiusPressed: semantic.radius.md,
       minHeight: semantic.space['2xl'],
-      jumboHeight: semantic.space['3xl'],
+      iconSize: semantic.space['2xl'],
       jumbo: {
         height: semantic.space['3xl'],
       },
@@ -210,20 +230,114 @@ export function createTokens(mode: ThemeMode = 'light') {
     card: {
       bg: semantic.color.surfaceContainer,
       border: semantic.color.outline,
+      borderLeader: semantic.color.highlightBorder,
+      borderPressed: semantic.color.action,
+      borderFocus: semantic.color.focus,
       radius: semantic.radius.xl,
       padding: semantic.space.lg,
       badgeSize: semantic.space.container,
     },
+    chip: {
+      bg: {
+        default: semantic.color.surfaceContainer,
+        pressed: semantic.color.surfaceVariant,
+        selected: semantic.color.actionContainer,
+        disabled: semantic.color.disabledBg,
+      },
+      border: {
+        default: semantic.color.outline,
+        selected: semantic.color.action,
+        focus: semantic.color.focus,
+        disabled: semantic.color.outline,
+        error: semantic.color.error,
+        success: semantic.color.success,
+        secondary: semantic.color.secondary,
+      },
+      radius: semantic.radius.full,
+      radiusPressed: semantic.radius.md,
+      minHeight: semantic.space['2xl'],
+      minWidth: semantic.space['3xl'],
+    },
+    option: {
+      bg: {
+        default: semantic.color.surfaceContainer,
+        selected: semantic.color.actionContainer,
+        disabled: semantic.color.disabledBg,
+        error: semantic.color.errorContainer,
+      },
+      border: {
+        default: semantic.color.outline,
+        selected: semantic.color.action,
+        focus: semantic.color.focus,
+        disabled: semantic.color.outline,
+        error: semantic.color.error,
+        success: semantic.color.success,
+      },
+      radius: semantic.radius.lg,
+      radiusPressed: semantic.radius.md,
+      minHeight: semantic.space.container,
+    },
+    tag: {
+      neutral: {
+        bg: semantic.color.surfaceVariant,
+        border: semantic.color.outline,
+        text: semantic.color.onSurface,
+      },
+      action: {
+        bg: semantic.color.actionContainer,
+        border: semantic.color.action,
+        text: semantic.color.onActionContainer,
+      },
+      secondary: {
+        bg: semantic.color.secondaryContainer,
+        border: semantic.color.secondary,
+        text: semantic.color.onSecondaryContainer,
+      },
+      success: {
+        bg: semantic.color.successContainer,
+        border: semantic.color.success,
+        text: semantic.color.onSuccessContainer,
+      },
+      error: {
+        bg: semantic.color.errorContainer,
+        border: semantic.color.error,
+        text: semantic.color.onErrorContainer,
+      },
+      highlight: {
+        bg: semantic.color.highlightContainer,
+        border: semantic.color.highlightBorder,
+        text: semantic.color.onHighlightContainer,
+      },
+      radius: semantic.radius.full,
+    },
+    banner: {
+      info: {
+        bg: semantic.color.actionContainer,
+        border: semantic.color.action,
+        text: semantic.color.onActionContainer,
+      },
+      success: {
+        bg: semantic.color.successContainer,
+        border: semantic.color.success,
+        text: semantic.color.onSuccessContainer,
+      },
+      warning: {
+        bg: semantic.color.secondaryContainer,
+        border: semantic.color.secondary,
+        text: semantic.color.onSecondaryContainer,
+      },
+      error: {
+        bg: semantic.color.errorContainer,
+        border: semantic.color.error,
+        text: semantic.color.onErrorContainer,
+      },
+      radius: semantic.radius.lg,
+    },
     timer: {
-      bgNormal: semantic.color.highlight,
-      textNormal: semantic.color.onHighlight,
-      bgCritical: semantic.color.error,
-      textCritical: semantic.color.onError,
-      radiusNormal: semantic.radius.full,
-      radiusCritical: semantic.radius.md,
       bg: {
         normal: semantic.color.highlight,
         critical: semantic.color.error,
+        calm: semantic.color.action,
       },
       text: {
         normal: semantic.color.onHighlight,
@@ -235,12 +349,6 @@ export function createTokens(mode: ThemeMode = 'light') {
       },
     },
     quiz: {
-      optionBg: semantic.color.surfaceContainer,
-      optionBorder: semantic.color.outline,
-      optionRadius: semantic.radius.lg,
-      optionCorrectBg: semantic.color.success,
-      optionWrongBg: semantic.color.error,
-      minHeight: semantic.space.container,
       option: {
         bg: semantic.color.surfaceContainer,
         border: semantic.color.outline,
@@ -257,8 +365,6 @@ export function createTokens(mode: ThemeMode = 'light') {
     key: {
       size: semantic.space['2xl'],
       radius: semantic.radius.md,
-      hitBg: semantic.color.success,
-      missBg: semantic.color.errorContainer,
       hit: {
         bg: semantic.color.success,
       },
@@ -275,8 +381,42 @@ export function createTokens(mode: ThemeMode = 'light') {
   };
 }
 
+export type AppTokens = ReturnType<typeof createTokens>;
+
 export const tokens = createTokens('light');
 export const darkTokens = createTokens('dark');
+
+const ThemeModeContext = createContext<ThemeMode | null>(null);
+
+export type ThemeProviderProps = {
+  mode?: ThemeMode;
+  children: React.ReactNode;
+};
+
+export const ThemeProvider = ({ mode, children }: ThemeProviderProps) => {
+  const systemScheme = useColorScheme();
+  const parentMode = useContext(ThemeModeContext);
+  const resolvedMode: ThemeMode =
+    mode ?? parentMode ?? (systemScheme === 'dark' ? 'dark' : 'light');
+
+  return React.createElement(
+    ThemeModeContext.Provider,
+    { value: resolvedMode },
+    children
+  );
+};
+
+export function useTheme(overrideMode?: ThemeMode): AppTokens {
+  const systemScheme = useColorScheme();
+  const contextMode = useContext(ThemeModeContext);
+  const resolvedMode: ThemeMode =
+    overrideMode ?? contextMode ?? (systemScheme === 'dark' ? 'dark' : 'light');
+
+  return useMemo(
+    () => (resolvedMode === 'dark' ? darkTokens : tokens),
+    [resolvedMode]
+  );
+}
 
 export const {
   color,
@@ -294,6 +434,10 @@ export const {
   button,
   input,
   card,
+  chip,
+  option,
+  tag,
+  banner,
   timer,
   quiz,
   key,

@@ -1,7 +1,11 @@
-import React from 'react';
-import { Pressable, View, Text, StyleSheet } from 'react-native';
+import React, { useMemo } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { tokens } from '@/view/theme';
+import {
+  getFocusRingStyle,
+  useKeyboardFocus,
+} from '@/view/components/useKeyboardFocus';
+import { useTheme, type AppTokens, type ThemeMode } from '@/view/theme';
 
 export type OptionStatus = 'default' | 'selected' | 'correct' | 'wrong';
 
@@ -10,6 +14,7 @@ export type QuizOptionProps = {
   text: string;
   status?: OptionStatus;
   disabled?: boolean;
+  themeMode?: ThemeMode;
   onPress: () => void;
 };
 
@@ -18,33 +23,47 @@ export const QuizOption = ({
   text,
   status = 'default',
   disabled = false,
+  themeMode,
   onPress,
 }: QuizOptionProps) => {
+  const activeTokens = useTheme(themeMode);
+  const styles = useMemo(() => createStyles(activeTokens), [activeTokens]);
+  const keyboardFocus = useKeyboardFocus();
+
   const getBackgroundColor = () => {
-    if (status === 'correct') return tokens.component.quiz.optionCorrectBg;
-    if (status === 'wrong') return tokens.component.quiz.optionWrongBg;
-    if (status === 'selected') return tokens.semantic.color.actionContainer;
-    return tokens.component.quiz.optionBg;
+    if (status === 'correct') return activeTokens.component.quiz.option.correct.bg;
+    if (status === 'wrong') return activeTokens.component.quiz.option.wrong.bg;
+    if (status === 'selected') return activeTokens.semantic.color.actionContainer;
+    return activeTokens.component.quiz.option.bg;
   };
 
   const getTextColor = () => {
-    if (status === 'correct') return tokens.semantic.color.onSuccess;
-    if (status === 'wrong') return tokens.semantic.color.onError;
-    if (status === 'selected') return tokens.semantic.color.onActionContainer;
-    return tokens.semantic.color.onSurface;
+    if (status === 'correct') return activeTokens.semantic.color.onSuccess;
+    if (status === 'wrong') return activeTokens.semantic.color.onError;
+    if (status === 'selected') return activeTokens.semantic.color.onActionContainer;
+    return activeTokens.semantic.color.onSurface;
   };
 
   const statusLabel =
     status === 'correct'
       ? ', resposta correta'
       : status === 'wrong'
-      ? ', resposta incorreta'
-      : '';
+        ? ', resposta incorreta'
+        : '';
+
+  const focusRingStyle = getFocusRingStyle(
+    activeTokens,
+    keyboardFocus.focusVisible
+  );
 
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled}
+      onPressIn={keyboardFocus.onPressIn}
+      onPressOut={keyboardFocus.onPressOut}
+      onFocus={keyboardFocus.onFocus}
+      onBlur={keyboardFocus.onBlur}
       accessibilityRole="button"
       accessibilityLabel={`Alternativa ${letter}: ${text}${statusLabel}`}
       accessibilityState={{
@@ -57,17 +76,18 @@ export const QuizOption = ({
           backgroundColor: getBackgroundColor(),
           borderColor:
             status === 'default'
-              ? tokens.component.quiz.optionBorder
+              ? activeTokens.component.quiz.option.border
               : status === 'selected'
-              ? tokens.semantic.color.action
-              : getBackgroundColor(),
+                ? activeTokens.component.option.border.selected
+                : getBackgroundColor(),
           borderRadius:
             status === 'wrong'
-              ? tokens.semantic.radius.sm
+              ? activeTokens.semantic.radius.sm
               : status === 'correct'
-              ? tokens.semantic.radius.md
-              : tokens.component.quiz.optionRadius,
+                ? activeTokens.semantic.radius.md
+                : activeTokens.component.quiz.option.radius,
         },
+        focusRingStyle,
       ]}
     >
       <View style={styles.leftGroup}>
@@ -87,14 +107,14 @@ export const QuizOption = ({
       {status === 'correct' && (
         <MaterialCommunityIcons
           name="check-circle"
-          size={tokens.semantic.icon.md}
+          size={activeTokens.semantic.icon.md}
           color={getTextColor()}
         />
       )}
       {status === 'wrong' && (
         <MaterialCommunityIcons
           name="close-circle"
-          size={tokens.semantic.icon.md}
+          size={activeTokens.semantic.icon.md}
           color={getTextColor()}
         />
       )}
@@ -102,43 +122,44 @@ export const QuizOption = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    minHeight: tokens.component.quiz.minHeight,
-    paddingHorizontal: tokens.semantic.space.md,
-    paddingVertical: tokens.semantic.space.sm,
-    borderWidth: tokens.semantic.border.thin,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: tokens.semantic.space.sm,
-  },
-  leftGroup: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.semantic.space.sm,
-  },
-  letterBadge: {
-    width: tokens.semantic.space.xl,
-    height: tokens.semantic.space.xl,
-    borderRadius: tokens.semantic.radius.full,
-    backgroundColor: tokens.semantic.color.surfaceVariant,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  letterText: {
-    fontFamily: tokens.semantic.font.label.family,
-    fontSize: tokens.semantic.font.label.size,
-    fontWeight: tokens.semantic.font.label.weight,
-    lineHeight: tokens.semantic.font.label.lineHeight,
-    color: tokens.semantic.color.onSurface,
-  },
-  optionText: {
-    flex: 1,
-    fontFamily: tokens.semantic.font.label.family,
-    fontSize: tokens.semantic.font.label.size,
-    fontWeight: tokens.semantic.font.label.weight,
-    lineHeight: tokens.semantic.font.label.lineHeight,
-  },
-});
+const createStyles = (activeTokens: AppTokens) =>
+  StyleSheet.create({
+    container: {
+      minHeight: activeTokens.component.quiz.option.minHeight,
+      paddingHorizontal: activeTokens.semantic.space.md,
+      paddingVertical: activeTokens.semantic.space.sm,
+      borderWidth: activeTokens.semantic.border.thin,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: activeTokens.semantic.space.sm,
+    },
+    leftGroup: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: activeTokens.semantic.space.sm,
+    },
+    letterBadge: {
+      width: activeTokens.semantic.space.xl,
+      height: activeTokens.semantic.space.xl,
+      borderRadius: activeTokens.semantic.radius.full,
+      backgroundColor: activeTokens.semantic.color.surfaceVariant,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    letterText: {
+      fontFamily: activeTokens.semantic.font.label.family,
+      fontSize: activeTokens.semantic.font.label.size,
+      fontWeight: activeTokens.semantic.font.label.weight,
+      lineHeight: activeTokens.semantic.font.label.lineHeight,
+      color: activeTokens.semantic.color.onSurface,
+    },
+    optionText: {
+      flex: 1,
+      fontFamily: activeTokens.semantic.font.label.family,
+      fontSize: activeTokens.semantic.font.label.size,
+      fontWeight: activeTokens.semantic.font.label.weight,
+      lineHeight: activeTokens.semantic.font.label.lineHeight,
+    },
+  });

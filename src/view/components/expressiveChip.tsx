@@ -1,7 +1,11 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { tokens } from '@/view/theme';
+import {
+  getFocusRingStyle,
+  useKeyboardFocus,
+} from '@/view/components/useKeyboardFocus';
+import { useTheme, type AppTokens, type ThemeMode } from '@/view/theme';
 
 export type ChipTone = 'neutral' | 'action' | 'success' | 'secondary' | 'error';
 
@@ -14,6 +18,7 @@ export type ExpressiveChipProps = {
   fullWidth?: boolean;
   flexGrow?: boolean;
   role?: 'button' | 'tab';
+  themeMode?: ThemeMode;
   accessibilityLabel?: string;
   onPress: () => void;
 };
@@ -27,77 +32,90 @@ export const ExpressiveChip = ({
   fullWidth = false,
   flexGrow = false,
   role = 'button',
+  themeMode,
   accessibilityLabel,
   onPress,
 }: ExpressiveChipProps) => {
+  const activeTokens = useTheme(themeMode);
+  const styles = useMemo(() => createStyles(activeTokens), [activeTokens]);
   const [pressed, setPressed] = useState(false);
-  const [focused, setFocused] = useState(false);
+  const keyboardFocus = useKeyboardFocus();
 
   const resolveColors = () => {
     if (disabled) {
       return {
-        bg: tokens.semantic.color.disabledBg,
-        border: tokens.semantic.color.outline,
-        text: tokens.semantic.color.disabledText,
+        bg: activeTokens.component.chip.bg.disabled,
+        border: activeTokens.component.chip.border.disabled,
+        text: activeTokens.semantic.color.disabledText,
       };
     }
 
     if (selected) {
       if (tone === 'success') {
         return {
-          bg: tokens.semantic.color.success,
-          border: tokens.semantic.color.success,
-          text: tokens.semantic.color.onSuccess,
+          bg: activeTokens.semantic.color.success,
+          border: activeTokens.component.chip.border.success,
+          text: activeTokens.semantic.color.onSuccess,
         };
       }
       if (tone === 'secondary') {
         return {
-          bg: tokens.semantic.color.secondary,
-          border: tokens.semantic.color.secondary,
-          text: tokens.semantic.color.onSecondary,
+          bg: activeTokens.semantic.color.secondary,
+          border: activeTokens.component.chip.border.secondary,
+          text: activeTokens.semantic.color.onSecondary,
         };
       }
       if (tone === 'error') {
         return {
-          bg: tokens.semantic.color.error,
-          border: tokens.semantic.color.error,
-          text: tokens.semantic.color.onError,
+          bg: activeTokens.semantic.color.error,
+          border: activeTokens.component.chip.border.error,
+          text: activeTokens.semantic.color.onError,
         };
       }
       return {
-        bg: tokens.semantic.color.actionContainer,
-        border: tokens.semantic.color.action,
-        text: tokens.semantic.color.onActionContainer,
+        bg: activeTokens.component.chip.bg.selected,
+        border: activeTokens.component.chip.border.selected,
+        text: activeTokens.semantic.color.onActionContainer,
       };
     }
 
     if (tone === 'action') {
       return {
-        bg: tokens.semantic.color.actionContainer,
-        border: tokens.semantic.color.action,
-        text: tokens.semantic.color.onActionContainer,
+        bg: activeTokens.component.chip.bg.selected,
+        border: activeTokens.component.chip.border.selected,
+        text: activeTokens.semantic.color.onActionContainer,
       };
     }
 
     return {
       bg: pressed
-        ? tokens.semantic.color.surfaceVariant
-        : tokens.semantic.color.surfaceContainer,
-      border: tokens.semantic.color.outline,
-      text: tokens.semantic.color.onSurface,
+        ? activeTokens.component.chip.bg.pressed
+        : activeTokens.component.chip.bg.default,
+      border: activeTokens.component.chip.border.default,
+      text: activeTokens.semantic.color.onSurface,
     };
   };
 
   const palette = resolveColors();
+  const focusRingStyle = getFocusRingStyle(
+    activeTokens,
+    keyboardFocus.focusVisible
+  );
 
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled}
-      onPressIn={() => setPressed(true)}
-      onPressOut={() => setPressed(false)}
-      onFocus={() => setFocused(true)}
-      onBlur={() => setFocused(false)}
+      onPressIn={() => {
+        setPressed(true);
+        keyboardFocus.onPressIn();
+      }}
+      onPressOut={() => {
+        setPressed(false);
+        keyboardFocus.onPressOut();
+      }}
+      onFocus={keyboardFocus.onFocus}
+      onBlur={keyboardFocus.onBlur}
       accessibilityRole={role}
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ disabled, selected }}
@@ -107,26 +125,25 @@ export const ExpressiveChip = ({
         flexGrow && styles.flexGrow,
         {
           backgroundColor: palette.bg,
-          borderColor: focused ? tokens.semantic.color.focus : palette.border,
-          borderWidth: focused
-            ? tokens.semantic.border.focus
-            : tokens.semantic.border.thin,
+          borderColor: palette.border,
+          borderWidth: activeTokens.semantic.border.thin,
           borderRadius: pressed
-            ? tokens.semantic.radius.md
-            : tokens.semantic.radius.full,
+            ? activeTokens.component.chip.radiusPressed
+            : activeTokens.component.chip.radius,
         },
+        focusRingStyle,
       ]}
     >
       {icon && (
         <MaterialCommunityIcons
           name={icon}
-          size={tokens.semantic.icon.sm}
+          size={activeTokens.semantic.icon.sm}
           color={palette.text}
         />
       )}
       <Text
         allowFontScaling
-        maxFontSizeMultiplier={tokens.semantic.typography.maxScale}
+        maxFontSizeMultiplier={activeTokens.semantic.typography.maxScale}
         style={[styles.label, { color: palette.text }]}
       >
         {label}
@@ -135,27 +152,28 @@ export const ExpressiveChip = ({
   );
 };
 
-const styles = StyleSheet.create({
-  base: {
-    minHeight: tokens.semantic.space['2xl'],
-    minWidth: tokens.semantic.space['3xl'],
-    paddingHorizontal: tokens.semantic.space.md,
-    paddingVertical: tokens.semantic.space.sm,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: tokens.semantic.space.xs,
-  },
-  fullWidth: {
-    width: '100%',
-  },
-  flexGrow: {
-    flex: 1,
-  },
-  label: {
-    fontFamily: tokens.semantic.font.label.family,
-    fontSize: tokens.semantic.font.caption.size,
-    lineHeight: tokens.semantic.font.caption.lineHeight,
-    fontWeight: tokens.semantic.font.label.weight,
-  },
-});
+const createStyles = (activeTokens: AppTokens) =>
+  StyleSheet.create({
+    base: {
+      minHeight: activeTokens.component.chip.minHeight,
+      minWidth: activeTokens.component.chip.minWidth,
+      paddingHorizontal: activeTokens.semantic.space.md,
+      paddingVertical: activeTokens.semantic.space.sm,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: activeTokens.semantic.space.xs,
+    },
+    fullWidth: {
+      width: '100%',
+    },
+    flexGrow: {
+      flex: 1,
+    },
+    label: {
+      fontFamily: activeTokens.semantic.font.tag.family,
+      fontSize: activeTokens.semantic.font.tag.size,
+      lineHeight: activeTokens.semantic.font.tag.lineHeight,
+      fontWeight: activeTokens.semantic.font.tag.weight,
+    },
+  });

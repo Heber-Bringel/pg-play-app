@@ -1,45 +1,63 @@
-import React from 'react';
-import { Pressable, Text, StyleSheet } from 'react-native';
-import { tokens } from '@/view/theme';
+import React, { useMemo } from 'react';
+import { Pressable, StyleSheet, Text } from 'react-native';
+import {
+  getFocusRingStyle,
+  useKeyboardFocus,
+} from '@/view/components/useKeyboardFocus';
+import { useTheme, type AppTokens, type ThemeMode } from '@/view/theme';
 
 export type KeyStatus = 'available' | 'hit' | 'miss';
 
 export type LetterKeyProps = {
   letter: string;
   status?: KeyStatus;
+  themeMode?: ThemeMode;
   onPress: (letter: string) => void;
 };
 
 export const LetterKey = ({
   letter,
   status = 'available',
+  themeMode,
   onPress,
 }: LetterKeyProps) => {
+  const activeTokens = useTheme(themeMode);
+  const styles = useMemo(() => createStyles(activeTokens), [activeTokens]);
+  const keyboardFocus = useKeyboardFocus();
   const isUsed = status !== 'available';
 
   const getBackgroundColor = () => {
-    if (status === 'hit') return tokens.component.key.hitBg;
-    if (status === 'miss') return tokens.component.key.missBg;
-    return tokens.semantic.color.surfaceContainer;
+    if (status === 'hit') return activeTokens.component.key.hit.bg;
+    if (status === 'miss') return activeTokens.component.key.miss.bg;
+    return activeTokens.semantic.color.surfaceContainer;
   };
 
   const getTextColor = () => {
-    if (status === 'hit') return tokens.semantic.color.onSuccess;
-    if (status === 'miss') return tokens.semantic.color.onErrorContainer;
-    return tokens.semantic.color.onSurface;
+    if (status === 'hit') return activeTokens.semantic.color.onSuccess;
+    if (status === 'miss') return activeTokens.semantic.color.onErrorContainer;
+    return activeTokens.semantic.color.onSurface;
   };
 
   const statusDescription =
     status === 'hit'
       ? 'correta, já utilizada'
       : status === 'miss'
-      ? 'incorreta, já utilizada'
-      : 'disponível';
+        ? 'incorreta, já utilizada'
+        : 'disponível';
+
+  const focusRingStyle = getFocusRingStyle(
+    activeTokens,
+    keyboardFocus.focusVisible
+  );
 
   return (
     <Pressable
       onPress={() => onPress(letter)}
       disabled={isUsed}
+      onPressIn={keyboardFocus.onPressIn}
+      onPressOut={keyboardFocus.onPressOut}
+      onFocus={keyboardFocus.onFocus}
+      onBlur={keyboardFocus.onBlur}
       accessibilityRole="button"
       accessibilityLabel={`Letra ${letter}, ${statusDescription}`}
       accessibilityState={{ disabled: isUsed }}
@@ -49,20 +67,21 @@ export const LetterKey = ({
           backgroundColor: getBackgroundColor(),
           borderColor:
             status === 'hit'
-              ? tokens.semantic.color.success
+              ? activeTokens.component.option.border.success
               : status === 'miss'
-              ? tokens.semantic.color.error
-              : tokens.semantic.color.outline,
+                ? activeTokens.component.option.border.error
+                : activeTokens.component.option.border.default,
           borderRadius:
             status === 'hit'
-              ? tokens.semantic.radius.full
-              : tokens.component.key.radius,
+              ? activeTokens.semantic.radius.full
+              : activeTokens.component.key.radius,
         },
+        focusRingStyle,
       ]}
     >
       <Text
         allowFontScaling
-        maxFontSizeMultiplier={tokens.semantic.typography.maxScale}
+        maxFontSizeMultiplier={activeTokens.semantic.typography.maxScale}
         style={[
           styles.letter,
           {
@@ -77,18 +96,19 @@ export const LetterKey = ({
   );
 };
 
-const styles = StyleSheet.create({
-  key: {
-    minWidth: tokens.component.key.size,
-    minHeight: tokens.component.key.size,
-    borderWidth: tokens.semantic.border.thin,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  letter: {
-    fontFamily: tokens.semantic.font.label.family,
-    fontSize: tokens.semantic.font.label.size,
-    fontWeight: tokens.semantic.font.label.weight,
-    lineHeight: tokens.semantic.font.label.lineHeight,
-  },
-});
+const createStyles = (activeTokens: AppTokens) =>
+  StyleSheet.create({
+    key: {
+      minWidth: activeTokens.component.key.size,
+      minHeight: activeTokens.component.key.size,
+      borderWidth: activeTokens.semantic.border.thin,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    letter: {
+      fontFamily: activeTokens.semantic.font.label.family,
+      fontSize: activeTokens.semantic.font.label.size,
+      fontWeight: activeTokens.semantic.font.label.weight,
+      lineHeight: activeTokens.semantic.font.label.lineHeight,
+    },
+  });
