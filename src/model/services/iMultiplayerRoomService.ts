@@ -1,5 +1,6 @@
 import type {
   AdedonhaConfig,
+  AdedonhaPhase,
   AdedonhaRoom,
   AdedonhaSubmission,
   AdedonhaTallyVerdict,
@@ -26,7 +27,10 @@ export interface IMultiplayerRoomService {
     roomId: string,
     drawnLetter: string
   ): Promise<AdedonhaRoom>;
-  openRoundFilling(roomId: string): Promise<AdedonhaRoom>;
+  openRoundFilling(
+    roomId: string,
+    expectedPhase?: AdedonhaPhase
+  ): Promise<AdedonhaRoom>;
   submitPlayerAnswers(
     roomId: string,
     playerId: string,
@@ -38,7 +42,8 @@ export interface IMultiplayerRoomService {
   ): Promise<AdedonhaRoom>;
   startTallyPhase(
     roomId: string,
-    classifiedSubmissions: AdedonhaSubmission[]
+    classifiedSubmissions: AdedonhaSubmission[],
+    expectedPhase?: AdedonhaPhase
   ): Promise<AdedonhaRoom>;
   raiseDoubt(roomId: string, submissionId: string): Promise<AdedonhaRoom>;
   judgeSubmission(
@@ -48,7 +53,10 @@ export interface IMultiplayerRoomService {
     points: number
   ): Promise<AdedonhaRoom>;
   advanceTallyColumn(roomId: string): Promise<AdedonhaRoom>;
-  advanceToNextRound(roomId: string): Promise<AdedonhaRoom>;
+  advanceToNextRound(
+    roomId: string,
+    expectedPhase?: AdedonhaPhase
+  ): Promise<AdedonhaRoom>;
   subscribeToRoom(
     roomId: string,
     onRoomUpdated: (room: AdedonhaRoom) => void

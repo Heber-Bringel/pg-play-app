@@ -38,6 +38,8 @@ const baseRoom: AdedonhaRoom = {
   gameType: 'adedonha',
   hostId: 'player-host',
   phase: 'lobby',
+  version: 0,
+  phaseEndsAt: null,
   config: {
     columns: ['Personagem Bíblico', 'Livro da Bíblia'],
     roundDurationSeconds: 90,
