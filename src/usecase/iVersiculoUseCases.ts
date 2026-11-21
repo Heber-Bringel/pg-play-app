@@ -21,10 +21,5 @@ export interface IVersiculoUseCases {
     answersByIndex: Record<number, string>,
     usedHint: boolean
   ): VerseBlankResult[];
-  acceptBlankByLeader(
-    results: VerseBlankResult[],
-    blankIndex: number,
-    usedHint: boolean
-  ): VerseBlankResult[];
   recordTeamScore(teamId: string, points: number): Promise<void>;
 }

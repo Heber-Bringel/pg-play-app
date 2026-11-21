@@ -159,29 +159,7 @@ export class VersiculoUseCases implements IVersiculoUseCases {
         userAnswer,
         expectedAnswer: blank.answer,
         isCorrect,
-        acceptedByLeader: false,
         pointsAwarded: isCorrect ? pointsPerCorrect : 0,
-      };
-    });
-  }
-
-  acceptBlankByLeader(
-    results: VerseBlankResult[],
-    blankIndex: number,
-    usedHint: boolean
-  ): VerseBlankResult[] {
-    const pointsPerCorrect = usedHint ? 5 : 10;
-
-    return results.map((result) => {
-      if (result.index !== blankIndex || result.isCorrect) {
-        return result;
-      }
-
-      return {
-        ...result,
-        isCorrect: true,
-        acceptedByLeader: true,
-        pointsAwarded: pointsPerCorrect,
       };
     });
   }
