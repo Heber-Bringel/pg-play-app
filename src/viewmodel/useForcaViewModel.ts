@@ -2,13 +2,18 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { pgPlayUseCases } from '@/di/container';
 import type { ForcaCategory, ForcaPuzzle } from '@/model/entities/arenaChallenge';
+import {
+  DEFAULT_MATCH_SETTINGS,
+  type ForcaAttemptsOption,
+  type MatchSettings,
+} from '@/model/entities/matchSettings';
 import type { Team } from '@/model/entities/team';
 import { DomainError } from '@/model/errors';
 import type { IPgPlayUseCases } from '@/usecase/iPgPlayUseCases';
 
 export type ForcaPhase = 'pass-turn' | 'playing' | 'word-result' | 'finished';
 
-export type ForcaAttemptsOption = 5 | 6 | 8;
+export type { ForcaAttemptsOption } from '@/model/entities/matchSettings';
 
 export const ALL_FORCA_CATEGORIES: ForcaCategory[] = [
   'Bíblico',
@@ -55,8 +60,8 @@ export type ForcaActions = {
   handleGuessLetter: (letter: string) => Promise<void>;
   handleResetWord: () => void;
   handleNextWord: () => void;
-  handleSelectAttempts: (attempts: ForcaAttemptsOption) => void;
-  handleSelectRounds: (rounds: number) => void;
+  handleSelectAttempts: (attempts: ForcaAttemptsOption) => Promise<void>;
+  handleSelectRounds: (rounds: number) => Promise<void>;
   handleToggleCategory: (category: ForcaCategory) => Promise<void>;
   handleRequestExit: () => void;
   handleCancelExit: () => void;
@@ -115,8 +120,12 @@ export function useForcaViewModel(
   const [currentTeamIndex, setCurrentTeamIndex] = useState<number>(0);
   const [currentRound, setCurrentRound] = useState<number>(1);
   const [totalRounds, setTotalRounds] = useState<number>(3);
-  const [maxAttempts, setMaxAttempts] = useState<ForcaAttemptsOption>(5);
-  const [remainingAttempts, setRemainingAttempts] = useState<number>(5);
+  const [maxAttempts, setMaxAttempts] = useState<ForcaAttemptsOption>(
+    DEFAULT_MATCH_SETTINGS.forca.maxAttempts
+  );
+  const [remainingAttempts, setRemainingAttempts] = useState<number>(
+    DEFAULT_MATCH_SETTINGS.forca.maxAttempts
+  );
   const [selectedCategories, setSelectedCategories] = useState<ForcaCategory[]>(ALL_FORCA_CATEGORIES);
   const [freshDeck, setFreshDeck] = useState<ForcaPuzzle[]>([]);
   const [currentPuzzle, setCurrentPuzzle] = useState<ForcaPuzzle | null>(null);
@@ -134,12 +143,16 @@ export function useForcaViewModel(
       setLoading(true);
       setError(null);
       try {
-        const [loadedTeams, loadedPuzzles] = await Promise.all([
+        const [loadedTeams, loadedPuzzles, settings] = await Promise.all([
           useCases.listTeams(),
           useCases.listForcaPuzzles(categoriesToLoad),
+          useCases.getMatchSettings(),
         ]);
         setTeams(loadedTeams);
         setFreshDeck(loadedPuzzles);
+        setMaxAttempts(settings.forca.maxAttempts);
+        setRemainingAttempts(settings.forca.maxAttempts);
+        setTotalRounds(settings.forca.totalRounds);
         if (loadedPuzzles.length > 0) {
           setCurrentPuzzle(loadedPuzzles[0]);
         } else {
@@ -287,16 +300,34 @@ export function useForcaViewModel(
     totalRounds,
   ]);
 
-  const handleSelectAttempts = useCallback((attempts: ForcaAttemptsOption) => {
-    setMaxAttempts(attempts);
-    setRemainingAttempts(attempts);
-  }, []);
+  const saveSettings = useCallback(
+    async (changes: Partial<MatchSettings['forca']>) => {
+      setError(null);
+      try {
+        const saved = await useCases.updateForcaSettings(changes);
+        setMaxAttempts(saved.forca.maxAttempts);
+        setRemainingAttempts(saved.forca.maxAttempts);
+        setTotalRounds(saved.forca.totalRounds);
+      } catch (err: unknown) {
+        if (err instanceof DomainError) {
+          setError(err.message);
+        } else {
+          setError('Não foi possível salvar os parâmetros da partida.');
+        }
+      }
+    },
+    [useCases]
+  );
 
-  const handleSelectRounds = useCallback((rounds: number) => {
-    if (rounds >= 1 && rounds <= 5) {
-      setTotalRounds(rounds);
-    }
-  }, []);
+  const handleSelectAttempts = useCallback(
+    (attempts: ForcaAttemptsOption) => saveSettings({ maxAttempts: attempts }),
+    [saveSettings]
+  );
+
+  const handleSelectRounds = useCallback(
+    (rounds: number) => saveSettings({ totalRounds: rounds }),
+    [saveSettings]
+  );
 
   const handleToggleCategory = useCallback(
     async (category: ForcaCategory) => {

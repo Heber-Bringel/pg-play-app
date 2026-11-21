@@ -2,13 +2,19 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { pgPlayUseCases } from '@/di/container';
 import type { QuizCategory, QuizOptionKey, QuizQuestion } from '@/model/entities/arenaChallenge';
+import {
+  DEFAULT_MATCH_SETTINGS,
+  type QuizDurationOption,
+  type QuizQuestionCountOption,
+  type QuizSettings,
+} from '@/model/entities/matchSettings';
 import type { Team } from '@/model/entities/team';
 import { DomainError } from '@/model/errors';
 import type { IPgPlayUseCases } from '@/usecase/iPgPlayUseCases';
 
 export type QuizPhase = 'pass-turn' | 'playing' | 'answered' | 'finished';
 
-export type QuizDurationOption = 15 | 20 | 30;
+export type { QuizDurationOption, QuizQuestionCountOption } from '@/model/entities/matchSettings';
 
 export const ALL_QUIZ_CATEGORIES: QuizCategory[] = [
   'Bíblico',
@@ -27,6 +33,9 @@ export type QuizState = {
   currentTeam: Team | null;
   currentQuestionIndex: number;
   totalQuestions: number;
+  questionsPerTeam: number;
+  configuredQuestionCount: QuizQuestionCountOption;
+  questionCountNotice: string | null;
   currentQuestion: QuizQuestion | null;
   selectedOptionKey: QuizOptionKey | null;
   isCorrect: boolean | null;
@@ -43,7 +52,8 @@ export type QuizActions = {
   handleSelectOption: (key: QuizOptionKey) => Promise<void>;
   handleTick: () => void;
   handleNextQuestion: () => void;
-  handleSelectDuration: (seconds: QuizDurationOption) => void;
+  handleSelectDuration: (seconds: QuizDurationOption) => Promise<void>;
+  handleSelectQuestionCount: (count: QuizQuestionCountOption) => Promise<void>;
   handleRequestExit: () => void;
   handleCancelExit: () => void;
   handleConfirmExit: () => void;
@@ -67,6 +77,10 @@ export function useQuizViewModel(
   const [turnScoreDelta, setTurnScoreDelta] = useState<number>(0);
   const [turnDurationSeconds, setTurnDurationSeconds] = useState<QuizDurationOption>(20);
   const [secondsRemaining, setSecondsRemaining] = useState<number>(20);
+  const [configuredQuestionCount, setConfiguredQuestionCount] =
+    useState<QuizQuestionCountOption>(
+      DEFAULT_MATCH_SETTINGS.quiz.questionCount
+    );
   const [confirmingExit, setConfirmingExit] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -75,9 +89,10 @@ export function useQuizViewModel(
     setLoading(true);
     setError(null);
     try {
-      const [loadedTeams, loadedQuestions] = await Promise.all([
+      const [loadedTeams, loadedQuestions, settings] = await Promise.all([
         useCase.listTeams(),
         useCase.listQuizQuestions(),
+        useCase.getMatchSettings(),
       ]);
 
       if (loadedTeams.length < 2) {
@@ -93,6 +108,9 @@ export function useQuizViewModel(
 
       setTeams(loadedTeams);
       setQuestions(loadedQuestions);
+      setTurnDurationSeconds(settings.quiz.durationSeconds);
+      setSecondsRemaining(settings.quiz.durationSeconds);
+      setConfiguredQuestionCount(settings.quiz.questionCount);
       setCurrentTeamIndex(0);
       setCurrentQuestionIndex(0);
       setPhase('pass-turn');
@@ -175,9 +193,26 @@ export function useQuizViewModel(
     [phase, currentQuestion, currentTeam, selectedOptionKey, useCase]
   );
 
+  const matchPlan = useCase.planQuizMatch(
+    configuredQuestionCount,
+    questions.length,
+    teams.length
+  );
+  const totalQuestions = matchPlan.totalQuestions;
+
+  let questionCountNotice: string | null = null;
+  if (questions.length > 0 && totalQuestions !== configuredQuestionCount) {
+    const bankNotice = matchPlan.limitedByBank
+      ? `O pacote atual tem ${questions.length} perguntas. `
+      : '';
+    questionCountNotice =
+      `${bankNotice}Serão ${totalQuestions} perguntas, ` +
+      `${matchPlan.questionsPerTeam} por equipe, para todas responderem a mesma quantidade.`;
+  }
+
   const handleNextQuestion = useCallback(() => {
     const nextIndex = currentQuestionIndex + 1;
-    if (nextIndex >= questions.length) {
+    if (nextIndex >= totalQuestions) {
       setPhase('finished');
       return;
     }
@@ -188,12 +223,36 @@ export function useQuizViewModel(
     setIsCorrect(null);
     setTurnScoreDelta(0);
     setPhase('pass-turn');
-  }, [currentQuestionIndex, questions.length, teams.length]);
+  }, [currentQuestionIndex, teams.length, totalQuestions]);
 
-  const handleSelectDuration = useCallback((seconds: QuizDurationOption) => {
-    setTurnDurationSeconds(seconds);
-    setSecondsRemaining(seconds);
-  }, []);
+  const saveSettings = useCallback(
+    async (changes: Partial<QuizSettings>) => {
+      setError(null);
+      try {
+        const saved = await useCase.updateQuizSettings(changes);
+        setTurnDurationSeconds(saved.quiz.durationSeconds);
+        setSecondsRemaining(saved.quiz.durationSeconds);
+        setConfiguredQuestionCount(saved.quiz.questionCount);
+      } catch (err: unknown) {
+        if (err instanceof DomainError) {
+          setError(err.message);
+        } else {
+          setError('Não foi possível salvar os parâmetros da partida.');
+        }
+      }
+    },
+    [useCase]
+  );
+
+  const handleSelectDuration = useCallback(
+    (seconds: QuizDurationOption) => saveSettings({ durationSeconds: seconds }),
+    [saveSettings]
+  );
+
+  const handleSelectQuestionCount = useCallback(
+    (count: QuizQuestionCountOption) => saveSettings({ questionCount: count }),
+    [saveSettings]
+  );
 
   const handleRequestExit = useCallback(() => {
     setConfirmingExit(true);
@@ -222,7 +281,10 @@ export function useQuizViewModel(
     currentTeamIndex,
     currentTeam,
     currentQuestionIndex,
-    totalQuestions: questions.length,
+    totalQuestions,
+    questionsPerTeam: matchPlan.questionsPerTeam,
+    configuredQuestionCount,
+    questionCountNotice,
     currentQuestion,
     selectedOptionKey,
     isCorrect,
@@ -240,6 +302,7 @@ export function useQuizViewModel(
     handleTick,
     handleNextQuestion,
     handleSelectDuration,
+    handleSelectQuestionCount,
     handleRequestExit,
     handleCancelExit,
     handleConfirmExit,
