@@ -354,7 +354,7 @@ export const CidadeDormeDaySection = ({
                 : 'Houve empate ou maioria em Pular Voto. Ninguém foi eliminado hoje!'
             }
             playersTag={`${alivePlayers.length} permanecem vivos`}
-            icon="weather-night"
+            icon="vote-outline"
           />
 
           {room.voteReport && (

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Pressable, View, Text, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { tokens } from '@/view/theme';
+import { darkTokens, tokens, type ThemeMode } from '@/view/theme';
 
 export type GameCardProps = {
   title: string;
@@ -10,6 +10,7 @@ export type GameCardProps = {
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
   highlightLeader?: boolean;
   disabled?: boolean;
+  themeMode?: ThemeMode;
   onPress?: () => void;
 };
 
@@ -20,9 +21,11 @@ export const GameCard = ({
   icon,
   highlightLeader = false,
   disabled = false,
+  themeMode = 'light',
   onPress,
 }: GameCardProps) => {
   const [pressed, setPressed] = useState(false);
+  const activeTokens = themeMode === 'dark' ? darkTokens : tokens;
 
   return (
     <Pressable
@@ -38,44 +41,72 @@ export const GameCard = ({
         styles.card,
         {
           backgroundColor: disabled
-            ? tokens.semantic.color.disabledBg
-            : tokens.component.card.bg,
+            ? activeTokens.semantic.color.disabledBg
+            : activeTokens.component.card.bg,
           borderColor: highlightLeader
-            ? tokens.semantic.color.highlight
+            ? activeTokens.semantic.color.highlight
             : pressed
-            ? tokens.semantic.color.action
-            : tokens.component.card.border,
+            ? activeTokens.semantic.color.action
+            : activeTokens.component.card.border,
           borderRadius: pressed
-            ? tokens.semantic.radius.md
-            : tokens.component.card.radius,
+            ? activeTokens.semantic.radius.md
+            : activeTokens.component.card.radius,
           elevation: disabled
-            ? tokens.semantic.elevation.none
+            ? activeTokens.semantic.elevation.none
             : highlightLeader
-            ? tokens.semantic.elevation.floating
-            : tokens.semantic.elevation.card,
+            ? activeTokens.semantic.elevation.floating
+            : activeTokens.semantic.elevation.card,
         },
       ]}
     >
       <View style={styles.header}>
-        <View style={styles.badge}>
+        <View
+          style={[
+            styles.badge,
+            { backgroundColor: activeTokens.semantic.color.actionContainer },
+          ]}
+        >
           <MaterialCommunityIcons
             name={icon}
-            size={tokens.semantic.icon.lg}
-            color={tokens.semantic.color.onActionContainer}
+            size={activeTokens.semantic.icon.lg}
+            color={activeTokens.semantic.color.onActionContainer}
           />
         </View>
-        <View style={styles.tag}>
-          <Text allowFontScaling style={styles.tagText}>
+        <View
+          style={[
+            styles.tag,
+            { backgroundColor: activeTokens.semantic.color.surfaceVariant },
+          ]}
+        >
+          <Text
+            allowFontScaling
+            style={[
+              styles.tagText,
+              { color: activeTokens.semantic.color.onSurface },
+            ]}
+          >
             {playersTag}
           </Text>
         </View>
       </View>
 
       <View style={styles.body}>
-        <Text allowFontScaling style={styles.title}>
+        <Text
+          allowFontScaling
+          style={[
+            styles.title,
+            { color: activeTokens.semantic.color.onSurface },
+          ]}
+        >
           {title}
         </Text>
-        <Text allowFontScaling style={styles.description}>
+        <Text
+          allowFontScaling
+          style={[
+            styles.description,
+            { color: activeTokens.semantic.color.onSurfaceMuted },
+          ]}
+        >
           {description}
         </Text>
       </View>

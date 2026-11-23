@@ -168,6 +168,7 @@ export const CidadeDormeNightSection = ({
         description={turnDescription}
         playersTag={`${alivePlayers.length} vivos na cidade`}
         icon="weather-night"
+        themeMode="dark"
       />
 
       {hasVerdictThisRound && room.detectiveVerdict ? (
