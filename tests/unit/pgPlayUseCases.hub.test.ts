@@ -13,7 +13,7 @@ describe('PgPlayUseCases — Catálogo e Hub de Jogos (UC01)', () => {
 
     const games = await useCases.listMinigames();
 
-    expect(games).toHaveLength(6);
+    expect(games).toHaveLength(7);
     expect(games.map((g) => g.id)).toEqual([
       'mimica',
       'quiz',
@@ -21,10 +21,12 @@ describe('PgPlayUseCases — Catálogo e Hub de Jogos (UC01)', () => {
       'adedonha',
       'cidade-dorme',
       'versiculo',
+      'quem-sou-eu',
     ]);
     expect(games.find((g) => g.id === 'cidade-dorme')?.available).toBe(true);
     expect(games.find((g) => g.id === 'mimica')?.available).toBe(true);
     expect(games.find((g) => g.id === 'versiculo')?.available).toBe(true);
+    expect(games.find((g) => g.id === 'quem-sou-eu')?.available).toBe(true);
   });
 
   it('deve filtrar minigames por texto ignorando acentos, espaços e caixa (RF03)', async () => {
@@ -54,7 +56,7 @@ describe('PgPlayUseCases — Catálogo e Hub de Jogos (UC01)', () => {
     );
 
     const onePhone = await useCases.listMinigames('', '1 Celular');
-    expect(onePhone).toHaveLength(4);
+    expect(onePhone).toHaveLength(5);
     expect(onePhone.every((g) => g.modality === '1 Celular')).toBe(true);
 
     const multiplayer = await useCases.listMinigames('', 'Multi-Celular');
