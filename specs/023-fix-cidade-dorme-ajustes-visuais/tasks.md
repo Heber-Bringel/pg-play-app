@@ -38,3 +38,16 @@
 
 - [x] **T009** Executar `npm run check` (`node scripts/check-arquitetura.mjs && tsc --noEmit && jest --passWithNoTests`) e confirmar **0 violações**
 - [x] **T010** Realizar commits convencionais e abrir Pull Request vinculando `Closes #67`
+
+---
+
+## Fase 5: Adendo — Seletor Minimizável de Tema no Hub (`Automático / Claro / Escuro`)
+*Objetivo: Implementar de dentro para fora (`model` → `infra` → `usecase` → `di` → `tests` → `viewmodel` → `view` → `app`) a preferência persistente de tema com seletor minimizável no Hub.*
+
+- [x] **T011** Criar entidade `ThemePreference` e contrato `IThemePreferenceDataSource` em `src/model/`
+- [x] **T012** Implementar `MemoryThemePreferenceDataSource` e `AsyncStorageThemePreferenceDataSource` em `src/infra/datasources/`
+- [x] **T013** Criar `IThemePreferenceUseCases`, `ThemePreferenceUseCases` em `src/usecase/` e registrar `themePreferenceUseCases` em `src/di/container.ts`
+- [x] **T014** Criar `useThemePreferenceViewModel` em `src/viewmodel/useThemePreferenceViewModel.ts`
+- [x] **T015** Atualizar `src/view/theme.ts`, `src/app/_layout.tsx`, `src/view/components/expressiveButton.tsx`, criar `src/view/components/themeModeSwitcher.tsx` e integrar em `src/view/index.tsx`
+- [x] **T016** Criar e atualizar testes em `tests/unit/`, `tests/hooks/`, `tests/components/themeProvider.test.tsx` e `tests/mocks/hubScreen.mock.test.tsx`
+- [x] **T017** Executar `npm run check` e confirmar **0 violações** e todos os testes passando

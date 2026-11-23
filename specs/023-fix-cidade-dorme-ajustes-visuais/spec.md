@@ -97,3 +97,20 @@ Como **Jogador observando o Painel da Cidade**, quero que participantes com a me
 - **`CS-01` (5 Itens da Issue `#67`):** Todos os 5 itens da tabela de ajustes visuais implementados e validados em `tests/components/cidadeDormeVisuals.test.tsx` e `tests/mocks/cidadeDormeScreen.mock.test.tsx`.
 - **`CS-02` (Design System `RNF10`):** Zero cores literais (`#hex`, `rgb()`, `rgba()`) fora de `src/view/theme.ts`; total alinhamento com tokens da versão `1.1.0` (`useTheme` / `tokens` / `darkTokens`).
 - **`CS-03` (Arquitetura MVVM):** `npm run check` (`node scripts/check-arquitetura.mjs && tsc --noEmit && jest --passWithNoTests`) passa com **0 violações**.
+
+---
+
+## 4. Adendo — Seletor Minimizável de Tema no Hub (`Automático / Claro / Escuro`)
+
+### História de Usuário 4 — Alternar Tema do App no Hub com Painel Minimizável e Persistência (Prioridade: P2)
+
+Como **Líder ou participante do PG usando o Hub de Jogos**, quero poder alternar facilmente entre os modos de tema **Automático**, **Claro** e **Escuro** por meio de um controle compacto que inicia minimizado e pode ser expandido/recolhido quando necessário, mantendo minha escolha salva no aparelho sem interferir nas fases temáticas do **Cidade Dorme**.
+
+**Por que esta prioridade:** Permite ao grupo adaptar o brilho/contraste do aplicativo ao ambiente presencial do PG (sala escura ou área aberta) independentemente da configuração do sistema operacional, sem poluir o cabeçalho inicial do Hub.
+
+**Cenários de Aceitação (Dado / Quando / Então):**
+
+1. **Dado** o Hub de Jogos aberto pela primeira vez (ou sem preferência salva), **Quando** o cabeçalho é renderizado, **Então** o seletor de tema aparece apenas como um botão compacto minimizado (ícone do modo atual, com `accessibilityState.expanded = false`) e a preferência padrão é `Automático` (`'auto'`).
+2. **Dado** o botão compacto de tema no cabeçalho do Hub, **Quando** o usuário toca nele, **Então** o painel de tema expande exibindo os 3 chips (`Automático`, `Claro`, `Escuro`) e um botão para minimizar; ao tocar no botão de minimizar ou novamente no botão do cabeçalho, o painel recolhe.
+3. **Dado** o painel de tema expandido, **Quando** o usuário seleciona `Escuro` ou `Claro`, **Então** todo o aplicativo aplica imediatamente o tema escolhido, persiste a preferência no `AsyncStorage` (`@pgplay:theme-preference:v1`) e a restaura ao reabrir o app.
+4. **Dado** que o usuário escolheu manualmente `Escuro` ou `Claro` no Hub e entra em uma sala do **Cidade Dorme**, **Quando** uma partida está em andamento, **Então** o tema da sala do Cidade Dorme mantém precedência exclusiva por fase (escuro nas fases noturnas e claro nas fases fora da Noite), restaurando a preferência do Hub ao sair da sala.

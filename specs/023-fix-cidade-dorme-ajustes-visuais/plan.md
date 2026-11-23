@@ -95,3 +95,26 @@ tests/
   - Em `role_reveal`, `"Prontos 0/5"` aparece apenas uma vez (no `CidadeDormeCityPanel`), e o `GameCard` exibe `"Sigilo Individual"`.
   - Em `vote_result`, o `GameCard` usa `icon="vote-outline"` (sem `"weather-night"`).
   - À noite (`night_assassin`), o `GameCard` recebe `themeMode="dark"`.
+
+---
+
+## 7. Adendo — Seletor Minimizável de Tema no Hub (`Automático / Claro / Escuro`)
+
+### Camadas MVVM Envolvidas
+- `src/model/entities/themePreference.ts`: entidade `ThemePreference = 'auto' | 'light' | 'dark'`.
+- `src/model/datasources/iThemePreferenceDataSource.ts`: contrato `IThemePreferenceDataSource`.
+- `src/infra/datasources/memoryThemePreferenceDataSource.ts`: implementação em memória (`MemoryThemePreferenceDataSource`) para testes e execução offline.
+- `src/infra/datasources/asyncStorageThemePreferenceDataSource.ts`: persistência local (`AsyncStorageThemePreferenceDataSource`) na chave `@pgplay:theme-preference:v1`.
+- `src/usecase/iThemePreferenceUseCases.ts` e `src/usecase/themePreferenceUseCases.ts`: validação e coordenação da preferência de tema.
+- `src/di/container.ts`: instância e exporta `themePreferenceUseCases`.
+- `src/viewmodel/useThemePreferenceViewModel.ts`: hook `[ThemePreferenceState, ThemePreferenceActions]` para carregamento e persistência no layout raiz.
+- `src/app/_layout.tsx`: conecta `useThemePreferenceViewModel` ao `<ThemeProvider>` raiz.
+- `src/view/theme.ts`: suporte a `preference`, `onChangePreference` e `useThemePreference()`, mantendo precedência estrita `mode > parentMode > overrideMode (Cidade Dorme) > preference (!== 'auto') > systemScheme`.
+- `src/view/components/expressiveButton.tsx`: prop opcional `accessibilityExpanded?: boolean`.
+- `src/view/components/themeModeSwitcher.tsx`: componentes `ThemeModeToggleButton` e `ThemeModePanel` usando `ExpressiveButton`, `ExpressiveTag` e `ExpressiveChip` exclusivamente com tokens de `@/view/theme`.
+- `src/view/index.tsx`: integra botão minimizado no cabeçalho do Hub (`brandActions`) e painel recolhível `ThemeModePanel`.
+- `tests/`: `tests/unit/asyncStorageThemePreferenceDataSource.test.ts`, `tests/unit/themePreferenceUseCases.test.ts`, `tests/hooks/useThemePreferenceViewModel.test.ts`, `tests/components/themeProvider.test.tsx` e `tests/mocks/hubScreen.mock.test.tsx`.
+
+### Tokens e Componentes do Design System Utilizados
+- Componentes: `ExpressiveButton` (`variant="icon"` com `accessibilityExpanded`), `ExpressiveTag` (`tone="action"`), `ExpressiveChip`.
+- Tokens: `activeTokens.component.card.{bg, border}`, `activeTokens.semantic.color.{onSurface, action}`, `activeTokens.semantic.space.{sm, md}`, `activeTokens.semantic.radius.lg`, `activeTokens.semantic.border.thin`, `activeTokens.semantic.elevation.card`, `activeTokens.semantic.font.label`, `activeTokens.semantic.icon.md`.
