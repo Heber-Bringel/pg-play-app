@@ -2,7 +2,10 @@ import React from 'react';
 import renderer, { act } from 'react-test-renderer';
 import { Animated } from 'react-native';
 import type { CidadeDormePlayer } from '@/model/entities/multiplayerSession';
-import { CidadeDormeCityPanel } from '@/view/components/cidadeDormeCityPanel';
+import {
+  CidadeDormeCityPanel,
+  getAvatarInitials,
+} from '@/view/components/cidadeDormeCityPanel';
 import { CidadeDormePhaseTimeline } from '@/view/components/cidadeDormePhaseTimeline';
 import { ExpressiveTimer } from '@/view/components/expressiveTimer';
 
@@ -121,5 +124,51 @@ describe('Componentes Visuais do Cidade Dorme (UC07 #56)', () => {
 
     expect(springSpy).not.toHaveBeenCalled();
     expect(timingSpy).not.toHaveBeenCalled();
+  });
+
+  it('CidadeDormeCityPanel exibe iniciais de duas letras para diferenciar nomes parecidos (Issue #67)', () => {
+    expect(getAvatarInitials('Diego')).toBe('DI');
+    expect(getAvatarInitials('Douglas')).toBe('DO');
+    expect(getAvatarInitials('Ana Maria')).toBe('AM');
+    expect(getAvatarInitials('B')).toBe('B');
+    expect(getAvatarInitials('   ')).toBe('?');
+
+    const similarPlayers: CidadeDormePlayer[] = [
+      {
+        id: 'p1',
+        nickname: 'Diego',
+        isHost: true,
+        isAlive: true,
+        isReady: true,
+        role: null,
+        hasVoted: false,
+      },
+      {
+        id: 'p2',
+        nickname: 'Douglas',
+        isHost: false,
+        isAlive: true,
+        isReady: true,
+        role: null,
+        hasVoted: false,
+      },
+    ];
+
+    let tree!: renderer.ReactTestRenderer;
+    act(() => {
+      tree = renderer.create(
+        <CidadeDormeCityPanel
+          players={similarPlayers}
+          aliveCount={2}
+          eliminatedCount={0}
+        />
+      );
+    });
+
+    const texts = tree.root
+      .findAllByType('Text' as any)
+      .map((t) => t.props.children);
+    expect(texts).toContain('DI');
+    expect(texts).toContain('DO');
   });
 });

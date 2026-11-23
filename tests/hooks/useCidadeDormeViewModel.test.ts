@@ -642,6 +642,17 @@ describe('useCidadeDormeViewModel — Hook do Cidade Dorme em Sala Multiplayer (
     expect(harness.getState().eliminatedCount).toBe(1);
     expect(harness.getState().phaseTimeline).toEqual([
       { id: 'night', label: 'Noite', isActive: false, isCompleted: true },
+      { id: 'dawn', label: 'Amanhecer', isActive: true, isCompleted: false },
+      { id: 'debate', label: 'Debate', isActive: false, isCompleted: false },
+      { id: 'voting', label: 'Votação', isActive: false, isCompleted: false },
+    ]);
+
+    act(() => {
+      jest.advanceTimersByTime(4_000);
+    });
+
+    expect(harness.getState().phaseTimeline).toEqual([
+      { id: 'night', label: 'Noite', isActive: false, isCompleted: true },
       { id: 'dawn', label: 'Amanhecer', isActive: false, isCompleted: true },
       { id: 'debate', label: 'Debate', isActive: true, isCompleted: false },
       { id: 'voting', label: 'Votação', isActive: false, isCompleted: false },

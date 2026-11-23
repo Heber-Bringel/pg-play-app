@@ -815,4 +815,82 @@ describe('CidadeDormeScreen — Testes de Tela com Mocks de ViewModel (UC07)', (
     expect(springSpy).not.toHaveBeenCalled();
     expect(timingSpy).not.toHaveBeenCalled();
   });
+
+  it('deve aplicar os ajustes visuais da noite, votação e revelação (Issue #67)', () => {
+    const actions = createMockActions();
+
+    // Issue #67 Item 1: o cartão da noite "A Noite · Turno do…" usa themeMode="dark"
+    jest
+      .spyOn(cidadeDormeVmModule, 'useCidadeDormeViewModel')
+      .mockReturnValue([
+        {
+          ...baseState,
+          isNightPhase: true,
+          room: { ...baseRoom, phase: 'night_assassin' },
+        },
+        actions,
+      ]);
+    let nightCardTree!: renderer.ReactTestRenderer;
+    act(() => {
+      nightCardTree = renderer.create(<CidadeDormeScreen />);
+    });
+    const nightCards = nightCardTree.root.findAll(
+      (node) =>
+        typeof node.props?.title === 'string' &&
+        node.props.title.startsWith('A Noite · Turno do')
+    );
+    expect(nightCards.length).toBeGreaterThan(0);
+    expect(nightCards[0].props.themeMode).toBe('dark');
+
+    // Issue #67 Item 4: em role_reveal, "Prontos 0/5" não duplica no GameCard
+    jest
+      .spyOn(cidadeDormeVmModule, 'useCidadeDormeViewModel')
+      .mockReturnValue([
+        {
+          ...baseState,
+          room: { ...baseRoom, phase: 'role_reveal' },
+        },
+        actions,
+      ]);
+    let roleRevealTree!: renderer.ReactTestRenderer;
+    act(() => {
+      roleRevealTree = renderer.create(<CidadeDormeScreen />);
+    });
+    const roleTexts = roleRevealTree.root
+      .findAllByType('Text' as any)
+      .map((t) => String(t.props.children));
+    expect(roleTexts.filter((txt) => txt.includes('Prontos'))).toHaveLength(1);
+    expect(roleTexts).toContain('Sigilo Individual');
+
+    // Issue #67 Item 2: em vote_result, o GameCard usa ícone diurno/votação (vote-outline), não weather-night
+    jest
+      .spyOn(cidadeDormeVmModule, 'useCidadeDormeViewModel')
+      .mockReturnValue([
+        {
+          ...baseState,
+          room: {
+            ...baseRoom,
+            phase: 'vote_result',
+            voteReport: {
+              roundNumber: 1,
+              eliminatedPlayerId: 'cd-player-2',
+              eliminatedNickname: 'Ana',
+              eliminatedRole: 'assassino',
+              tieOrSkipped: false,
+              voteCounts: { 'cd-player-2': 3 },
+              skipCount: 1,
+            },
+          },
+        },
+        actions,
+      ]);
+    let voteResultIconTree!: renderer.ReactTestRenderer;
+    act(() => {
+      voteResultIconTree = renderer.create(<CidadeDormeScreen />);
+    });
+    const voteResultCard = voteResultIconTree.root.findByProps({
+      title: 'Resultado da Votação · Ana Eliminado',
+    } as any);
+    expect(voteResultCard.props.icon).toBe('vote-outline');
+  });
 });
