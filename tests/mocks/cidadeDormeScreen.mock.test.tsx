@@ -1,4 +1,5 @@
 import React from 'react';
+import { AccessibilityInfo, Animated } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 import CidadeDormeRoute from '@/app/cidade-dorme';
 import type { CidadeDormeRoom } from '@/model/entities/multiplayerSession';
@@ -29,6 +30,7 @@ const createMockActions = (): CidadeDormeActions => ({
   handleTallyVotes: jest.fn(async () => {}),
   handleStartNextNight: jest.fn(async () => {}),
   handleRestartMatch: jest.fn(async () => {}),
+  handleSetReduceMotion: jest.fn(),
   handleRequestExit: jest.fn(),
   handleCancelExit: jest.fn(),
   handleExitArena: jest.fn(),
@@ -128,6 +130,15 @@ const baseState: CidadeDormeState = {
   selectedNightTargetId: 'cd-player-2',
   selectedVoteTargetId: 'cd-player-2',
   secondsRemaining: 15,
+  reduceMotion: false,
+  phaseTimeline: [
+    { id: 'night', label: 'Noite', isActive: false, isCompleted: false },
+    { id: 'dawn', label: 'Amanhecer', isActive: false, isCompleted: false },
+    { id: 'debate', label: 'Debate', isActive: false, isCompleted: false },
+    { id: 'voting', label: 'Votação', isActive: false, isCompleted: false },
+  ],
+  aliveCount: 5,
+  eliminatedCount: 0,
   loading: false,
   error: null,
   confirmingExit: false,
@@ -590,11 +601,14 @@ describe('CidadeDormeScreen — Testes de Tela com Mocks de ViewModel (UC07)', (
       assassinNightTree = renderer.create(<CidadeDormeScreen />);
     });
     const nightTexts = assassinNightTree.root.findAllByType('Text' as any);
-    expect(nightTexts.some((t) => t.props.children === 'Ana')).toBe(false);
-    expect(nightTexts.some((t) => t.props.children === 'Lucas')).toBe(false);
-    expect(nightTexts.some((t) => t.props.children === 'Líder do PG')).toBe(
-      true
-    );
+    const nightTargetButtons = assassinNightTree.root
+      .findAllByType('Pressable' as any)
+      .map((p) => String(p.props.accessibilityLabel ?? ''));
+    expect(nightTargetButtons.some((l) => l.includes(': Ana'))).toBe(false);
+    expect(nightTargetButtons.some((l) => l.includes(': Lucas'))).toBe(false);
+    expect(
+      nightTargetButtons.some((l) => l.includes(': Líder do PG'))
+    ).toBe(true);
     expect(
       nightTexts.some(
         (t) =>
@@ -619,11 +633,14 @@ describe('CidadeDormeScreen — Testes de Tela com Mocks de ViewModel (UC07)', (
       voteDayTree = renderer.create(<CidadeDormeScreen />);
     });
     const voteTexts = voteDayTree.root.findAllByType('Text' as any);
+    const voteTargetButtons = voteDayTree.root
+      .findAllByType('Pressable' as any)
+      .map((p) => String(p.props.accessibilityLabel ?? ''));
     // Próprio jogador (Líder do PG) não aparece como candidato
-    expect(voteTexts.some((t) => t.props.children === 'Líder do PG')).toBe(
+    expect(voteTargetButtons.some((l) => l.includes(': Líder do PG'))).toBe(
       false
     );
-    expect(voteTexts.some((t) => t.props.children === 'Ana')).toBe(true);
+    expect(voteTargetButtons.some((l) => l.includes(': Ana'))).toBe(true);
     expect(
       voteTexts.some((t) => t.props.children === 'Abster-se / Pular Voto')
     ).toBe(true);
@@ -634,5 +651,168 @@ describe('CidadeDormeScreen — Testes de Tela com Mocks de ViewModel (UC07)', (
     expect(
       voteIcons.some((i) => i.props.name === 'hand-back-left-outline')
     ).toBe(true);
+  });
+
+  it('deve renderizar timeline, painel da cidade, barras de votação, paridade noturna (RNF11) e respeitar reduceMotion (RNF09) (#56)', async () => {
+    const actions = createMockActions();
+
+    // 1. Paridade noturna (RNF11): mesma linha do tempo, painel e legenda para quem age e quem dorme
+    const nightTimeline = [
+      { id: 'night' as const, label: 'Noite', isActive: true, isCompleted: false },
+      { id: 'dawn' as const, label: 'Amanhecer', isActive: false, isCompleted: false },
+      { id: 'debate' as const, label: 'Debate', isActive: false, isCompleted: false },
+      { id: 'voting' as const, label: 'Votação', isActive: false, isCompleted: false },
+    ];
+    const nightRoom: CidadeDormeRoom = {
+      ...baseRoom,
+      phase: 'night_angel',
+      currentRound: 2,
+      players: baseRoom.players.map((p, idx) =>
+        idx === 4 ? { ...p, isAlive: false } : p
+      ),
+    };
+
+    jest
+      .spyOn(cidadeDormeVmModule, 'useCidadeDormeViewModel')
+      .mockReturnValue([
+        {
+          ...baseState,
+          isNightPhase: true,
+          currentPlayerId: 'cd-player-3',
+          currentPlayer: nightRoom.players[2], // Anjo (age nesta fase)
+          phaseTimeline: nightTimeline,
+          aliveCount: 4,
+          eliminatedCount: 1,
+          room: nightRoom,
+        },
+        actions,
+      ]);
+    let angelTree!: renderer.ReactTestRenderer;
+    act(() => {
+      angelTree = renderer.create(<CidadeDormeScreen />);
+    });
+
+    jest
+      .spyOn(cidadeDormeVmModule, 'useCidadeDormeViewModel')
+      .mockReturnValue([
+        {
+          ...baseState,
+          isNightPhase: true,
+          currentPlayerId: 'cd-player-4',
+          currentPlayer: nightRoom.players[3], // Cidadão (dorme nesta fase)
+          phaseTimeline: nightTimeline,
+          aliveCount: 4,
+          eliminatedCount: 1,
+          room: nightRoom,
+        },
+        actions,
+      ]);
+    let citizenTree!: renderer.ReactTestRenderer;
+    act(() => {
+      citizenTree = renderer.create(<CidadeDormeScreen />);
+    });
+
+    const angelTexts = angelTree.root.findAllByType('Text' as any).map((t) => t.props.children);
+    const citizenTexts = citizenTree.root.findAllByType('Text' as any).map((t) => t.props.children);
+    expect(angelTexts).toContain('Noite 2');
+    expect(citizenTexts).toContain('Noite 2');
+    expect(angelTexts).toContain('Vivos 4 · Eliminados 1');
+    expect(citizenTexts).toContain('Vivos 4 · Eliminados 1');
+    // Nenhum papel secreto aparece no painel da cidade durante a noite
+    expect(citizenTexts).not.toContain('Assassino');
+    expect(citizenTexts).not.toContain('Anjo');
+
+    // 2. Resultado da votação: barras com contagem agregada sem revelar votantes
+    jest
+      .spyOn(cidadeDormeVmModule, 'useCidadeDormeViewModel')
+      .mockReturnValue([
+        {
+          ...baseState,
+          phaseTimeline: [
+            { id: 'night', label: 'Noite', isActive: false, isCompleted: true },
+            { id: 'dawn', label: 'Amanhecer', isActive: false, isCompleted: true },
+            { id: 'debate', label: 'Debate', isActive: false, isCompleted: true },
+            { id: 'voting', label: 'Votação', isActive: false, isCompleted: true },
+          ],
+          aliveCount: 4,
+          eliminatedCount: 1,
+          room: {
+            ...baseRoom,
+            phase: 'vote_result',
+            voteReport: {
+              roundNumber: 1,
+              eliminatedPlayerId: 'cd-player-2',
+              eliminatedNickname: 'Ana',
+              eliminatedRole: 'assassino',
+              tieOrSkipped: false,
+              voteCounts: { 'cd-player-2': 3 },
+              skipCount: 1,
+            },
+          },
+        },
+        actions,
+      ]);
+    let voteResultTree!: renderer.ReactTestRenderer;
+    act(() => {
+      voteResultTree = renderer.create(<CidadeDormeScreen />);
+    });
+    const voteResultTexts = voteResultTree.root.findAllByType('Text' as any);
+    expect(voteResultTexts.some((t) => t.props.children === '3 voto(s)')).toBe(true);
+    expect(voteResultTexts.some((t) => t.props.children === '1 voto(s)')).toBe(true);
+
+    // 3. Fim de jogo exibe ícones específicos por papel
+    jest
+      .spyOn(cidadeDormeVmModule, 'useCidadeDormeViewModel')
+      .mockReturnValue([
+        {
+          ...baseState,
+          room: {
+            ...baseRoom,
+            phase: 'finished',
+            winner: 'cidade',
+          },
+        },
+        actions,
+      ]);
+    let finishedTree!: renderer.ReactTestRenderer;
+    act(() => {
+      finishedTree = renderer.create(<CidadeDormeScreen />);
+    });
+    const finishedIcons = finishedTree.root
+      .findAllByType('MaterialCommunityIcons' as any)
+      .map((i) => i.props.name);
+    expect(finishedIcons).toContain('incognito');
+    expect(finishedIcons).toContain('shield-check');
+    expect(finishedIcons).toContain('magnify');
+    expect(finishedIcons).toContain('home-account');
+
+    // 4. Com reduceMotion=true, AccessibilityInfo sincroniza e animações não são disparadas
+    jest
+      .spyOn(AccessibilityInfo, 'isReduceMotionEnabled')
+      .mockResolvedValueOnce(true);
+    const springSpy = jest.spyOn(Animated, 'spring');
+    const timingSpy = jest.spyOn(Animated, 'timing');
+
+    jest
+      .spyOn(cidadeDormeVmModule, 'useCidadeDormeViewModel')
+      .mockReturnValue([
+        {
+          ...baseState,
+          reduceMotion: true,
+          isNightPhase: true,
+          secondsRemaining: 5,
+          room: { ...baseRoom, phase: 'night_assassin' },
+        },
+        actions,
+      ]);
+
+    await act(async () => {
+      renderer.create(<CidadeDormeScreen />);
+      await Promise.resolve();
+    });
+
+    expect(actions.handleSetReduceMotion).toHaveBeenCalledWith(true);
+    expect(springSpy).not.toHaveBeenCalled();
+    expect(timingSpy).not.toHaveBeenCalled();
   });
 });

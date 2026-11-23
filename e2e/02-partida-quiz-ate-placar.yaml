@@ -1,0 +1,18 @@
+appId: br.edu.ifpi.pgplay
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Quiz Relâmpago"
+- tapOn: "Quiz Relâmpago"
+- assertVisible: "Estou Pronto!"
+- tapOn: "Estou Pronto!"
+- assertVisible: "Pergunta 1/"
+- tapOn:
+    id: "quiz-option-A"
+    optional: true
+- tapOn:
+    text: "Alternativa A.*"
+    optional: true
+- assertVisible:
+    text: "Placar Geral"
+    optional: true

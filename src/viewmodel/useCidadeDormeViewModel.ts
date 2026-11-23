@@ -19,6 +19,15 @@ import type {
 
 const CONNECTION_TIMEOUT_MS = 10_000;
 
+export type CidadeDormeTimelineStepId = 'night' | 'dawn' | 'debate' | 'voting';
+
+export type CidadeDormeTimelineStep = {
+  id: CidadeDormeTimelineStepId;
+  label: string;
+  isActive: boolean;
+  isCompleted: boolean;
+};
+
 export type CidadeDormeState = {
   room: CidadeDormeRoom | null;
   currentPlayerId: string | null;
@@ -32,6 +41,10 @@ export type CidadeDormeState = {
   selectedNightTargetId: string | null;
   selectedVoteTargetId: string | null;
   secondsRemaining: number;
+  reduceMotion: boolean;
+  phaseTimeline: CidadeDormeTimelineStep[];
+  aliveCount: number;
+  eliminatedCount: number;
   loading: boolean;
   error: string | null;
   confirmingExit: boolean;
@@ -66,6 +79,7 @@ export type CidadeDormeActions = {
   handleTallyVotes: () => Promise<void>;
   handleStartNextNight: () => Promise<void>;
   handleRestartMatch: () => Promise<void>;
+  handleSetReduceMotion: (enabled: boolean) => void;
   handleRequestExit: () => void;
   handleCancelExit: () => void;
   handleExitArena: () => void;
@@ -78,6 +92,39 @@ function isPhaseNight(phase: CidadeDormeRoom['phase'] | undefined): boolean {
     phase === 'night_angel' ||
     phase === 'night_detective'
   );
+}
+
+const TIMELINE_STEPS: Array<{ id: CidadeDormeTimelineStepId; label: string }> = [
+  { id: 'night', label: 'Noite' },
+  { id: 'dawn', label: 'Amanhecer' },
+  { id: 'debate', label: 'Debate' },
+  { id: 'voting', label: 'Votação' },
+];
+
+function buildPhaseTimeline(
+  phase: CidadeDormePhase | undefined
+): CidadeDormeTimelineStep[] {
+  let activeIndex = -1;
+  let completedUpTo = -1;
+
+  if (isPhaseNight(phase)) {
+    activeIndex = 0;
+  } else if (phase === 'day_debate') {
+    activeIndex = 2;
+    completedUpTo = 1;
+  } else if (phase === 'day_voting') {
+    activeIndex = 3;
+    completedUpTo = 2;
+  } else if (phase === 'vote_result' || phase === 'finished') {
+    completedUpTo = 3;
+  }
+
+  return TIMELINE_STEPS.map((step, index) => ({
+    id: step.id,
+    label: step.label,
+    isActive: index === activeIndex,
+    isCompleted: index <= completedUpTo,
+  }));
 }
 
 function getPhaseDurationSeconds(room: CidadeDormeRoom): number {
@@ -117,6 +164,7 @@ export function useCidadeDormeViewModel(
     string | null
   >(null);
   const [secondsRemaining, setSecondsRemaining] = useState<number>(15);
+  const [reduceMotion, setReduceMotion] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmingExit, setConfirmingExit] = useState<boolean>(false);
@@ -667,6 +715,10 @@ export function useCidadeDormeViewModel(
     secondsRemaining,
   ]);
 
+  const handleSetReduceMotion = useCallback((enabled: boolean): void => {
+    setReduceMotion(enabled);
+  }, []);
+
   const handleRequestExit = useCallback((): void => {
     setConfirmingExit(true);
   }, []);
@@ -728,6 +780,11 @@ export function useCidadeDormeViewModel(
     : null;
 
   const isNightPhase = isPhaseNight(room?.phase);
+  const phaseTimeline = buildPhaseTimeline(room?.phase);
+  const aliveCount = room ? room.players.filter((p) => p.isAlive).length : 0;
+  const eliminatedCount = room
+    ? room.players.filter((p) => !p.isAlive).length
+    : 0;
 
   const state: CidadeDormeState = {
     room,
@@ -742,6 +799,10 @@ export function useCidadeDormeViewModel(
     selectedNightTargetId,
     selectedVoteTargetId,
     secondsRemaining,
+    reduceMotion,
+    phaseTimeline,
+    aliveCount,
+    eliminatedCount,
     loading,
     error,
     confirmingExit,
@@ -767,6 +828,7 @@ export function useCidadeDormeViewModel(
     handleTallyVotes,
     handleStartNextNight,
     handleRestartMatch,
+    handleSetReduceMotion,
     handleRequestExit,
     handleCancelExit,
     handleExitArena,

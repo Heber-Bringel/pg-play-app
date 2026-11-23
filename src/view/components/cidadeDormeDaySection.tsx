@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useMemo, useRef } from 'react';
+import { Animated, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type {
   CidadeDormePlayer,
@@ -20,12 +20,23 @@ const ROLE_LABELS: Record<CidadeDormeRole, string> = {
   detetive: 'Detetive',
 };
 
+const ROLE_ICONS: Record<
+  CidadeDormeRole,
+  keyof typeof MaterialCommunityIcons.glyphMap
+> = {
+  assassino: 'incognito',
+  anjo: 'shield-check',
+  detetive: 'magnify',
+  cidadao: 'home-account',
+};
+
 export type CidadeDormeDaySectionProps = {
   room: CidadeDormeRoom;
   currentPlayer: CidadeDormePlayer | null;
   isCurrentPlayerHost: boolean;
   selectedVoteTargetId: string | null;
   secondsRemaining: number;
+  reduceMotion?: boolean;
   onStartVotingPhase: () => Promise<void>;
   onSelectVoteTarget: (targetIdOrSkip: string) => void;
   onCastVote: () => Promise<void>;
@@ -41,6 +52,7 @@ export const CidadeDormeDaySection = ({
   isCurrentPlayerHost,
   selectedVoteTargetId,
   secondsRemaining,
+  reduceMotion = false,
   onStartVotingPhase,
   onSelectVoteTarget,
   onCastVote,
@@ -51,6 +63,99 @@ export const CidadeDormeDaySection = ({
 }: CidadeDormeDaySectionProps) => {
   const activeTokens = useTheme();
   const styles = useMemo(() => createStyles(activeTokens), [activeTokens]);
+
+  const narratorFadeAnim = useRef(new Animated.Value(1)).current;
+  const dawnSlideAnim = useRef(new Animated.Value(0)).current;
+  const dawnOpacityAnim = useRef(new Animated.Value(1)).current;
+  const voteBarAnim = useRef(new Animated.Value(1)).current;
+  const winnerScaleAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (reduceMotion) {
+      narratorFadeAnim.setValue(1);
+      return;
+    }
+    narratorFadeAnim.setValue(0.6);
+    Animated.timing(narratorFadeAnim, {
+      toValue: 1,
+      duration: activeTokens.semantic.motion.duration.short,
+      useNativeDriver: true,
+    }).start();
+  }, [
+    activeTokens.semantic.motion.duration.short,
+    narratorFadeAnim,
+    reduceMotion,
+    room.narratorCaption,
+  ]);
+
+  useEffect(() => {
+    if (room.phase !== 'day_debate' || reduceMotion) {
+      dawnSlideAnim.setValue(0);
+      dawnOpacityAnim.setValue(1);
+      return;
+    }
+    dawnSlideAnim.setValue(-16);
+    dawnOpacityAnim.setValue(0);
+    Animated.spring(dawnSlideAnim, {
+      toValue: 0,
+      damping: activeTokens.semantic.motion.spring.spatial.damping,
+      stiffness: activeTokens.semantic.motion.spring.spatial.stiffness,
+      useNativeDriver: true,
+    }).start();
+    Animated.timing(dawnOpacityAnim, {
+      toValue: 1,
+      duration: activeTokens.semantic.motion.duration.medium,
+      useNativeDriver: true,
+    }).start();
+  }, [
+    activeTokens.semantic.motion.duration.medium,
+    activeTokens.semantic.motion.spring.spatial.damping,
+    activeTokens.semantic.motion.spring.spatial.stiffness,
+    dawnOpacityAnim,
+    dawnSlideAnim,
+    reduceMotion,
+    room.currentRound,
+    room.phase,
+  ]);
+
+  useEffect(() => {
+    if (room.phase !== 'vote_result' || reduceMotion) {
+      voteBarAnim.setValue(1);
+      return;
+    }
+    voteBarAnim.setValue(0);
+    Animated.timing(voteBarAnim, {
+      toValue: 1,
+      duration: activeTokens.semantic.motion.duration.medium,
+      useNativeDriver: false,
+    }).start();
+  }, [
+    activeTokens.semantic.motion.duration.medium,
+    reduceMotion,
+    room.currentRound,
+    room.phase,
+    voteBarAnim,
+  ]);
+
+  useEffect(() => {
+    if (room.phase !== 'finished' || reduceMotion) {
+      winnerScaleAnim.setValue(1);
+      return;
+    }
+    winnerScaleAnim.setValue(0.92);
+    Animated.spring(winnerScaleAnim, {
+      toValue: 1,
+      damping: activeTokens.semantic.motion.spring.spatial.damping,
+      stiffness: activeTokens.semantic.motion.spring.spatial.stiffness,
+      useNativeDriver: true,
+    }).start();
+  }, [
+    activeTokens.semantic.motion.spring.spatial.damping,
+    activeTokens.semantic.motion.spring.spatial.stiffness,
+    reduceMotion,
+    room.phase,
+    winnerScaleAnim,
+  ]);
 
   const alivePlayers = room.players.filter((p) => p.isAlive);
   const votingCandidates = alivePlayers.filter(
@@ -82,8 +187,8 @@ export const CidadeDormeDaySection = ({
 
   return (
     <View style={styles.container}>
-      <View
-        style={styles.narratorBanner}
+      <Animated.View
+        style={[styles.narratorBanner, { opacity: narratorFadeAnim }]}
         accessibilityRole="text"
         accessibilityLabel={`Legenda do Narrador: ${room.narratorCaption}`}
       >
@@ -101,7 +206,7 @@ export const CidadeDormeDaySection = ({
             {room.narratorCaption}
           </Text>
         </View>
-      </View>
+      </Animated.View>
 
       {!isAlive && room.phase !== 'finished' && (
         <View
@@ -123,15 +228,42 @@ export const CidadeDormeDaySection = ({
       {room.phase === 'day_debate' && (
         <View style={styles.sectionBlock}>
           <View style={styles.timerRow}>
-            <ExpressiveTimer secondsRemaining={secondsRemaining} />
+            <ExpressiveTimer
+              secondsRemaining={secondsRemaining}
+              reduceMotion={reduceMotion}
+            />
           </View>
 
-          <GameCard
-            title={dawnTitle}
-            description={dawnDescription}
-            playersTag={`${alivePlayers.length} vivos · Debate Presencial`}
-            icon="weather-sunny"
-          />
+          <Animated.View
+            style={{
+              opacity: dawnOpacityAnim,
+              transform: [{ translateY: dawnSlideAnim }],
+            }}
+          >
+            <GameCard
+              title={dawnTitle}
+              description={dawnDescription}
+              playersTag={`${alivePlayers.length} vivos · Debate Presencial`}
+              icon="weather-sunny"
+            />
+          </Animated.View>
+
+          {room.dawnReport?.savedByAngel && (
+            <View
+              style={styles.angelShieldBanner}
+              accessibilityRole="text"
+              accessibilityLabel="Proteção do Anjo: ninguém foi eliminado"
+            >
+              <MaterialCommunityIcons
+                name="shield-check"
+                size={activeTokens.semantic.icon.md}
+                color={activeTokens.component.banner.success.text}
+              />
+              <Text allowFontScaling style={styles.angelShieldText}>
+                Escudo do Anjo ativado: ninguém foi eliminado nesta noite!
+              </Text>
+            </View>
+          )}
 
           <View style={styles.cardBox}>
             <Text allowFontScaling style={styles.sectionTitle}>
@@ -187,6 +319,7 @@ export const CidadeDormeDaySection = ({
                     key={player.id}
                     index={index + 1}
                     label={player.nickname}
+                    reduceMotion={reduceMotion}
                     selected={selectedVoteTargetId === player.id}
                     onPress={() => onSelectVoteTarget(player.id)}
                   />
@@ -196,6 +329,7 @@ export const CidadeDormeDaySection = ({
                   icon="hand-back-left-outline"
                   label="Abster-se / Pular Voto"
                   accessibilityLabel="Abster-se / Pular Voto"
+                  reduceMotion={reduceMotion}
                   selected={selectedVoteTargetId === 'skip'}
                   onPress={() => onSelectVoteTarget('skip')}
                 />
@@ -255,6 +389,91 @@ export const CidadeDormeDaySection = ({
             icon="weather-night"
           />
 
+          {room.voteReport && (
+            <View style={styles.cardBox}>
+              <Text allowFontScaling style={styles.sectionTitle}>
+                Contagem de Votos (Sigilo Preservado)
+              </Text>
+              <View style={styles.tallyBarsList}>
+                {Object.entries(room.voteReport.voteCounts).map(
+                  ([playerId, count]) => {
+                    const target = room.players.find((p) => p.id === playerId);
+                    const maxCount = Math.max(
+                      1,
+                      room.voteReport?.skipCount ?? 0,
+                      ...Object.values(room.voteReport?.voteCounts ?? {})
+                    );
+                    const pct = Math.round((count / maxCount) * 100);
+                    const barWidth = voteBarAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['0%', `${pct}%`],
+                    });
+                    return (
+                      <View
+                        key={playerId}
+                        style={styles.tallyBarItem}
+                        accessibilityRole="text"
+                        accessibilityLabel={`${target?.nickname ?? 'Jogador'}: ${count} voto(s)`}
+                      >
+                        <View style={styles.tallyBarHeader}>
+                          <Text allowFontScaling style={styles.tallyBarName}>
+                            {target?.nickname ?? 'Jogador'}
+                          </Text>
+                          <Text allowFontScaling style={styles.tallyBarCount}>
+                            {`${count} voto(s)`}
+                          </Text>
+                        </View>
+                        <View style={styles.tallyTrack}>
+                          <Animated.View
+                            style={[styles.tallyFill, { width: barWidth }]}
+                          />
+                        </View>
+                      </View>
+                    );
+                  }
+                )}
+                <View
+                  style={styles.tallyBarItem}
+                  accessibilityRole="text"
+                  accessibilityLabel={`Abster-se / Pular Voto: ${room.voteReport.skipCount} voto(s)`}
+                >
+                  <View style={styles.tallyBarHeader}>
+                    <Text allowFontScaling style={styles.tallyBarName}>
+                      Abster-se / Pular Voto
+                    </Text>
+                    <Text allowFontScaling style={styles.tallyBarCount}>
+                      {`${room.voteReport.skipCount} voto(s)`}
+                    </Text>
+                  </View>
+                  <View style={styles.tallyTrack}>
+                    <Animated.View
+                      style={[
+                        styles.tallyFillSkip,
+                        {
+                          width: voteBarAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [
+                              '0%',
+                              `${Math.round(
+                                (room.voteReport.skipCount /
+                                  Math.max(
+                                    1,
+                                    room.voteReport.skipCount,
+                                    ...Object.values(room.voteReport.voteCounts)
+                                  )) *
+                                  100
+                              )}%`,
+                            ],
+                          }),
+                        },
+                      ]}
+                    />
+                  </View>
+                </View>
+              </View>
+            </View>
+          )}
+
           <View style={styles.cardBox}>
             {isCurrentPlayerHost ? (
               <ExpressiveButton
@@ -283,12 +502,13 @@ export const CidadeDormeDaySection = ({
 
       {room.phase === 'finished' && (
         <View style={styles.sectionBlock}>
-          <View
+          <Animated.View
             style={[
               styles.winnerBanner,
               room.winner === 'cidade'
                 ? styles.winnerBannerCity
                 : styles.winnerBannerAssassins,
+              { transform: [{ scale: winnerScaleAnim }] },
             ]}
           >
             <MaterialCommunityIcons
@@ -329,7 +549,7 @@ export const CidadeDormeDaySection = ({
                   : 'Os Assassinos atingiram paridade numérica com os cidadãos inocentes!'}
               </Text>
             </View>
-          </View>
+          </Animated.View>
 
           <View style={styles.cardBox}>
             <Text allowFontScaling style={styles.sectionTitle}>
@@ -338,7 +558,8 @@ export const CidadeDormeDaySection = ({
 
             <View style={styles.rolesSummaryList}>
               {room.players.map((player) => {
-                const isAssassin = player.role === 'assassino';
+                const roleKey: CidadeDormeRole = player.role ?? 'cidadao';
+                const isAssassin = roleKey === 'assassino';
                 return (
                   <View
                     key={player.id}
@@ -349,9 +570,7 @@ export const CidadeDormeDaySection = ({
                   >
                     <View style={styles.roleSummaryLeft}>
                       <MaterialCommunityIcons
-                        name={
-                          isAssassin ? 'alert-octagon' : 'shield-check-outline'
-                        }
+                        name={ROLE_ICONS[roleKey]}
                         size={activeTokens.semantic.icon.md}
                         color={
                           isAssassin
@@ -578,6 +797,65 @@ const createStyles = (activeTokens: AppTokens) => {
       fontSize: font.body.size,
       lineHeight: font.body.lineHeight,
       color: banner.info.text,
+    },
+    angelShieldBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.sm,
+      padding: space.md,
+      borderRadius: banner.radius,
+      backgroundColor: banner.success.bg,
+      borderWidth: border.thin,
+      borderColor: banner.success.border,
+    },
+    angelShieldText: {
+      flex: 1,
+      fontFamily: font.label.family,
+      fontSize: font.label.size,
+      lineHeight: font.label.lineHeight,
+      fontWeight: font.label.weight,
+      color: banner.success.text,
+    },
+    tallyBarsList: {
+      gap: space.sm,
+    },
+    tallyBarItem: {
+      gap: space.xs,
+    },
+    tallyBarHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    tallyBarName: {
+      fontFamily: font.label.family,
+      fontSize: font.label.size,
+      lineHeight: font.label.lineHeight,
+      fontWeight: font.label.weight,
+      color: color.onSurface,
+    },
+    tallyBarCount: {
+      fontFamily: font.caption.family,
+      fontSize: font.caption.size,
+      lineHeight: font.caption.lineHeight,
+      fontWeight: font.caption.weight,
+      color: color.onSurfaceMuted,
+    },
+    tallyTrack: {
+      height: space.sm,
+      borderRadius: radius.full,
+      backgroundColor: color.surfaceVariant,
+      overflow: 'hidden',
+    },
+    tallyFill: {
+      height: space.sm,
+      borderRadius: radius.full,
+      backgroundColor: color.action,
+    },
+    tallyFillSkip: {
+      height: space.sm,
+      borderRadius: radius.full,
+      backgroundColor: color.onSurfaceMuted,
     },
   });
 };

@@ -17,6 +17,11 @@ export const Platform = {
     options.ios ?? options.default,
 };
 
+export const AccessibilityInfo = {
+  isReduceMotionEnabled: jest.fn(async () => false),
+  addEventListener: jest.fn(() => ({ remove: jest.fn() })),
+};
+
 export const Animated = {
   View: (props: any) => React.createElement('View', props, props.children),
   Text: (props: any) => React.createElement('Text', props, props.children),
@@ -27,6 +32,10 @@ export const Animated = {
     }
     setValue(v: number) {
       this.val = v;
+    }
+    interpolate(config: { inputRange: number[]; outputRange: Array<number | string> }) {
+      const idx = this.val >= (config.inputRange[1] ?? 1) ? 1 : 0;
+      return config.outputRange[idx] ?? config.outputRange[0];
     }
   },
   spring: (_val: any, _config: any) => ({
