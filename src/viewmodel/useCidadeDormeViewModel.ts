@@ -18,6 +18,8 @@ import type {
 } from '@/usecase/iCidadeDormeUseCases';
 
 const CONNECTION_TIMEOUT_MS = 10_000;
+const NIGHT_SYNC_WATCHDOG_INTERVAL_MS = 1_500;
+const NIGHT_SYNC_WATCHDOG_MAX_ATTEMPTS = 4;
 
 export type CidadeDormeTimelineStepId = 'night' | 'dawn' | 'debate' | 'voting';
 
@@ -172,6 +174,8 @@ export function useCidadeDormeViewModel(
   const lastPhaseKeyRef = useRef<string | null>(null);
   const lastSpokenKeyRef = useRef<string | null>(null);
   const autoAdvancedPhaseKeyRef = useRef<string | null>(null);
+  const currentPlayerIdRef = useRef<string | null>(null);
+  const lastRoomIdRef = useRef<string | null>(null);
   const lastVersionRef = useRef<number>(-1);
   const activeTimeoutsRef = useRef<Set<ReturnType<typeof setTimeout>>>(
     new Set()
@@ -238,28 +242,68 @@ export function useCidadeDormeViewModel(
     []
   );
 
+  const acceptRoomSnapshot = useCallback(
+    (nextRoom: CidadeDormeRoom, knownPlayerId?: string | null): boolean => {
+      const activeId = knownPlayerId ?? currentPlayerIdRef.current;
+      if (
+        activeId &&
+        activeId !== nextRoom.hostId &&
+        !nextRoom.players.some((p) => p.id === activeId)
+      ) {
+        lastSpokenKeyRef.current = null;
+        lastPhaseKeyRef.current = null;
+        autoAdvancedPhaseKeyRef.current = null;
+        lastRoomIdRef.current = null;
+        lastVersionRef.current = -1;
+        currentPlayerIdRef.current = null;
+        void useCase.leaveRoom(nextRoom.id, activeId).catch(() => {
+          // Saída em best-effort para limpar linha órfã do jogador removido.
+        });
+        setRoom(null);
+        setCurrentPlayerId(null);
+        setIsRoleVisible(false);
+        setHasSubmittedNightAction(false);
+        setSelectedNightTargetId(null);
+        setSelectedVoteTargetId(null);
+        setError('Você foi removido da sala pelo Moderador.');
+        return false;
+      }
+
+      const nextVersion = nextRoom.version ?? 0;
+      if (lastRoomIdRef.current !== nextRoom.id) {
+        lastRoomIdRef.current = nextRoom.id;
+        lastVersionRef.current = nextVersion;
+      } else if (nextVersion < lastVersionRef.current) {
+        return false;
+      } else {
+        lastVersionRef.current = nextVersion;
+      }
+      syncPhaseTimerAndSelection(nextRoom);
+      setRoom(nextRoom);
+      return true;
+    },
+    [syncPhaseTimerAndSelection, useCase]
+  );
+
   const applyRoomState = useCallback(
     async (loadedRoom: CidadeDormeRoom) => {
       const localId = await useCase.getLocalPlayerId(loadedRoom.id);
-      setCurrentPlayerId(localId ?? loadedRoom.hostId);
-      syncPhaseTimerAndSelection(loadedRoom);
-      setRoom(loadedRoom);
+      if (!isMountedRef.current) return;
+      const resolvedId = localId ?? loadedRoom.hostId;
+      currentPlayerIdRef.current = resolvedId;
+      setCurrentPlayerId(resolvedId);
+      acceptRoomSnapshot(loadedRoom, resolvedId);
     },
-    [syncPhaseTimerAndSelection, useCase]
+    [acceptRoomSnapshot, useCase]
   );
 
   useEffect(() => {
     if (!room?.id) return;
     const unsubscribe = useCase.subscribeToRoom(room.id, (updatedRoom) => {
-      if (updatedRoom.version < lastVersionRef.current) {
-        return;
-      }
-      lastVersionRef.current = updatedRoom.version;
-      syncPhaseTimerAndSelection(updatedRoom);
-      setRoom(updatedRoom);
+      acceptRoomSnapshot(updatedRoom);
     });
     return () => unsubscribe();
-  }, [room?.id, syncPhaseTimerAndSelection, useCase]);
+  }, [acceptRoomSnapshot, room?.id, useCase]);
 
   const activePlayerId = currentPlayerId ?? room?.hostId ?? '';
   const isCurrentPlayerHost = Boolean(
@@ -299,6 +343,9 @@ export function useCidadeDormeViewModel(
     async (hostNickname: string): Promise<boolean> => {
       setLoading(true);
       setError(null);
+      currentPlayerIdRef.current = null;
+      lastRoomIdRef.current = null;
+      lastVersionRef.current = -1;
       try {
         const created = await runWithConnectionTimeout(
           useCase.createRoom(hostNickname)
@@ -327,6 +374,9 @@ export function useCidadeDormeViewModel(
     async (code: string, nickname: string): Promise<boolean> => {
       setLoading(true);
       setError(null);
+      currentPlayerIdRef.current = null;
+      lastRoomIdRef.current = null;
+      lastVersionRef.current = -1;
       try {
         const joined = await runWithConnectionTimeout(
           useCase.joinRoom(code, nickname)
@@ -357,7 +407,7 @@ export function useCidadeDormeViewModel(
       try {
         setError(null);
         const updated = await useCase.removePlayer(room.id, playerId);
-        setRoom(updated);
+        acceptRoomSnapshot(updated);
       } catch (err: unknown) {
         if (err instanceof DomainError) {
           setError(err.message);
@@ -366,7 +416,7 @@ export function useCidadeDormeViewModel(
         }
       }
     },
-    [room, useCase]
+    [acceptRoomSnapshot, room, useCase]
   );
 
   const handleUpdateConfig = useCallback(
@@ -375,7 +425,7 @@ export function useCidadeDormeViewModel(
       try {
         setError(null);
         const updated = await useCase.updateConfig(room.id, partialConfig);
-        setRoom(updated);
+        acceptRoomSnapshot(updated);
       } catch (err: unknown) {
         if (err instanceof DomainError) {
           setError(err.message);
@@ -384,7 +434,7 @@ export function useCidadeDormeViewModel(
         }
       }
     },
-    [room, useCase]
+    [acceptRoomSnapshot, room, useCase]
   );
 
   const handleStartMatch = useCallback(
@@ -394,8 +444,7 @@ export function useCidadeDormeViewModel(
         setError(null);
         const started = await useCase.startMatch(room.id, preferredRoles);
         setIsRoleVisible(false);
-        syncPhaseTimerAndSelection(started);
-        setRoom(started);
+        acceptRoomSnapshot(started);
       } catch (err: unknown) {
         if (err instanceof DomainError) {
           setError(err.message);
@@ -404,7 +453,7 @@ export function useCidadeDormeViewModel(
         }
       }
     },
-    [room, syncPhaseTimerAndSelection, useCase]
+    [acceptRoomSnapshot, room, useCase]
   );
 
   const handleToggleRoleVisibility = useCallback((): void => {
@@ -422,8 +471,7 @@ export function useCidadeDormeViewModel(
           activePlayerId,
           markAllReady
         );
-        syncPhaseTimerAndSelection(updated);
-        setRoom(updated);
+        acceptRoomSnapshot(updated);
       } catch (err: unknown) {
         if (err instanceof DomainError) {
           setError(err.message);
@@ -432,7 +480,7 @@ export function useCidadeDormeViewModel(
         }
       }
     },
-    [activePlayerId, room, syncPhaseTimerAndSelection, useCase]
+    [acceptRoomSnapshot, activePlayerId, room, useCase]
   );
 
   const handleSelectNightTarget = useCallback(
@@ -455,8 +503,7 @@ export function useCidadeDormeViewModel(
           chosen
         );
         setHasSubmittedNightAction(true);
-        syncPhaseTimerAndSelection(updated);
-        setRoom(updated);
+        acceptRoomSnapshot(updated);
       } catch (err: unknown) {
         if (err instanceof DomainError) {
           setError(err.message);
@@ -465,7 +512,7 @@ export function useCidadeDormeViewModel(
         }
       }
     },
-    [activePlayerId, room, selectedNightTargetId, syncPhaseTimerAndSelection, useCase]
+    [acceptRoomSnapshot, activePlayerId, room, selectedNightTargetId, useCase]
   );
 
   const handleConfirmAngelProtection = useCallback(
@@ -483,8 +530,7 @@ export function useCidadeDormeViewModel(
           chosen
         );
         setHasSubmittedNightAction(true);
-        syncPhaseTimerAndSelection(updated);
-        setRoom(updated);
+        acceptRoomSnapshot(updated);
       } catch (err: unknown) {
         if (err instanceof DomainError) {
           setError(err.message);
@@ -493,7 +539,7 @@ export function useCidadeDormeViewModel(
         }
       }
     },
-    [activePlayerId, room, selectedNightTargetId, syncPhaseTimerAndSelection, useCase]
+    [acceptRoomSnapshot, activePlayerId, room, selectedNightTargetId, useCase]
   );
 
   const handleConfirmDetectiveInvestigation = useCallback(
@@ -509,7 +555,7 @@ export function useCidadeDormeViewModel(
           chosen
         );
         setHasSubmittedNightAction(true);
-        setRoom(updated);
+        acceptRoomSnapshot(updated);
       } catch (err: unknown) {
         if (err instanceof DomainError) {
           setError(err.message);
@@ -518,7 +564,7 @@ export function useCidadeDormeViewModel(
         }
       }
     },
-    [activePlayerId, room, selectedNightTargetId, useCase]
+    [acceptRoomSnapshot, activePlayerId, room, selectedNightTargetId, useCase]
   );
 
   const handleAdvanceToDawn = useCallback(async (): Promise<void> => {
@@ -526,8 +572,7 @@ export function useCidadeDormeViewModel(
     try {
       setError(null);
       const updated = await useCase.advanceToDawn(room.id);
-      syncPhaseTimerAndSelection(updated);
-      setRoom(updated);
+      acceptRoomSnapshot(updated);
     } catch (err: unknown) {
       if (err instanceof DomainError) {
         setError(err.message);
@@ -535,7 +580,7 @@ export function useCidadeDormeViewModel(
         setError('Não foi possível avançar para o amanhecer.');
       }
     }
-  }, [room, syncPhaseTimerAndSelection, useCase]);
+  }, [acceptRoomSnapshot, room, useCase]);
 
   const handleAutoAdvanceNightTurn = useCallback(
     async (
@@ -550,8 +595,7 @@ export function useCidadeDormeViewModel(
           expectedPhase,
           expectedRound
         );
-        syncPhaseTimerAndSelection(updated);
-        setRoom(updated);
+        acceptRoomSnapshot(updated);
       } catch (err: unknown) {
         if (err instanceof DomainError) {
           setError(err.message);
@@ -560,7 +604,7 @@ export function useCidadeDormeViewModel(
         }
       }
     },
-    [room, syncPhaseTimerAndSelection, useCase]
+    [acceptRoomSnapshot, room, useCase]
   );
 
   const handleStartVotingPhase = useCallback(async (): Promise<void> => {
@@ -568,8 +612,7 @@ export function useCidadeDormeViewModel(
     try {
       setError(null);
       const updated = await useCase.startVotingPhase(room.id);
-      syncPhaseTimerAndSelection(updated);
-      setRoom(updated);
+      acceptRoomSnapshot(updated);
     } catch (err: unknown) {
       if (err instanceof DomainError) {
         setError(err.message);
@@ -577,7 +620,7 @@ export function useCidadeDormeViewModel(
         setError('Não foi possível iniciar a fase de votação.');
       }
     }
-  }, [room, syncPhaseTimerAndSelection, useCase]);
+  }, [acceptRoomSnapshot, room, useCase]);
 
   const handleSelectVoteTarget = useCallback((targetIdOrSkip: string): void => {
     setError(null);
@@ -595,7 +638,7 @@ export function useCidadeDormeViewModel(
           activePlayerId,
           chosen
         );
-        setRoom(updated);
+        acceptRoomSnapshot(updated);
       } catch (err: unknown) {
         if (err instanceof DomainError) {
           setError(err.message);
@@ -604,7 +647,7 @@ export function useCidadeDormeViewModel(
         }
       }
     },
-    [activePlayerId, room, selectedVoteTargetId, useCase]
+    [acceptRoomSnapshot, activePlayerId, room, selectedVoteTargetId, useCase]
   );
 
   const handleTallyVotes = useCallback(async (): Promise<void> => {
@@ -618,8 +661,7 @@ export function useCidadeDormeViewModel(
         await useCase.castVote(room.id, activePlayerId, selectedVoteTargetId);
       }
       const updated = await useCase.tallyVotes(room.id);
-      syncPhaseTimerAndSelection(updated);
-      setRoom(updated);
+      acceptRoomSnapshot(updated);
     } catch (err: unknown) {
       if (err instanceof DomainError) {
         setError(err.message);
@@ -628,10 +670,10 @@ export function useCidadeDormeViewModel(
       }
     }
   }, [
+    acceptRoomSnapshot,
     activePlayerId,
     room,
     selectedVoteTargetId,
-    syncPhaseTimerAndSelection,
     useCase,
   ]);
 
@@ -640,8 +682,7 @@ export function useCidadeDormeViewModel(
     try {
       setError(null);
       const updated = await useCase.startNextNight(room.id);
-      syncPhaseTimerAndSelection(updated);
-      setRoom(updated);
+      acceptRoomSnapshot(updated);
     } catch (err: unknown) {
       if (err instanceof DomainError) {
         setError(err.message);
@@ -649,7 +690,7 @@ export function useCidadeDormeViewModel(
         setError('Não foi possível iniciar a próxima noite.');
       }
     }
-  }, [room, syncPhaseTimerAndSelection, useCase]);
+  }, [acceptRoomSnapshot, room, useCase]);
 
   const handleRestartMatch = useCallback(async (): Promise<void> => {
     if (!room) return;
@@ -657,8 +698,7 @@ export function useCidadeDormeViewModel(
       setError(null);
       const restarted = await useCase.restartMatch(room.id);
       setIsRoleVisible(false);
-      syncPhaseTimerAndSelection(restarted);
-      setRoom(restarted);
+      acceptRoomSnapshot(restarted);
     } catch (err: unknown) {
       if (err instanceof DomainError) {
         setError(err.message);
@@ -666,7 +706,7 @@ export function useCidadeDormeViewModel(
         setError('Não foi possível iniciar a revanche.');
       }
     }
-  }, [room, syncPhaseTimerAndSelection, useCase]);
+  }, [acceptRoomSnapshot, room, useCase]);
 
   // Cronômetro regressivo sincronizado com phaseEndsAt para turnos da Noite e Debate do Dia (RF10)
   useEffect(() => {
@@ -715,6 +755,52 @@ export function useCidadeDormeViewModel(
     secondsRemaining,
   ]);
 
+  // Watchdog de segurança pós-phaseEndsAt para recuperar eventos Realtime perdidos (Issue #65)
+  const isTimedPhaseExpired = Boolean(
+    room?.id &&
+      room.phaseEndsAt &&
+      (isPhaseNight(room.phase) || room.phase === 'day_debate') &&
+      secondsRemaining <= 0
+  );
+
+  useEffect(() => {
+    if (!isTimedPhaseExpired || !room?.id) {
+      return;
+    }
+
+    const watchedRoomId = room.id;
+    let attempts = 0;
+    const intervalId = setInterval(() => {
+      if (!isMountedRef.current) {
+        clearInterval(intervalId);
+        return;
+      }
+      attempts += 1;
+      void useCase
+        .getRoom(watchedRoomId)
+        .then((refreshed) => {
+          if (isMountedRef.current) {
+            acceptRoomSnapshot(refreshed);
+          }
+        })
+        .catch(() => {
+          // Falha transitória na releitura não bloqueia a sessão.
+        });
+      if (attempts >= NIGHT_SYNC_WATCHDOG_MAX_ATTEMPTS) {
+        clearInterval(intervalId);
+      }
+    }, NIGHT_SYNC_WATCHDOG_INTERVAL_MS);
+
+    return () => clearInterval(intervalId);
+  }, [
+    acceptRoomSnapshot,
+    isTimedPhaseExpired,
+    room?.currentRound,
+    room?.id,
+    room?.phase,
+    useCase,
+  ]);
+
   const handleSetReduceMotion = useCallback((enabled: boolean): void => {
     setReduceMotion(enabled);
   }, []);
@@ -732,6 +818,9 @@ export function useCidadeDormeViewModel(
     lastSpokenKeyRef.current = null;
     lastPhaseKeyRef.current = null;
     autoAdvancedPhaseKeyRef.current = null;
+    lastRoomIdRef.current = null;
+    lastVersionRef.current = -1;
+    currentPlayerIdRef.current = null;
     void useCase.stopNarratorAudio().catch(() => {
       // Falha transitória ao parar o áudio não impede retorno ao Hub.
     });
