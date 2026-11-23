@@ -229,6 +229,37 @@ describe('TermometroScreen — Testes de Tela com Mocks de ViewModel (UC11)', ()
     expect(actions.handleNextSpeaker).toHaveBeenCalledTimes(1);
     expect(actions.handleTogglePause).toHaveBeenCalledTimes(1);
 
+    // 2.1. Estado pausado na tela: selo mostra "Pausado", progresso continua visível e botão mostra "Continuar" (Issue #72)
+    spy.mockReturnValue([
+      {
+        ...baseState,
+        stage: 'turn',
+        participantMode: 'custom',
+        currentSpeakerLabel: 'Mariana',
+        hasStartedSpeaking: true,
+        isPaused: true,
+        secondsRemaining: 36,
+      },
+      actions,
+    ]);
+    act(() => {
+      tree.update(<TermometroScreen />);
+    });
+
+    const pausedTexts = tree.root
+      .findAllByType('Text' as any)
+      .map((t) => String(t.props.children));
+    expect(pausedTexts.includes('Pausado')).toBe(true);
+    expect(pausedTexts.includes('00:36')).toBe(true);
+
+    const continueBtn = tree.root.findByProps({
+      accessibilityLabel: 'Continuar',
+    } as any);
+    act(() => {
+      continueBtn.props.onPress();
+    });
+    expect(actions.handleTogglePause).toHaveBeenCalledTimes(2);
+
     // 3. Tempo concluído (00:00): botão Pausar não aparece mais
     spy.mockReturnValue([
       {

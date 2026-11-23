@@ -11,6 +11,7 @@ export type ButtonVariant =
   | 'primary'
   | 'primaryJumbo'
   | 'successJumbo'
+  | 'tonalJumbo'
   | 'secondary'
   | 'tonal'
   | 'outlined'
@@ -25,6 +26,7 @@ export type ExpressiveButtonProps = {
   variant?: ButtonVariant;
   tone?: ButtonTone;
   disabled?: boolean;
+  accessibilityExpanded?: boolean;
   themeMode?: ThemeMode;
   accessibilityLabel?: string;
   onPress: () => void;
@@ -36,6 +38,7 @@ export const ExpressiveButton = ({
   variant = 'primary',
   tone = 'default',
   disabled = false,
+  accessibilityExpanded,
   themeMode,
   accessibilityLabel,
   onPress,
@@ -45,7 +48,10 @@ export const ExpressiveButton = ({
   const [pressed, setPressed] = useState(false);
   const keyboardFocus = useKeyboardFocus();
 
-  const isJumbo = variant === 'primaryJumbo' || variant === 'successJumbo';
+  const isJumbo =
+    variant === 'primaryJumbo' ||
+    variant === 'successJumbo' ||
+    variant === 'tonalJumbo';
   const isIconOnly = variant === 'icon';
   const isTextOnly = variant === 'text';
 
@@ -71,7 +77,9 @@ export const ExpressiveButton = ({
     }
     if (variant === 'successJumbo') return activeTokens.semantic.color.success;
     if (variant === 'secondary') return activeTokens.semantic.color.secondary;
-    if (variant === 'tonal') return activeTokens.semantic.color.actionContainer;
+    if (variant === 'tonal' || variant === 'tonalJumbo') {
+      return activeTokens.semantic.color.actionContainer;
+    }
     if (variant === 'outlined') return activeTokens.semantic.color.surfaceContainer;
     return pressed
       ? activeTokens.component.button.bgPressed
@@ -92,7 +100,9 @@ export const ExpressiveButton = ({
     }
     if (variant === 'successJumbo') return activeTokens.semantic.color.onSuccess;
     if (variant === 'secondary') return activeTokens.semantic.color.onSecondary;
-    if (variant === 'tonal') return activeTokens.semantic.color.onActionContainer;
+    if (variant === 'tonal' || variant === 'tonalJumbo') {
+      return activeTokens.semantic.color.onActionContainer;
+    }
     if (variant === 'outlined') return activeTokens.semantic.color.onSurface;
     return activeTokens.component.button.label;
   };
@@ -119,7 +129,11 @@ export const ExpressiveButton = ({
       onBlur={keyboardFocus.onBlur}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
-      accessibilityState={{ disabled }}
+      accessibilityState={
+        accessibilityExpanded !== undefined
+          ? { disabled, expanded: accessibilityExpanded }
+          : { disabled }
+      }
       style={[
         styles.base,
         {

@@ -73,11 +73,11 @@ export const ExpressiveTimer = ({
     const fillPercent = Math.round(ratio * 100);
     const isWarm = ratio >= 0.7 && !isExpired;
 
-    // Issue #50: alto contraste (> 3:1) sobre surfaceVariant tanto em modo tranquilo, quente quanto pausado
+    // Issue #50 e #72: alto contraste (>= 3:1) sobre surfaceVariant em todas as fases (tranquilo, quente/concluído e pausado), no tema claro e no escuro
     const fillBg = paused
       ? activeTokens.semantic.color.outline
       : isExpired || isWarm
-        ? activeTokens.semantic.color.highlight
+        ? activeTokens.semantic.color.highlightBorder
         : activeTokens.component.timer.bg.calm;
 
     const bulbBorderColor = paused
@@ -85,6 +85,14 @@ export const ExpressiveTimer = ({
       : isExpired || isWarm
         ? activeTokens.semantic.color.highlightBorder
         : activeTokens.semantic.color.action;
+
+    const bulbIconColor = paused
+      ? activeTokens.semantic.color.surfaceContainer
+      : isExpired || isWarm
+        ? activeTokens.mode === 'dark'
+          ? activeTokens.semantic.color.onHighlight
+          : activeTokens.semantic.color.surfaceContainer
+        : activeTokens.semantic.color.onAction;
 
     const badgeBg = paused
       ? activeTokens.semantic.color.surfaceVariant
@@ -163,11 +171,7 @@ export const ExpressiveTimer = ({
               <MaterialCommunityIcons
                 name={thermoIcon}
                 size={activeTokens.semantic.icon.sm}
-                color={
-                  isExpired || isWarm
-                    ? activeTokens.semantic.color.onHighlight
-                    : activeTokens.semantic.color.onAction
-                }
+                color={bulbIconColor}
               />
             </View>
           </View>
