@@ -8,6 +8,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
+    "build:web": "expo export -p web",
     "doctor": "npx expo-doctor",
     "arquitetura": "node scripts/check-arquitetura.mjs",
     "check": "node scripts/check-arquitetura.mjs && tsc --noEmit && jest --passWithNoTests",

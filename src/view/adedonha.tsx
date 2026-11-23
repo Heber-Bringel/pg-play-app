@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -15,11 +15,14 @@ import { AdedonhaSummarySection } from '@/view/components/adedonhaSummarySection
 import { AdedonhaTallySection } from '@/view/components/adedonhaTallySection';
 import { ConfirmModal } from '@/view/components/confirmModal';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
-import { tokens } from '@/view/theme';
+import { ExpressiveTag } from '@/view/components/expressiveTag';
+import { useTheme, type AppTokens } from '@/view/theme';
 import { useAdedonhaViewModel } from '@/viewmodel/useAdedonhaViewModel';
 
 export const AdedonhaScreen = () => {
   const [state, actions] = useAdedonhaViewModel();
+  const activeTokens = useTheme();
+  const styles = useMemo(() => createStyles(activeTokens), [activeTokens]);
 
   if (state.loading && state.room) {
     return (
@@ -30,7 +33,7 @@ export const AdedonhaScreen = () => {
       >
         <Text
           allowFontScaling
-          maxFontSizeMultiplier={tokens.semantic.typography.maxScale}
+          maxFontSizeMultiplier={activeTokens.semantic.typography.maxScale}
           style={styles.title}
         >
           Conectando à Sala da Adedonha Bíblica...
@@ -85,24 +88,12 @@ export const AdedonhaScreen = () => {
             icon="arrow-left"
             onPress={actions.handleRequestExit}
           />
-          <View
-            style={styles.roomBadge}
-            accessibilityRole="text"
+          <ExpressiveTag
+            label={`PIN ${room.code} · Rodada ${room.currentRound}/${room.config.totalRounds}`}
+            icon="access-point"
+            tone="action"
             accessibilityLabel={`Sala ${room.code}, Rodada ${room.currentRound} de ${room.config.totalRounds}`}
-          >
-            <MaterialCommunityIcons
-              name="access-point"
-              size={tokens.semantic.icon.sm}
-              color={tokens.semantic.color.onActionContainer}
-            />
-            <Text
-              allowFontScaling
-              maxFontSizeMultiplier={tokens.semantic.typography.maxScale}
-              style={styles.roomBadgeText}
-            >
-              {`PIN ${room.code} · Rodada ${room.currentRound}/${room.config.totalRounds}`}
-            </Text>
-          </View>
+          />
         </View>
 
         <ConfirmModal
@@ -117,8 +108,8 @@ export const AdedonhaScreen = () => {
           <View style={styles.errorBanner} accessibilityLiveRegion="assertive">
             <MaterialCommunityIcons
               name="alert-circle"
-              size={tokens.semantic.icon.md}
-              color={tokens.semantic.color.error}
+              size={activeTokens.semantic.icon.md}
+              color={activeTokens.component.banner.error.text}
             />
             <Text allowFontScaling style={styles.errorBannerText}>
               {state.error}
@@ -183,71 +174,60 @@ export const AdedonhaScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  scroll: {
-    flex: 1,
-    backgroundColor: tokens.semantic.color.surface,
-  },
-  screenContent: {
-    padding: tokens.semantic.space.md,
-    paddingBottom: tokens.semantic.space['3xl'],
-    gap: tokens.semantic.space.lg,
-  },
-  centerScreen: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: tokens.semantic.color.surface,
-    padding: tokens.semantic.space.lg,
-  },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: tokens.semantic.space.sm,
-  },
-  roomBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.semantic.space.xs,
-    paddingHorizontal: tokens.semantic.space.md,
-    paddingVertical: tokens.semantic.space.sm,
-    borderRadius: tokens.semantic.radius.full,
-    backgroundColor: tokens.semantic.color.actionContainer,
-  },
-  roomBadgeText: {
-    fontFamily: tokens.semantic.font.caption.family,
-    fontSize: tokens.semantic.font.caption.size,
-    lineHeight: tokens.semantic.font.caption.lineHeight,
-    fontWeight: tokens.semantic.font.caption.weight,
-    color: tokens.semantic.color.onActionContainer,
-  },
-  errorBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.semantic.space.sm,
-    padding: tokens.semantic.space.md,
-    borderRadius: tokens.semantic.radius.md,
-    borderWidth: tokens.semantic.border.thin,
-    borderColor: tokens.semantic.color.error,
-    backgroundColor: tokens.semantic.color.errorContainer,
-  },
-  errorBannerText: {
-    flexShrink: 1,
-    fontFamily: tokens.semantic.font.body.family,
-    fontSize: tokens.semantic.font.body.size,
-    fontWeight: tokens.semantic.font.body.weight,
-    lineHeight: tokens.semantic.font.body.lineHeight,
-    color: tokens.semantic.color.onErrorContainer,
-  },
-  title: {
-    fontFamily: tokens.semantic.font.title.family,
-    fontSize: tokens.semantic.font.title.size,
-    lineHeight: tokens.semantic.font.title.lineHeight,
-    fontWeight: tokens.semantic.font.title.weight,
-    color: tokens.semantic.color.onSurface,
-    textAlign: 'center',
-  },
-});
+const createStyles = (activeTokens: AppTokens) => {
+  const { color, font, radius, space, border } = activeTokens.semantic;
+  const { banner } = activeTokens.component;
+  return StyleSheet.create({
+    scroll: {
+      flex: 1,
+      backgroundColor: color.surface,
+    },
+    screenContent: {
+      padding: space.md,
+      paddingBottom: space['3xl'],
+      gap: space.lg,
+    },
+    centerScreen: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: color.surface,
+      padding: space.lg,
+    },
+    topBar: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: space.sm,
+      flexWrap: 'wrap',
+    },
+    errorBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.sm,
+      padding: space.md,
+      borderRadius: radius.md,
+      borderWidth: border.thin,
+      borderColor: banner.error.border,
+      backgroundColor: banner.error.bg,
+    },
+    errorBannerText: {
+      flexShrink: 1,
+      fontFamily: font.body.family,
+      fontSize: font.body.size,
+      fontWeight: font.body.weight,
+      lineHeight: font.body.lineHeight,
+      color: banner.error.text,
+    },
+    title: {
+      fontFamily: font.title.family,
+      fontSize: font.title.size,
+      lineHeight: font.title.lineHeight,
+      fontWeight: font.title.weight,
+      color: color.onSurface,
+      textAlign: 'center',
+    },
+  });
+};
 
 export default AdedonhaScreen;

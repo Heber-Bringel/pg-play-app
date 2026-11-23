@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type {
@@ -7,10 +7,11 @@ import type {
   CidadeDormeRoom,
 } from '@/model/entities/multiplayerSession';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
+import { ExpressiveTag } from '@/view/components/expressiveTag';
 import { ExpressiveTimer } from '@/view/components/expressiveTimer';
 import { GameCard } from '@/view/components/gameCard';
 import { SelectableOptionItem } from '@/view/components/selectableOptionItem';
-import { tokens } from '@/view/theme';
+import { useTheme, type AppTokens } from '@/view/theme';
 
 const ROLE_LABELS: Record<CidadeDormeRole, string> = {
   cidadao: 'Cidadão',
@@ -60,6 +61,9 @@ export const CidadeDormeDaySection = ({
   onRestartMatch,
   onExitArena,
 }: CidadeDormeDaySectionProps) => {
+  const activeTokens = useTheme();
+  const styles = useMemo(() => createStyles(activeTokens), [activeTokens]);
+
   const narratorFadeAnim = useRef(new Animated.Value(1)).current;
   const dawnSlideAnim = useRef(new Animated.Value(0)).current;
   const dawnOpacityAnim = useRef(new Animated.Value(1)).current;
@@ -74,10 +78,15 @@ export const CidadeDormeDaySection = ({
     narratorFadeAnim.setValue(0.6);
     Animated.timing(narratorFadeAnim, {
       toValue: 1,
-      duration: tokens.semantic.motion.duration.short,
+      duration: activeTokens.semantic.motion.duration.short,
       useNativeDriver: true,
     }).start();
-  }, [narratorFadeAnim, reduceMotion, room.narratorCaption]);
+  }, [
+    activeTokens.semantic.motion.duration.short,
+    narratorFadeAnim,
+    reduceMotion,
+    room.narratorCaption,
+  ]);
 
   useEffect(() => {
     if (room.phase !== 'day_debate' || reduceMotion) {
@@ -89,16 +98,25 @@ export const CidadeDormeDaySection = ({
     dawnOpacityAnim.setValue(0);
     Animated.spring(dawnSlideAnim, {
       toValue: 0,
-      damping: tokens.semantic.motion.spring.spatial.damping,
-      stiffness: tokens.semantic.motion.spring.spatial.stiffness,
+      damping: activeTokens.semantic.motion.spring.spatial.damping,
+      stiffness: activeTokens.semantic.motion.spring.spatial.stiffness,
       useNativeDriver: true,
     }).start();
     Animated.timing(dawnOpacityAnim, {
       toValue: 1,
-      duration: tokens.semantic.motion.duration.medium,
+      duration: activeTokens.semantic.motion.duration.medium,
       useNativeDriver: true,
     }).start();
-  }, [dawnOpacityAnim, dawnSlideAnim, reduceMotion, room.currentRound, room.phase]);
+  }, [
+    activeTokens.semantic.motion.duration.medium,
+    activeTokens.semantic.motion.spring.spatial.damping,
+    activeTokens.semantic.motion.spring.spatial.stiffness,
+    dawnOpacityAnim,
+    dawnSlideAnim,
+    reduceMotion,
+    room.currentRound,
+    room.phase,
+  ]);
 
   useEffect(() => {
     if (room.phase !== 'vote_result' || reduceMotion) {
@@ -108,10 +126,16 @@ export const CidadeDormeDaySection = ({
     voteBarAnim.setValue(0);
     Animated.timing(voteBarAnim, {
       toValue: 1,
-      duration: tokens.semantic.motion.duration.medium,
+      duration: activeTokens.semantic.motion.duration.medium,
       useNativeDriver: false,
     }).start();
-  }, [reduceMotion, room.currentRound, room.phase, voteBarAnim]);
+  }, [
+    activeTokens.semantic.motion.duration.medium,
+    reduceMotion,
+    room.currentRound,
+    room.phase,
+    voteBarAnim,
+  ]);
 
   useEffect(() => {
     if (room.phase !== 'finished' || reduceMotion) {
@@ -121,11 +145,18 @@ export const CidadeDormeDaySection = ({
     winnerScaleAnim.setValue(0.92);
     Animated.spring(winnerScaleAnim, {
       toValue: 1,
-      damping: tokens.semantic.motion.spring.spatial.damping,
-      stiffness: tokens.semantic.motion.spring.spatial.stiffness,
+      damping: activeTokens.semantic.motion.spring.spatial.damping,
+      stiffness: activeTokens.semantic.motion.spring.spatial.stiffness,
       useNativeDriver: true,
     }).start();
-  }, [reduceMotion, room.phase, winnerScaleAnim]);
+  }, [
+    activeTokens.semantic.motion.spring.spatial.damping,
+    activeTokens.semantic.motion.spring.spatial.stiffness,
+    reduceMotion,
+    room.phase,
+    winnerScaleAnim,
+  ]);
+
   const alivePlayers = room.players.filter((p) => p.isAlive);
   const votingCandidates = alivePlayers.filter(
     (player) => !currentPlayer || player.id !== currentPlayer.id
@@ -141,18 +172,18 @@ export const CidadeDormeDaySection = ({
   const dawnTitle = room.dawnReport?.savedByAngel
     ? 'Boletim do Amanhecer · O Anjo Salvou a Vítima!'
     : room.dawnReport?.eliminatedNickname
-    ? `Boletim do Amanhecer · ${room.dawnReport.eliminatedNickname} foi Eliminado`
-    : 'Boletim do Amanhecer · A Cidade Acorda';
+      ? `Boletim do Amanhecer · ${room.dawnReport.eliminatedNickname} foi Eliminado`
+      : 'Boletim do Amanhecer · A Cidade Acorda';
 
   const dawnDescription = room.dawnReport?.savedByAngel
     ? 'A madrugada foi tensa, mas o Anjo protegeu a vítima a tempo! Ninguém foi eliminado.'
     : room.dawnReport?.eliminatedNickname
-    ? `Triste notícia na cidade: ${room.dawnReport.eliminatedNickname} foi eliminado durante a noite${
-        room.dawnReport.eliminatedRole
-          ? ` (${ROLE_LABELS[room.dawnReport.eliminatedRole]})`
-          : ''
-      }.`
-    : 'Todos podem abrir os olhos para iniciar o debate do dia.';
+      ? `Triste notícia na cidade: ${room.dawnReport.eliminatedNickname} foi eliminado durante a noite${
+          room.dawnReport.eliminatedRole
+            ? ` (${ROLE_LABELS[room.dawnReport.eliminatedRole]})`
+            : ''
+        }.`
+      : 'Todos podem abrir os olhos para iniciar o debate do dia.';
 
   return (
     <View style={styles.container}>
@@ -163,13 +194,14 @@ export const CidadeDormeDaySection = ({
       >
         <MaterialCommunityIcons
           name="weather-sunny"
-          size={tokens.semantic.icon.md}
-          color={tokens.semantic.color.onActionContainer}
+          size={activeTokens.semantic.icon.md}
+          color={activeTokens.component.banner.info.text}
         />
         <View style={styles.narratorTextWrap}>
-          <Text allowFontScaling style={styles.narratorVoiceTag}>
-            {`NARRADOR (${room.config.narratorVoice.toUpperCase()}) · DIA ${room.currentRound}`}
-          </Text>
+          <ExpressiveTag
+            label={`NARRADOR (${room.config.narratorVoice.toUpperCase()}) · DIA ${room.currentRound}`}
+            tone="action"
+          />
           <Text allowFontScaling style={styles.narratorText}>
             {room.narratorCaption}
           </Text>
@@ -184,8 +216,8 @@ export const CidadeDormeDaySection = ({
         >
           <MaterialCommunityIcons
             name="ghost-outline"
-            size={tokens.semantic.icon.md}
-            color={tokens.semantic.color.onErrorContainer}
+            size={activeTokens.semantic.icon.md}
+            color={activeTokens.component.banner.error.text}
           />
           <Text allowFontScaling style={styles.spectatorText}>
             Você foi eliminado — Acompanhe em silêncio (Modo Espectador).
@@ -224,8 +256,8 @@ export const CidadeDormeDaySection = ({
             >
               <MaterialCommunityIcons
                 name="shield-check"
-                size={tokens.semantic.icon.md}
-                color={tokens.semantic.color.onSuccess}
+                size={activeTokens.semantic.icon.md}
+                color={activeTokens.component.banner.success.text}
               />
               <Text allowFontScaling style={styles.angelShieldText}>
                 Escudo do Anjo ativado: ninguém foi eliminado nesta noite!
@@ -254,8 +286,8 @@ export const CidadeDormeDaySection = ({
               <View style={styles.waitingCard}>
                 <MaterialCommunityIcons
                   name="clock-outline"
-                  size={tokens.semantic.icon.md}
-                  color={tokens.semantic.color.onActionContainer}
+                  size={activeTokens.semantic.icon.md}
+                  color={activeTokens.component.banner.info.text}
                 />
                 <Text allowFontScaling style={styles.waitingText}>
                   Aguardando o Moderador encerrar o debate e abrir a votação secreta.
@@ -456,8 +488,8 @@ export const CidadeDormeDaySection = ({
               <View style={styles.waitingCard}>
                 <MaterialCommunityIcons
                   name="clock-outline"
-                  size={tokens.semantic.icon.md}
-                  color={tokens.semantic.color.onActionContainer}
+                  size={activeTokens.semantic.icon.md}
+                  color={activeTokens.component.banner.info.text}
                 />
                 <Text allowFontScaling style={styles.waitingText}>
                   Aguardando o Moderador iniciar a próxima noite.
@@ -481,17 +513,17 @@ export const CidadeDormeDaySection = ({
           >
             <MaterialCommunityIcons
               name={room.winner === 'cidade' ? 'trophy' : 'incognito'}
-              size={tokens.semantic.icon.lg}
+              size={activeTokens.semantic.icon.lg}
               color={
                 room.winner === 'cidade'
-                  ? tokens.semantic.color.onHighlight
-                  : tokens.semantic.color.onErrorContainer
+                  ? activeTokens.semantic.color.onHighlight
+                  : activeTokens.component.banner.error.text
               }
             />
             <View style={styles.winnerTextWrap}>
               <Text
                 allowFontScaling
-                maxFontSizeMultiplier={tokens.semantic.typography.maxScale}
+                maxFontSizeMultiplier={activeTokens.semantic.typography.maxScale}
                 style={[
                   styles.winnerTitle,
                   room.winner === 'cidade'
@@ -539,11 +571,11 @@ export const CidadeDormeDaySection = ({
                     <View style={styles.roleSummaryLeft}>
                       <MaterialCommunityIcons
                         name={ROLE_ICONS[roleKey]}
-                        size={tokens.semantic.icon.md}
+                        size={activeTokens.semantic.icon.md}
                         color={
                           isAssassin
-                            ? tokens.semantic.color.error
-                            : tokens.semantic.color.success
+                            ? activeTokens.semantic.color.error
+                            : activeTokens.semantic.color.success
                         }
                       />
                       <View>
@@ -555,18 +587,10 @@ export const CidadeDormeDaySection = ({
                         </Text>
                       </View>
                     </View>
-                    <View
-                      style={[
-                        styles.rolePill,
-                        isAssassin
-                          ? styles.rolePillAssassin
-                          : styles.rolePillCity,
-                      ]}
-                    >
-                      <Text allowFontScaling style={styles.rolePillText}>
-                        {player.role ? ROLE_LABELS[player.role] : 'Cidadão'}
-                      </Text>
-                    </View>
+                    <ExpressiveTag
+                      label={player.role ? ROLE_LABELS[player.role] : 'Cidadão'}
+                      tone={isAssassin ? 'error' : 'action'}
+                    />
                   </View>
                 );
               })}
@@ -585,8 +609,8 @@ export const CidadeDormeDaySection = ({
               <View style={styles.waitingCard}>
                 <MaterialCommunityIcons
                   name="clock-outline"
-                  size={tokens.semantic.icon.md}
-                  color={tokens.semantic.color.onActionContainer}
+                  size={activeTokens.semantic.icon.md}
+                  color={activeTokens.component.banner.info.text}
                 />
                 <Text allowFontScaling style={styles.waitingText}>
                   Aguardando o Moderador iniciar uma revanche ou toque em Trocar de Jogo abaixo.
@@ -607,251 +631,231 @@ export const CidadeDormeDaySection = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    gap: tokens.semantic.space.lg,
-  },
-  sectionBlock: {
-    gap: tokens.semantic.space.lg,
-  },
-  narratorBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.semantic.space.sm,
-    padding: tokens.semantic.space.md,
-    borderRadius: tokens.semantic.radius.lg,
-    backgroundColor: tokens.semantic.color.actionContainer,
-    borderWidth: tokens.semantic.border.thin,
-    borderColor: tokens.semantic.color.action,
-  },
-  narratorTextWrap: {
-    flex: 1,
-    gap: tokens.semantic.space.xs,
-  },
-  narratorVoiceTag: {
-    fontFamily: tokens.semantic.font.caption.family,
-    fontSize: tokens.semantic.font.caption.size,
-    lineHeight: tokens.semantic.font.caption.lineHeight,
-    fontWeight: tokens.semantic.font.caption.weight,
-    color: tokens.semantic.color.onActionContainer,
-  },
-  narratorText: {
-    fontFamily: tokens.semantic.font.body.family,
-    fontSize: tokens.semantic.font.body.size,
-    lineHeight: tokens.semantic.font.body.lineHeight,
-    fontWeight: tokens.semantic.font.label.weight,
-    color: tokens.semantic.color.onActionContainer,
-  },
-  spectatorBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.semantic.space.sm,
-    padding: tokens.semantic.space.md,
-    borderRadius: tokens.semantic.radius.sm,
-    backgroundColor: tokens.semantic.color.errorContainer,
-    borderWidth: tokens.semantic.border.thin,
-    borderColor: tokens.semantic.color.error,
-  },
-  spectatorText: {
-    flex: 1,
-    fontFamily: tokens.semantic.font.label.family,
-    fontSize: tokens.semantic.font.label.size,
-    lineHeight: tokens.semantic.font.label.lineHeight,
-    fontWeight: tokens.semantic.font.label.weight,
-    color: tokens.semantic.color.onErrorContainer,
-  },
-  timerRow: {
-    alignItems: 'center',
-  },
-  cardBox: {
-    backgroundColor: tokens.component.card.bg,
-    borderColor: tokens.component.card.border,
-    borderWidth: tokens.semantic.border.thin,
-    borderRadius: tokens.component.card.radius,
-    padding: tokens.component.card.padding,
-    gap: tokens.semantic.space.md,
-    elevation: tokens.semantic.elevation.card,
-  },
-  sectionTitle: {
-    fontFamily: tokens.semantic.font.subtitle.family,
-    fontSize: tokens.semantic.font.subtitle.size,
-    lineHeight: tokens.semantic.font.subtitle.lineHeight,
-    fontWeight: tokens.semantic.font.subtitle.weight,
-    color: tokens.semantic.color.onSurface,
-  },
-  sectionSubtitle: {
-    fontFamily: tokens.semantic.font.body.family,
-    fontSize: tokens.semantic.font.body.size,
-    lineHeight: tokens.semantic.font.body.lineHeight,
-    color: tokens.semantic.color.onSurfaceMuted,
-  },
-  optionsList: {
-    gap: tokens.semantic.space.sm,
-  },
-  winnerBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.semantic.space.md,
-    padding: tokens.component.card.padding,
-    borderWidth: tokens.semantic.border.focus,
-    elevation: tokens.semantic.elevation.card,
-  },
-  winnerBannerCity: {
-    backgroundColor: tokens.semantic.color.highlight,
-    borderColor: tokens.semantic.color.action,
-    borderRadius: tokens.semantic.radius.xl,
-  },
-  winnerBannerAssassins: {
-    backgroundColor: tokens.semantic.color.errorContainer,
-    borderColor: tokens.semantic.color.error,
-    borderRadius: tokens.semantic.radius.sm,
-  },
-  winnerTextWrap: {
-    flex: 1,
-    gap: tokens.semantic.space.xs,
-  },
-  winnerTitle: {
-    fontFamily: tokens.semantic.font.title.family,
-    fontSize: tokens.semantic.font.title.size,
-    lineHeight: tokens.semantic.font.title.lineHeight,
-    fontWeight: tokens.semantic.font.title.weight,
-  },
-  winnerTitleCity: {
-    color: tokens.semantic.color.onHighlight,
-  },
-  winnerTitleAssassins: {
-    color: tokens.semantic.color.onErrorContainer,
-  },
-  winnerSubtitle: {
-    fontFamily: tokens.semantic.font.body.family,
-    fontSize: tokens.semantic.font.body.size,
-    lineHeight: tokens.semantic.font.body.lineHeight,
-  },
-  rolesSummaryList: {
-    gap: tokens.semantic.space.sm,
-  },
-  roleSummaryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: tokens.semantic.space.md,
-    borderRadius: tokens.semantic.radius.md,
-    borderWidth: tokens.semantic.border.thin,
-    borderColor: tokens.semantic.color.outline,
-    backgroundColor: tokens.semantic.color.surface,
-  },
-  roleSummaryRowAssassin: {
-    borderColor: tokens.semantic.color.error,
-    borderRadius: tokens.semantic.radius.sm,
-  },
-  roleSummaryLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.semantic.space.sm,
-    flex: 1,
-  },
-  playerName: {
-    fontFamily: tokens.semantic.font.label.family,
-    fontSize: tokens.semantic.font.label.size,
-    lineHeight: tokens.semantic.font.label.lineHeight,
-    fontWeight: tokens.semantic.font.label.weight,
-    color: tokens.semantic.color.onSurface,
-  },
-  playerStatusText: {
-    fontFamily: tokens.semantic.font.caption.family,
-    fontSize: tokens.semantic.font.caption.size,
-    lineHeight: tokens.semantic.font.caption.lineHeight,
-    color: tokens.semantic.color.onSurfaceMuted,
-  },
-  rolePill: {
-    paddingHorizontal: tokens.semantic.space.md,
-    paddingVertical: tokens.semantic.space.xs,
-  },
-  rolePillCity: {
-    backgroundColor: tokens.semantic.color.actionContainer,
-    borderRadius: tokens.semantic.radius.full,
-  },
-  rolePillAssassin: {
-    backgroundColor: tokens.semantic.color.errorContainer,
-    borderRadius: tokens.semantic.radius.sm,
-  },
-  rolePillText: {
-    fontFamily: tokens.semantic.font.caption.family,
-    fontSize: tokens.semantic.font.caption.size,
-    lineHeight: tokens.semantic.font.caption.lineHeight,
-    fontWeight: tokens.semantic.font.caption.weight,
-    color: tokens.semantic.color.onSurface,
-  },
-  waitingCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.semantic.space.sm,
-    padding: tokens.semantic.space.md,
-    borderRadius: tokens.semantic.radius.lg,
-    backgroundColor: tokens.semantic.color.actionContainer,
-  },
-  waitingText: {
-    flex: 1,
-    fontFamily: tokens.semantic.font.body.family,
-    fontSize: tokens.semantic.font.body.size,
-    lineHeight: tokens.semantic.font.body.lineHeight,
-    color: tokens.semantic.color.onActionContainer,
-  },
-  angelShieldBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.semantic.space.sm,
-    padding: tokens.semantic.space.md,
-    borderRadius: tokens.semantic.radius.lg,
-    backgroundColor: tokens.semantic.color.success,
-  },
-  angelShieldText: {
-    flex: 1,
-    fontFamily: tokens.semantic.font.label.family,
-    fontSize: tokens.semantic.font.label.size,
-    lineHeight: tokens.semantic.font.label.lineHeight,
-    fontWeight: tokens.semantic.font.label.weight,
-    color: tokens.semantic.color.onSuccess,
-  },
-  tallyBarsList: {
-    gap: tokens.semantic.space.sm,
-  },
-  tallyBarItem: {
-    gap: tokens.semantic.space.xs,
-  },
-  tallyBarHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  tallyBarName: {
-    fontFamily: tokens.semantic.font.label.family,
-    fontSize: tokens.semantic.font.label.size,
-    lineHeight: tokens.semantic.font.label.lineHeight,
-    fontWeight: tokens.semantic.font.label.weight,
-    color: tokens.semantic.color.onSurface,
-  },
-  tallyBarCount: {
-    fontFamily: tokens.semantic.font.caption.family,
-    fontSize: tokens.semantic.font.caption.size,
-    lineHeight: tokens.semantic.font.caption.lineHeight,
-    fontWeight: tokens.semantic.font.caption.weight,
-    color: tokens.semantic.color.onSurfaceMuted,
-  },
-  tallyTrack: {
-    height: tokens.semantic.space.sm,
-    borderRadius: tokens.semantic.radius.full,
-    backgroundColor: tokens.semantic.color.surfaceVariant,
-    overflow: 'hidden',
-  },
-  tallyFill: {
-    height: tokens.semantic.space.sm,
-    borderRadius: tokens.semantic.radius.full,
-    backgroundColor: tokens.semantic.color.action,
-  },
-  tallyFillSkip: {
-    height: tokens.semantic.space.sm,
-    borderRadius: tokens.semantic.radius.full,
-    backgroundColor: tokens.semantic.color.onSurfaceMuted,
-  },
-});
+const createStyles = (activeTokens: AppTokens) => {
+  const { color, font, radius, space, border, elevation } = activeTokens.semantic;
+  const { card, banner } = activeTokens.component;
+  return StyleSheet.create({
+    container: {
+      gap: space.lg,
+    },
+    sectionBlock: {
+      gap: space.lg,
+    },
+    narratorBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.sm,
+      padding: space.md,
+      borderRadius: banner.radius,
+      backgroundColor: banner.info.bg,
+      borderWidth: border.thin,
+      borderColor: banner.info.border,
+    },
+    narratorTextWrap: {
+      flex: 1,
+      gap: space.xs,
+    },
+    narratorText: {
+      fontFamily: font.body.family,
+      fontSize: font.body.size,
+      lineHeight: font.body.lineHeight,
+      fontWeight: font.label.weight,
+      color: banner.info.text,
+    },
+    spectatorBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.sm,
+      padding: space.md,
+      borderRadius: radius.sm,
+      backgroundColor: banner.error.bg,
+      borderWidth: border.thin,
+      borderColor: banner.error.border,
+    },
+    spectatorText: {
+      flex: 1,
+      fontFamily: font.label.family,
+      fontSize: font.label.size,
+      lineHeight: font.label.lineHeight,
+      fontWeight: font.label.weight,
+      color: banner.error.text,
+    },
+    timerRow: {
+      alignItems: 'center',
+    },
+    cardBox: {
+      backgroundColor: card.bg,
+      borderColor: card.border,
+      borderWidth: border.thin,
+      borderRadius: card.radius,
+      padding: card.padding,
+      gap: space.md,
+      elevation: elevation.card,
+    },
+    sectionTitle: {
+      fontFamily: font.subtitle.family,
+      fontSize: font.subtitle.size,
+      lineHeight: font.subtitle.lineHeight,
+      fontWeight: font.subtitle.weight,
+      color: color.onSurface,
+    },
+    sectionSubtitle: {
+      fontFamily: font.body.family,
+      fontSize: font.body.size,
+      lineHeight: font.body.lineHeight,
+      color: color.onSurfaceMuted,
+    },
+    optionsList: {
+      gap: space.sm,
+    },
+    winnerBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.md,
+      padding: card.padding,
+      borderWidth: border.focus,
+      elevation: elevation.card,
+    },
+    winnerBannerCity: {
+      backgroundColor: color.highlight,
+      borderColor: card.borderLeader,
+      borderRadius: radius.xl,
+    },
+    winnerBannerAssassins: {
+      backgroundColor: banner.error.bg,
+      borderColor: banner.error.border,
+      borderRadius: radius.sm,
+    },
+    winnerTextWrap: {
+      flex: 1,
+      gap: space.xs,
+    },
+    winnerTitle: {
+      fontFamily: font.title.family,
+      fontSize: font.title.size,
+      lineHeight: font.title.lineHeight,
+      fontWeight: font.title.weight,
+    },
+    winnerTitleCity: {
+      color: color.onHighlight,
+    },
+    winnerTitleAssassins: {
+      color: banner.error.text,
+    },
+    winnerSubtitle: {
+      fontFamily: font.body.family,
+      fontSize: font.body.size,
+      lineHeight: font.body.lineHeight,
+    },
+    rolesSummaryList: {
+      gap: space.sm,
+    },
+    roleSummaryRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: space.md,
+      borderRadius: radius.md,
+      borderWidth: border.thin,
+      borderColor: card.border,
+      backgroundColor: color.surface,
+    },
+    roleSummaryRowAssassin: {
+      borderColor: banner.error.border,
+      borderRadius: radius.sm,
+    },
+    roleSummaryLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.sm,
+      flex: 1,
+    },
+    playerName: {
+      fontFamily: font.label.family,
+      fontSize: font.label.size,
+      lineHeight: font.label.lineHeight,
+      fontWeight: font.label.weight,
+      color: color.onSurface,
+    },
+    playerStatusText: {
+      fontFamily: font.caption.family,
+      fontSize: font.caption.size,
+      lineHeight: font.caption.lineHeight,
+      color: color.onSurfaceMuted,
+    },
+    waitingCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.sm,
+      padding: space.md,
+      borderRadius: banner.radius,
+      backgroundColor: banner.info.bg,
+    },
+    waitingText: {
+      flex: 1,
+      fontFamily: font.body.family,
+      fontSize: font.body.size,
+      lineHeight: font.body.lineHeight,
+      color: banner.info.text,
+    },
+    angelShieldBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.sm,
+      padding: space.md,
+      borderRadius: banner.radius,
+      backgroundColor: banner.success.bg,
+      borderWidth: border.thin,
+      borderColor: banner.success.border,
+    },
+    angelShieldText: {
+      flex: 1,
+      fontFamily: font.label.family,
+      fontSize: font.label.size,
+      lineHeight: font.label.lineHeight,
+      fontWeight: font.label.weight,
+      color: banner.success.text,
+    },
+    tallyBarsList: {
+      gap: space.sm,
+    },
+    tallyBarItem: {
+      gap: space.xs,
+    },
+    tallyBarHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    tallyBarName: {
+      fontFamily: font.label.family,
+      fontSize: font.label.size,
+      lineHeight: font.label.lineHeight,
+      fontWeight: font.label.weight,
+      color: color.onSurface,
+    },
+    tallyBarCount: {
+      fontFamily: font.caption.family,
+      fontSize: font.caption.size,
+      lineHeight: font.caption.lineHeight,
+      fontWeight: font.caption.weight,
+      color: color.onSurfaceMuted,
+    },
+    tallyTrack: {
+      height: space.sm,
+      borderRadius: radius.full,
+      backgroundColor: color.surfaceVariant,
+      overflow: 'hidden',
+    },
+    tallyFill: {
+      height: space.sm,
+      borderRadius: radius.full,
+      backgroundColor: color.action,
+    },
+    tallyFillSkip: {
+      height: space.sm,
+      borderRadius: radius.full,
+      backgroundColor: color.onSurfaceMuted,
+    },
+  });
+};

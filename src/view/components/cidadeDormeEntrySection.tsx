@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
 import { ExpressiveChip } from '@/view/components/expressiveChip';
+import { ExpressiveTag } from '@/view/components/expressiveTag';
 import { ExpressiveTextField } from '@/view/components/expressiveTextField';
 import { GameCard } from '@/view/components/gameCard';
-import { tokens } from '@/view/theme';
+import { useTheme, type AppTokens } from '@/view/theme';
 
 type EntryMode = 'create' | 'join';
 
@@ -26,6 +27,8 @@ export const CidadeDormeEntrySection = ({
   onCreateRoom,
   onJoinRoom,
 }: CidadeDormeEntrySectionProps) => {
+  const activeTokens = useTheme();
+  const styles = useMemo(() => createStyles(activeTokens), [activeTokens]);
   const [entryMode, setEntryMode] = useState<EntryMode>('create');
   const [nicknameInput, setNicknameInput] = useState<string>('');
   const [roomCodeInput, setRoomCodeInput] = useState<string>('');
@@ -39,28 +42,16 @@ export const CidadeDormeEntrySection = ({
           icon="arrow-left"
           onPress={onExitArena}
         />
-        <View
-          style={styles.modeBadge}
-          accessibilityRole="text"
+        <ExpressiveTag
+          label={isRealtimeEnabled ? 'Realtime Ativo' : 'Sem Conexão Realtime'}
+          icon={isRealtimeEnabled ? 'cloud-check-outline' : 'cloud-off-outline'}
+          tone="action"
           accessibilityLabel={
             isRealtimeEnabled
               ? 'Modo Multiplayer Supabase Realtime'
               : 'Servidor Multiplayer não configurado'
           }
-        >
-          <MaterialCommunityIcons
-            name={isRealtimeEnabled ? 'cloud-check-outline' : 'cloud-off-outline'}
-            size={tokens.semantic.icon.sm}
-            color={tokens.semantic.color.onActionContainer}
-          />
-          <Text
-            allowFontScaling
-            maxFontSizeMultiplier={tokens.semantic.typography.maxScale}
-            style={styles.modeBadgeText}
-          >
-            {isRealtimeEnabled ? 'Realtime Ativo' : 'Sem Conexão Realtime'}
-          </Text>
-        </View>
+        />
       </View>
 
       <GameCard
@@ -74,8 +65,8 @@ export const CidadeDormeEntrySection = ({
         <View style={styles.errorBanner} accessibilityLiveRegion="assertive">
           <MaterialCommunityIcons
             name="alert-circle"
-            size={tokens.semantic.icon.md}
-            color={tokens.semantic.color.error}
+            size={activeTokens.semantic.icon.md}
+            color={activeTokens.component.banner.error.text}
           />
           <Text allowFontScaling style={styles.errorBannerText}>
             {error}
@@ -131,7 +122,7 @@ export const CidadeDormeEntrySection = ({
           >
             <ActivityIndicator
               size="small"
-              color={tokens.semantic.color.action}
+              color={activeTokens.semantic.color.action}
             />
             <Text allowFontScaling style={styles.loadingBannerText}>
               {entryMode === 'create'
@@ -178,86 +169,75 @@ export const CidadeDormeEntrySection = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    gap: tokens.semantic.space.lg,
-  },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: tokens.semantic.space.sm,
-  },
-  modeBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.semantic.space.xs,
-    paddingHorizontal: tokens.semantic.space.md,
-    paddingVertical: tokens.semantic.space.sm,
-    borderRadius: tokens.semantic.radius.full,
-    backgroundColor: tokens.semantic.color.actionContainer,
-  },
-  modeBadgeText: {
-    fontFamily: tokens.semantic.font.caption.family,
-    fontSize: tokens.semantic.font.caption.size,
-    lineHeight: tokens.semantic.font.caption.lineHeight,
-    fontWeight: tokens.semantic.font.caption.weight,
-    color: tokens.semantic.color.onActionContainer,
-  },
-  errorBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.semantic.space.sm,
-    padding: tokens.semantic.space.md,
-    borderRadius: tokens.semantic.radius.md,
-    borderWidth: tokens.semantic.border.thin,
-    borderColor: tokens.semantic.color.error,
-    backgroundColor: tokens.semantic.color.errorContainer,
-  },
-  errorBannerText: {
-    flexShrink: 1,
-    fontFamily: tokens.semantic.font.body.family,
-    fontSize: tokens.semantic.font.body.size,
-    fontWeight: tokens.semantic.font.body.weight,
-    lineHeight: tokens.semantic.font.body.lineHeight,
-    color: tokens.semantic.color.onErrorContainer,
-  },
-  entryCard: {
-    backgroundColor: tokens.component.card.bg,
-    borderColor: tokens.component.card.border,
-    borderWidth: tokens.semantic.border.thin,
-    borderRadius: tokens.component.card.radius,
-    padding: tokens.component.card.padding,
-    gap: tokens.semantic.space.md,
-    elevation: tokens.semantic.elevation.card,
-  },
-  sectionTitle: {
-    fontFamily: tokens.semantic.font.subtitle.family,
-    fontSize: tokens.semantic.font.subtitle.size,
-    lineHeight: tokens.semantic.font.subtitle.lineHeight,
-    fontWeight: tokens.semantic.font.subtitle.weight,
-    color: tokens.semantic.color.onSurface,
-  },
-  segmentedRow: {
-    flexDirection: 'row',
-    gap: tokens.semantic.space.sm,
-  },
-  loadingBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.semantic.space.sm,
-    padding: tokens.semantic.space.md,
-    borderRadius: tokens.semantic.radius.lg,
-    backgroundColor: tokens.semantic.color.actionContainer,
-  },
-  loadingBannerText: {
-    flex: 1,
-    fontFamily: tokens.semantic.font.body.family,
-    fontSize: tokens.semantic.font.body.size,
-    lineHeight: tokens.semantic.font.body.lineHeight,
-    color: tokens.semantic.color.onActionContainer,
-  },
-  joinFields: {
-    gap: tokens.semantic.space.md,
-  },
-});
+const createStyles = (activeTokens: AppTokens) => {
+  const { color, font, radius, space, border, elevation } = activeTokens.semantic;
+  const { card, banner } = activeTokens.component;
+  return StyleSheet.create({
+    container: {
+      gap: space.lg,
+    },
+    topBar: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: space.sm,
+      flexWrap: 'wrap',
+    },
+    errorBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.sm,
+      padding: space.md,
+      borderRadius: radius.md,
+      borderWidth: border.thin,
+      borderColor: banner.error.border,
+      backgroundColor: banner.error.bg,
+    },
+    errorBannerText: {
+      flexShrink: 1,
+      fontFamily: font.body.family,
+      fontSize: font.body.size,
+      fontWeight: font.body.weight,
+      lineHeight: font.body.lineHeight,
+      color: banner.error.text,
+    },
+    entryCard: {
+      backgroundColor: card.bg,
+      borderColor: card.border,
+      borderWidth: border.thin,
+      borderRadius: card.radius,
+      padding: card.padding,
+      gap: space.md,
+      elevation: elevation.card,
+    },
+    sectionTitle: {
+      fontFamily: font.subtitle.family,
+      fontSize: font.subtitle.size,
+      lineHeight: font.subtitle.lineHeight,
+      fontWeight: font.subtitle.weight,
+      color: color.onSurface,
+    },
+    segmentedRow: {
+      flexDirection: 'row',
+      gap: space.sm,
+    },
+    loadingBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.sm,
+      padding: space.md,
+      borderRadius: banner.radius,
+      backgroundColor: banner.info.bg,
+    },
+    loadingBannerText: {
+      flex: 1,
+      fontFamily: font.body.family,
+      fontSize: font.body.size,
+      lineHeight: font.body.lineHeight,
+      color: banner.info.text,
+    },
+    joinFields: {
+      gap: space.md,
+    },
+  });
+};

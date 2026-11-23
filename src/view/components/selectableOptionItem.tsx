@@ -1,7 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { darkTokens, tokens, type ThemeMode } from '@/view/theme';
+import {
+  getFocusRingStyle,
+  useKeyboardFocus,
+} from '@/view/components/useKeyboardFocus';
+import { useTheme, type AppTokens, type ThemeMode } from '@/view/theme';
 
 export type SelectableOptionItemProps = {
   label: string;
@@ -9,6 +13,7 @@ export type SelectableOptionItemProps = {
   icon?: keyof typeof MaterialCommunityIcons.glyphMap;
   selected?: boolean;
   disabled?: boolean;
+  error?: boolean;
   themeMode?: ThemeMode;
   reduceMotion?: boolean;
   accessibilityLabel?: string;
@@ -21,16 +26,17 @@ export const SelectableOptionItem = ({
   icon,
   selected = false,
   disabled = false,
-  themeMode = 'light',
+  error = false,
+  themeMode,
   reduceMotion = false,
   accessibilityLabel,
   onPress,
 }: SelectableOptionItemProps) => {
+  const activeTokens = useTheme(themeMode);
+  const styles = useMemo(() => createStyles(activeTokens), [activeTokens]);
   const [pressed, setPressed] = useState(false);
-  const [focused, setFocused] = useState(false);
+  const keyboardFocus = useKeyboardFocus();
   const scaleAnim = useRef(new Animated.Value(1)).current;
-
-  const activeTokens = themeMode === 'dark' ? darkTokens : tokens;
 
   useEffect(() => {
     if (selected && !reduceMotion) {
@@ -53,31 +59,33 @@ export const SelectableOptionItem = ({
   ]);
 
   const backgroundColor = disabled
-    ? activeTokens.semantic.color.disabledBg
-    : selected
-    ? activeTokens.semantic.color.actionContainer
-    : activeTokens.component.quiz.optionBg;
+    ? activeTokens.component.option.bg.disabled
+    : error
+      ? activeTokens.component.option.bg.error
+      : selected
+        ? activeTokens.component.option.bg.selected
+        : activeTokens.component.option.bg.default;
 
-  const borderColor = focused
-    ? activeTokens.semantic.color.focus
-    : selected
-    ? activeTokens.semantic.color.action
-    : activeTokens.component.quiz.optionBorder;
-
-  const borderWidth = focused
-    ? activeTokens.semantic.border.focus
-    : activeTokens.semantic.border.thin;
+  const borderColor = disabled
+    ? activeTokens.component.option.border.disabled
+    : error
+      ? activeTokens.component.option.border.error
+      : selected
+        ? activeTokens.component.option.border.selected
+        : activeTokens.component.option.border.default;
 
   const borderRadius =
     pressed || selected
-      ? activeTokens.semantic.radius.md
-      : activeTokens.component.quiz.optionRadius;
+      ? activeTokens.component.option.radiusPressed
+      : activeTokens.component.option.radius;
 
   const labelColor = disabled
     ? activeTokens.semantic.color.disabledText
-    : selected
-    ? activeTokens.semantic.color.onActionContainer
-    : activeTokens.semantic.color.onSurface;
+    : error
+      ? activeTokens.semantic.color.onErrorContainer
+      : selected
+        ? activeTokens.semantic.color.onActionContainer
+        : activeTokens.semantic.color.onSurface;
 
   const badgeBg = selected
     ? activeTokens.semantic.color.action
@@ -91,15 +99,26 @@ export const SelectableOptionItem = ({
     accessibilityLabel ??
     (index !== undefined ? `Selecionar jogador ${index}: ${label}` : label);
 
+  const focusRingStyle = getFocusRingStyle(
+    activeTokens,
+    keyboardFocus.focusVisible
+  );
+
   return (
     <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
       <Pressable
         onPress={onPress}
         disabled={disabled}
-        onPressIn={() => setPressed(true)}
-        onPressOut={() => setPressed(false)}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
+        onPressIn={() => {
+          setPressed(true);
+          keyboardFocus.onPressIn();
+        }}
+        onPressOut={() => {
+          setPressed(false);
+          keyboardFocus.onPressOut();
+        }}
+        onFocus={keyboardFocus.onFocus}
+        onBlur={keyboardFocus.onBlur}
         accessibilityRole="button"
         accessibilityLabel={resolvedAccessibilityLabel}
         accessibilityState={{ disabled, selected }}
@@ -108,9 +127,10 @@ export const SelectableOptionItem = ({
           {
             backgroundColor,
             borderColor,
-            borderWidth,
+            borderWidth: activeTokens.semantic.border.thin,
             borderRadius,
           },
+          focusRingStyle,
         ]}
       >
         <View style={styles.leftGroup}>
@@ -151,40 +171,41 @@ export const SelectableOptionItem = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    minHeight: tokens.component.quiz.minHeight,
-    paddingHorizontal: tokens.semantic.space.md,
-    paddingVertical: tokens.semantic.space.sm,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: tokens.semantic.space.sm,
-  },
-  leftGroup: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.semantic.space.sm,
-  },
-  leadingBadge: {
-    width: tokens.semantic.space.xl,
-    height: tokens.semantic.space.xl,
-    borderRadius: tokens.semantic.radius.full,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  indexText: {
-    fontFamily: tokens.semantic.font.label.family,
-    fontSize: tokens.semantic.font.label.size,
-    fontWeight: tokens.semantic.font.label.weight,
-    lineHeight: tokens.semantic.font.label.lineHeight,
-  },
-  optionLabel: {
-    flex: 1,
-    fontFamily: tokens.semantic.font.label.family,
-    fontSize: tokens.semantic.font.label.size,
-    fontWeight: tokens.semantic.font.label.weight,
-    lineHeight: tokens.semantic.font.label.lineHeight,
-  },
-});
+const createStyles = (activeTokens: AppTokens) =>
+  StyleSheet.create({
+    container: {
+      minHeight: activeTokens.component.option.minHeight,
+      paddingHorizontal: activeTokens.semantic.space.md,
+      paddingVertical: activeTokens.semantic.space.sm,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: activeTokens.semantic.space.sm,
+    },
+    leftGroup: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: activeTokens.semantic.space.sm,
+    },
+    leadingBadge: {
+      width: activeTokens.semantic.space.xl,
+      height: activeTokens.semantic.space.xl,
+      borderRadius: activeTokens.semantic.radius.full,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    indexText: {
+      fontFamily: activeTokens.semantic.font.label.family,
+      fontSize: activeTokens.semantic.font.label.size,
+      fontWeight: activeTokens.semantic.font.label.weight,
+      lineHeight: activeTokens.semantic.font.label.lineHeight,
+    },
+    optionLabel: {
+      flex: 1,
+      fontFamily: activeTokens.semantic.font.label.family,
+      fontSize: activeTokens.semantic.font.label.size,
+      fontWeight: activeTokens.semantic.font.label.weight,
+      lineHeight: activeTokens.semantic.font.label.lineHeight,
+    },
+  });

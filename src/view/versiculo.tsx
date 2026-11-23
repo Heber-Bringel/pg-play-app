@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -10,8 +10,13 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ConfirmModal } from '@/view/components/confirmModal';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
 import { ExpressiveChip } from '@/view/components/expressiveChip';
+import { ExpressiveTag } from '@/view/components/expressiveTag';
 import { ExpressiveTimer } from '@/view/components/expressiveTimer';
-import { border, card, color, elevation, font, radius, space } from '@/view/theme';
+import {
+  getFocusRingStyle,
+  useKeyboardFocus,
+} from '@/view/components/useKeyboardFocus';
+import { useTheme, type AppTokens } from '@/view/theme';
 import {
   ALL_VERSE_PACKS,
   useVersiculoViewModel,
@@ -21,8 +26,87 @@ import {
 
 const OPTION_LETTERS = ['A', 'B', 'C', 'D'] as const;
 
+type VersiculoOptionTileProps = {
+  letter: string;
+  option: string;
+  isSelected: boolean;
+  isEliminated: boolean;
+  activeTokens: AppTokens;
+  styles: ReturnType<typeof createStyles>;
+  onPress: () => void;
+};
+
+const VersiculoOptionTile = ({
+  letter,
+  option,
+  isSelected,
+  isEliminated,
+  activeTokens,
+  styles,
+  onPress,
+}: VersiculoOptionTileProps) => {
+  const keyboardFocus = useKeyboardFocus();
+  const focusRingStyle = getFocusRingStyle(
+    activeTokens,
+    keyboardFocus.focusVisible
+  );
+
+  return (
+    <Pressable
+      style={[
+        styles.optionTile,
+        isSelected ? styles.optionTileSelected : null,
+        isEliminated ? styles.optionTileEliminated : null,
+        focusRingStyle,
+      ]}
+      disabled={isEliminated}
+      onPressIn={keyboardFocus.onPressIn}
+      onPressOut={keyboardFocus.onPressOut}
+      onFocus={keyboardFocus.onFocus}
+      onBlur={keyboardFocus.onBlur}
+      accessibilityRole="button"
+      accessibilityState={{
+        selected: isSelected,
+        disabled: isEliminated,
+      }}
+      accessibilityLabel={`Opção ${letter}: ${option}`}
+      onPress={onPress}
+    >
+      <View
+        style={[
+          styles.optionBadge,
+          isSelected ? styles.optionBadgeSelected : null,
+        ]}
+      >
+        <Text
+          allowFontScaling
+          style={[
+            styles.optionLetter,
+            isSelected ? styles.optionLetterSelected : null,
+          ]}
+        >
+          {letter}
+        </Text>
+      </View>
+      <Text
+        allowFontScaling
+        numberOfLines={2}
+        style={[
+          styles.optionText,
+          isEliminated ? styles.optionTextEliminated : null,
+        ]}
+      >
+        {option}
+      </Text>
+    </Pressable>
+  );
+};
+
 const VersiculoScreen = () => {
   const [state, actions] = useVersiculoViewModel();
+  const activeTokens = useTheme();
+  const styles = useMemo(() => createStyles(activeTokens), [activeTokens]);
+
   const hasEnoughTeams = state.teams.length >= 2;
   const activeBlank =
     state.currentPassage?.blanks.find(
@@ -42,16 +126,11 @@ const VersiculoScreen = () => {
           variant="outlined"
           onPress={actions.requestExit}
         />
-        <View style={styles.headerBadge}>
-          <MaterialCommunityIcons
-            name="book-open-variant"
-            size={20}
-            color={color.action}
-          />
-          <Text allowFontScaling style={styles.headerTitle}>
-            Complete o Versículo
-          </Text>
-        </View>
+        <ExpressiveTag
+          label="Complete o Versículo"
+          icon="book-open-variant"
+          tone="action"
+        />
       </View>
 
       <ScrollView
@@ -67,8 +146,8 @@ const VersiculoScreen = () => {
           >
             <MaterialCommunityIcons
               name="alert-circle"
-              size={22}
-              color={color.error}
+              size={activeTokens.semantic.icon.md}
+              color={activeTokens.component.banner.error.text}
             />
             <Text allowFontScaling style={styles.errorText}>
               {state.error}
@@ -84,8 +163,8 @@ const VersiculoScreen = () => {
           >
             <MaterialCommunityIcons
               name="book-open-variant"
-              size={36}
-              color={color.action}
+              size={activeTokens.semantic.icon.lg}
+              color={activeTokens.semantic.color.action}
             />
             <Text allowFontScaling style={styles.helperText}>
               Carregando passagens bíblicas...
@@ -108,8 +187,8 @@ const VersiculoScreen = () => {
                 <View style={styles.warningBox}>
                   <MaterialCommunityIcons
                     name="account-group"
-                    size={22}
-                    color={color.error}
+                    size={activeTokens.semantic.icon.md}
+                    color={activeTokens.component.banner.error.text}
                   />
                   <Text allowFontScaling style={styles.warningText}>
                     Cadastre pelo menos 2 equipes para jogar Complete o
@@ -210,9 +289,10 @@ const VersiculoScreen = () => {
         state.currentPassage ? (
           <View style={styles.sectionStack}>
             <View style={styles.timerRow}>
-              <Text allowFontScaling style={styles.teamTurnBadge}>
-                {`Equipe ${state.currentTeam.name} · ${state.currentPassageIndex + 1}/${state.passages.length}`}
-              </Text>
+              <ExpressiveTag
+                label={`Equipe ${state.currentTeam.name} · ${state.currentPassageIndex + 1}/${state.passages.length}`}
+                tone="action"
+              />
               <ExpressiveTimer secondsRemaining={state.secondsRemaining} />
             </View>
 
@@ -266,51 +346,18 @@ const VersiculoScreen = () => {
                       Boolean(activeHint?.eliminatedOptions.includes(option));
 
                     return (
-                      <Pressable
+                      <VersiculoOptionTile
                         key={`${activeBlank.index}-${option}`}
-                        style={[
-                          styles.optionTile,
-                          isSelected ? styles.optionTileSelected : null,
-                          isEliminated ? styles.optionTileEliminated : null,
-                        ]}
-                        disabled={isEliminated}
-                        accessibilityRole="button"
-                        accessibilityState={{
-                          selected: isSelected,
-                          disabled: isEliminated,
-                        }}
-                        accessibilityLabel={`Opção ${letter}: ${option}`}
+                        letter={letter}
+                        option={option}
+                        isSelected={isSelected}
+                        isEliminated={isEliminated}
+                        activeTokens={activeTokens}
+                        styles={styles}
                         onPress={() =>
                           actions.setAnswer(activeBlank.index, option)
                         }
-                      >
-                        <View
-                          style={[
-                            styles.optionBadge,
-                            isSelected ? styles.optionBadgeSelected : null,
-                          ]}
-                        >
-                          <Text
-                            allowFontScaling
-                            style={[
-                              styles.optionLetter,
-                              isSelected ? styles.optionLetterSelected : null,
-                            ]}
-                          >
-                            {letter}
-                          </Text>
-                        </View>
-                        <Text
-                          allowFontScaling
-                          numberOfLines={2}
-                          style={[
-                            styles.optionText,
-                            isEliminated ? styles.optionTextEliminated : null,
-                          ]}
-                        >
-                          {option}
-                        </Text>
-                      </Pressable>
+                      />
                     );
                   })}
                 </View>
@@ -355,9 +402,10 @@ const VersiculoScreen = () => {
               <Text allowFontScaling style={styles.passageText}>
                 {state.currentPassage.fullText}
               </Text>
-              <Text allowFontScaling style={styles.turnPointsBadge}>
-                {`Pontuação da rodada (${state.currentTeam.name}): +${state.turnPoints} pts`}
-              </Text>
+              <ExpressiveTag
+                label={`Pontuação da rodada (${state.currentTeam.name}): +${state.turnPoints} pts`}
+                tone="highlight"
+              />
             </View>
 
             <View style={styles.sectionStack}>
@@ -378,8 +426,12 @@ const VersiculoScreen = () => {
                   <View style={styles.resultHeader}>
                     <MaterialCommunityIcons
                       name={item.isCorrect ? 'check-circle' : 'close-circle'}
-                      size={24}
-                      color={item.isCorrect ? color.success : color.error}
+                      size={activeTokens.semantic.icon.md}
+                      color={
+                        item.isCorrect
+                          ? activeTokens.semantic.color.success
+                          : activeTokens.semantic.color.error
+                      }
                     />
                     <Text allowFontScaling style={styles.resultTitle}>
                       {`Lacuna ${item.index} · +${item.pointsAwarded} pts`}
@@ -466,291 +518,267 @@ const VersiculoScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: color.surface,
-    paddingHorizontal: space.lg,
-    paddingTop: space.md,
-  },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: space.md,
-    marginBottom: space.md,
-  },
-  headerBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.xs,
-    backgroundColor: color.surfaceContainer,
-    paddingHorizontal: space.md,
-    paddingVertical: space.sm,
-    borderRadius: radius.full,
-  },
-  headerTitle: {
-    fontFamily: font.label.family,
-    fontSize: font.label.size,
-    lineHeight: font.label.lineHeight,
-    fontWeight: font.label.weight,
-    color: color.onSurface,
-  },
-  scrollContent: {
-    paddingBottom: space.xxxl,
-    gap: space.lg,
-  },
-  sectionStack: {
-    gap: space.lg,
-  },
-  centerBox: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: space.xxl,
-    gap: space.md,
-  },
-  card: {
-    backgroundColor: card.bg,
-    borderRadius: card.radius,
-    borderWidth: border.thin,
-    borderColor: card.border,
-    padding: card.padding,
-    gap: space.md,
-    elevation: elevation.card,
-  },
-  errorBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
-    backgroundColor: color.errorContainer,
-    borderColor: color.error,
-    borderWidth: 2,
-    borderRadius: radius.md,
-    padding: space.md,
-  },
-  errorText: {
-    flex: 1,
-    fontFamily: font.body.family,
-    fontSize: font.body.size,
-    lineHeight: font.body.lineHeight,
-    fontWeight: font.body.weight,
-    color: color.onErrorContainer,
-  },
-  warningBox: {
-    backgroundColor: color.surfaceContainer,
-    borderRadius: radius.md,
-    padding: space.md,
-    gap: space.sm,
-  },
-  warningText: {
-    fontFamily: font.body.family,
-    fontSize: font.body.size,
-    lineHeight: font.body.lineHeight,
-    fontWeight: font.body.weight,
-    color: color.onSurface,
-  },
-  cardTitle: {
-    fontFamily: font.title.family,
-    fontSize: font.title.size,
-    lineHeight: font.title.lineHeight,
-    fontWeight: font.title.weight,
-    color: color.onSurface,
-  },
-  heroTitle: {
-    fontFamily: font.display.family,
-    fontSize: font.display.size,
-    lineHeight: font.display.lineHeight,
-    fontWeight: font.display.weight,
-    color: color.onSurface,
-  },
-  eyebrow: {
-    fontFamily: font.label.family,
-    fontSize: font.label.size,
-    lineHeight: font.label.lineHeight,
-    fontWeight: font.label.weight,
-    color: color.action,
-  },
-  sectionLabel: {
-    fontFamily: font.subtitle.family,
-    fontSize: font.subtitle.size,
-    lineHeight: font.subtitle.lineHeight,
-    fontWeight: font.subtitle.weight,
-    color: color.onSurface,
-  },
-  bodyText: {
-    fontFamily: font.body.family,
-    fontSize: font.body.size,
-    lineHeight: font.body.lineHeight,
-    fontWeight: font.body.weight,
-    color: color.onSurfaceMuted,
-  },
-  helperText: {
-    fontFamily: font.body.family,
-    fontSize: font.body.size,
-    lineHeight: font.body.lineHeight,
-    fontWeight: font.body.weight,
-    color: color.onSurfaceMuted,
-  },
-  chipWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: space.sm,
-  },
-  timerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: space.md,
-    flexWrap: 'wrap',
-  },
-  teamTurnBadge: {
-    fontFamily: font.subtitle.family,
-    fontSize: font.subtitle.size,
-    lineHeight: font.subtitle.lineHeight,
-    fontWeight: font.subtitle.weight,
-    color: color.onSurface,
-  },
-  passageText: {
-    fontFamily: font.title.family,
-    fontSize: font.title.size,
-    lineHeight: font.title.lineHeight,
-    fontWeight: font.title.weight,
-    color: color.onSurface,
-  },
-  optionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: space.sm,
-  },
-  optionTile: {
-    width: '48%',
-    flexGrow: 1,
-    minHeight: space.xxl,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
-    backgroundColor: color.surfaceContainer,
-    borderWidth: border.thin,
-    borderColor: color.outline,
-    borderRadius: radius.md,
-    paddingHorizontal: space.sm,
-    paddingVertical: space.sm,
-  },
-  optionTileSelected: {
-    backgroundColor: color.actionContainer,
-    borderColor: color.action,
-  },
-  optionTileEliminated: {
-    backgroundColor: color.disabledBg,
-    borderColor: color.disabledBg,
-  },
-  optionBadge: {
-    width: space.lg,
-    height: space.lg,
-    borderRadius: radius.full,
-    backgroundColor: color.surfaceVariant,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  optionBadgeSelected: {
-    backgroundColor: color.action,
-  },
-  optionLetter: {
-    fontFamily: font.label.family,
-    fontSize: font.label.size,
-    lineHeight: font.label.lineHeight,
-    fontWeight: font.label.weight,
-    color: color.onSurface,
-  },
-  optionLetterSelected: {
-    color: color.onAction,
-  },
-  optionText: {
-    flex: 1,
-    fontFamily: font.label.family,
-    fontSize: font.label.size,
-    lineHeight: font.label.lineHeight,
-    fontWeight: font.label.weight,
-    color: color.onSurface,
-  },
-  optionTextEliminated: {
-    color: color.disabledText,
-  },
-  compactActionsRow: {
-    flexDirection: 'row',
-    gap: space.sm,
-  },
-  compactActionItem: {
-    flex: 1,
-  },
-  actionStack: {
-    gap: space.md,
-  },
-  turnPointsBadge: {
-    fontFamily: font.subtitle.family,
-    fontSize: font.subtitle.size,
-    lineHeight: font.subtitle.lineHeight,
-    fontWeight: font.subtitle.weight,
-    color: color.action,
-  },
-  resultCard: {
-    backgroundColor: color.surfaceContainer,
-    borderWidth: 2,
-    padding: space.md,
-    gap: space.sm,
-  },
-  resultCardCorrect: {
-    borderColor: color.success,
-    borderRadius: radius.lg,
-  },
-  resultCardWrong: {
-    borderColor: color.error,
-    borderRadius: radius.sm,
-  },
-  resultHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
-  },
-  resultTitle: {
-    fontFamily: font.subtitle.family,
-    fontSize: font.subtitle.size,
-    lineHeight: font.subtitle.lineHeight,
-    fontWeight: font.subtitle.weight,
-    color: color.onSurface,
-  },
-  expectedText: {
-    fontFamily: font.label.family,
-    fontSize: font.label.size,
-    lineHeight: font.label.lineHeight,
-    fontWeight: font.label.weight,
-    color: color.onSurface,
-  },
-  summaryList: {
-    gap: space.sm,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: color.surfaceContainer,
-    borderRadius: radius.md,
-    padding: space.md,
-  },
-  summaryTeamName: {
-    fontFamily: font.subtitle.family,
-    fontSize: font.subtitle.size,
-    lineHeight: font.subtitle.lineHeight,
-    fontWeight: font.subtitle.weight,
-    color: color.onSurface,
-  },
-  summaryPoints: {
-    fontFamily: font.label.family,
-    fontSize: font.label.size,
-    lineHeight: font.label.lineHeight,
-    fontWeight: font.label.weight,
-    color: color.action,
-  },
-});
+const createStyles = (activeTokens: AppTokens) => {
+  const { color, font, radius, space, border, elevation } = activeTokens.semantic;
+  const { card, option, banner } = activeTokens.component;
+  return StyleSheet.create({
+    root: {
+      flex: 1,
+      backgroundColor: color.surface,
+      paddingHorizontal: space.lg,
+      paddingTop: space.md,
+    },
+    topBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: space.md,
+      marginBottom: space.md,
+    },
+    scrollContent: {
+      paddingBottom: space['3xl'],
+      gap: space.lg,
+    },
+    sectionStack: {
+      gap: space.lg,
+    },
+    centerBox: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: space['2xl'],
+      gap: space.md,
+    },
+    card: {
+      backgroundColor: card.bg,
+      borderRadius: card.radius,
+      borderWidth: border.thin,
+      borderColor: card.border,
+      padding: card.padding,
+      gap: space.md,
+      elevation: elevation.card,
+    },
+    errorBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.sm,
+      backgroundColor: banner.error.bg,
+      borderColor: banner.error.border,
+      borderWidth: border.thin,
+      borderRadius: radius.md,
+      padding: space.md,
+    },
+    errorText: {
+      flex: 1,
+      fontFamily: font.body.family,
+      fontSize: font.body.size,
+      lineHeight: font.body.lineHeight,
+      fontWeight: font.body.weight,
+      color: banner.error.text,
+    },
+    warningBox: {
+      backgroundColor: banner.error.bg,
+      borderColor: banner.error.border,
+      borderWidth: border.thin,
+      borderRadius: radius.md,
+      padding: space.md,
+      gap: space.sm,
+    },
+    warningText: {
+      fontFamily: font.body.family,
+      fontSize: font.body.size,
+      lineHeight: font.body.lineHeight,
+      fontWeight: font.body.weight,
+      color: banner.error.text,
+    },
+    cardTitle: {
+      fontFamily: font.title.family,
+      fontSize: font.title.size,
+      lineHeight: font.title.lineHeight,
+      fontWeight: font.title.weight,
+      color: color.onSurface,
+    },
+    heroTitle: {
+      fontFamily: font.display.family,
+      fontSize: font.display.size,
+      lineHeight: font.display.lineHeight,
+      fontWeight: font.display.weight,
+      color: color.onSurface,
+    },
+    eyebrow: {
+      fontFamily: font.label.family,
+      fontSize: font.label.size,
+      lineHeight: font.label.lineHeight,
+      fontWeight: font.label.weight,
+      color: color.action,
+    },
+    sectionLabel: {
+      fontFamily: font.subtitle.family,
+      fontSize: font.subtitle.size,
+      lineHeight: font.subtitle.lineHeight,
+      fontWeight: font.subtitle.weight,
+      color: color.onSurface,
+    },
+    bodyText: {
+      fontFamily: font.body.family,
+      fontSize: font.body.size,
+      lineHeight: font.body.lineHeight,
+      fontWeight: font.body.weight,
+      color: color.onSurfaceMuted,
+    },
+    helperText: {
+      fontFamily: font.body.family,
+      fontSize: font.body.size,
+      lineHeight: font.body.lineHeight,
+      fontWeight: font.body.weight,
+      color: color.onSurfaceMuted,
+    },
+    chipWrap: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: space.sm,
+    },
+    timerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: space.md,
+      flexWrap: 'wrap',
+    },
+    passageText: {
+      fontFamily: font.title.family,
+      fontSize: font.title.size,
+      lineHeight: font.title.lineHeight,
+      fontWeight: font.title.weight,
+      color: color.onSurface,
+    },
+    optionsGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: space.sm,
+    },
+    optionTile: {
+      width: '48%',
+      flexGrow: 1,
+      minHeight: space['2xl'],
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.sm,
+      backgroundColor: option.bg.default,
+      borderWidth: border.thin,
+      borderColor: option.border.default,
+      borderRadius: radius.md,
+      paddingHorizontal: space.sm,
+      paddingVertical: space.sm,
+    },
+    optionTileSelected: {
+      backgroundColor: option.bg.selected,
+      borderColor: option.border.selected,
+    },
+    optionTileEliminated: {
+      backgroundColor: option.bg.disabled,
+      borderColor: option.border.disabled,
+    },
+    optionBadge: {
+      width: space.lg,
+      height: space.lg,
+      borderRadius: radius.full,
+      backgroundColor: color.surfaceVariant,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    optionBadgeSelected: {
+      backgroundColor: color.action,
+    },
+    optionLetter: {
+      fontFamily: font.label.family,
+      fontSize: font.label.size,
+      lineHeight: font.label.lineHeight,
+      fontWeight: font.label.weight,
+      color: color.onSurface,
+    },
+    optionLetterSelected: {
+      color: color.onAction,
+    },
+    optionText: {
+      flex: 1,
+      fontFamily: font.label.family,
+      fontSize: font.label.size,
+      lineHeight: font.label.lineHeight,
+      fontWeight: font.label.weight,
+      color: color.onSurface,
+    },
+    optionTextEliminated: {
+      color: color.disabledText,
+    },
+    compactActionsRow: {
+      flexDirection: 'row',
+      gap: space.sm,
+    },
+    compactActionItem: {
+      flex: 1,
+    },
+    actionStack: {
+      gap: space.md,
+    },
+    resultCard: {
+      backgroundColor: card.bg,
+      borderWidth: border.thin,
+      padding: space.md,
+      gap: space.sm,
+    },
+    resultCardCorrect: {
+      borderColor: banner.success.border,
+      borderRadius: radius.lg,
+    },
+    resultCardWrong: {
+      borderColor: banner.error.border,
+      borderRadius: radius.sm,
+    },
+    resultHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.sm,
+    },
+    resultTitle: {
+      fontFamily: font.subtitle.family,
+      fontSize: font.subtitle.size,
+      lineHeight: font.subtitle.lineHeight,
+      fontWeight: font.subtitle.weight,
+      color: color.onSurface,
+    },
+    expectedText: {
+      fontFamily: font.label.family,
+      fontSize: font.label.size,
+      lineHeight: font.label.lineHeight,
+      fontWeight: font.label.weight,
+      color: color.onSurface,
+    },
+    summaryList: {
+      gap: space.sm,
+    },
+    summaryRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: card.bg,
+      borderRadius: radius.md,
+      padding: space.md,
+    },
+    summaryTeamName: {
+      fontFamily: font.subtitle.family,
+      fontSize: font.subtitle.size,
+      lineHeight: font.subtitle.lineHeight,
+      fontWeight: font.subtitle.weight,
+      color: color.onSurface,
+    },
+    summaryPoints: {
+      fontFamily: font.label.family,
+      fontSize: font.label.size,
+      lineHeight: font.label.lineHeight,
+      fontWeight: font.label.weight,
+      color: color.action,
+    },
+  });
+};
 
 export default VersiculoScreen;

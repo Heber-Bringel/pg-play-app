@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type {
   AdedonhaConfig,
@@ -9,10 +9,11 @@ import type {
 } from '@/model/entities/multiplayerSession';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
 import { ExpressiveChip } from '@/view/components/expressiveChip';
+import { ExpressiveTag } from '@/view/components/expressiveTag';
 import { ExpressiveTextField } from '@/view/components/expressiveTextField';
 import { GameCard } from '@/view/components/gameCard';
 import { LetterKey } from '@/view/components/letterKey';
-import { tokens } from '@/view/theme';
+import { useTheme, type AppTokens } from '@/view/theme';
 
 const ROULETTE_PREVIEW_LETTERS: string[] = [
   'A',
@@ -54,10 +55,11 @@ export const AdedonhaLobbySection = ({
   onRemoveColumn,
   onUpdateConfig,
 }: AdedonhaLobbySectionProps) => {
+  const activeTokens = useTheme();
+  const styles = useMemo(() => createStyles(activeTokens), [activeTokens]);
   const [activeTab, setActiveTab] = useState<LobbyTab>('play');
   const [showManualLetters, setShowManualLetters] = useState<boolean>(false);
   const [newColumnInput, setNewColumnInput] = useState<string>('');
-  const [focusedColumn, setFocusedColumn] = useState<string | null>(null);
 
   const unusedSuggestions = suggestedColumns.filter(
     (s) => !room.config.columns.includes(s)
@@ -114,33 +116,12 @@ export const AdedonhaLobbySection = ({
               {room.players.map((player) => {
                 const isMe = player.id === currentPlayerId;
                 return (
-                  <View
+                  <ExpressiveTag
                     key={player.id}
-                    style={[
-                      styles.playerChip,
-                      player.isHost && styles.playerChipHost,
-                    ]}
-                  >
-                    <MaterialCommunityIcons
-                      name={player.isHost ? 'crown' : 'account'}
-                      size={tokens.semantic.icon.sm}
-                      color={
-                        player.isHost
-                          ? tokens.semantic.color.onActionContainer
-                          : tokens.semantic.color.onSurface
-                      }
-                    />
-                    <Text
-                      allowFontScaling
-                      maxFontSizeMultiplier={tokens.semantic.typography.maxScale}
-                      style={[
-                        styles.playerChipText,
-                        player.isHost && styles.playerChipHostText,
-                      ]}
-                    >
-                      {`${player.nickname}${isMe ? ' (Você)' : ''}`}
-                    </Text>
-                  </View>
+                    label={`${player.nickname}${isMe ? ' (Você)' : ''}`}
+                    icon={player.isHost ? 'crown' : 'account'}
+                    tone={player.isHost ? 'action' : 'neutral'}
+                  />
                 );
               })}
             </View>
@@ -197,8 +178,8 @@ export const AdedonhaLobbySection = ({
             <View style={styles.waitingCard}>
               <MaterialCommunityIcons
                 name="clock-outline"
-                size={tokens.semantic.icon.md}
-                color={tokens.semantic.color.onActionContainer}
+                size={activeTokens.semantic.icon.md}
+                color={activeTokens.component.banner.info.text}
               />
               <Text allowFontScaling style={styles.waitingText}>
                 Aguardando o Moderador girar a Roleta Expressiva para iniciar a rodada.
@@ -308,27 +289,15 @@ export const AdedonhaLobbySection = ({
                     </Text>
                   </View>
                   {isCurrentPlayerHost && room.config.columns.length > 1 && (
-                    <Pressable
-                      accessibilityRole="button"
+                    <ExpressiveButton
+                      variant="icon"
+                      tone="danger"
+                      icon="trash-can-outline"
                       accessibilityLabel={`Remover coluna ${col}`}
-                      onFocus={() => setFocusedColumn(col)}
-                      onBlur={() => setFocusedColumn(null)}
-                      style={({ pressed }) => [
-                        styles.removeColumnButton,
-                        pressed && styles.removeColumnButtonPressed,
-                        focusedColumn === col &&
-                          styles.removeColumnButtonFocused,
-                      ]}
                       onPress={() => {
                         void onRemoveColumn(col);
                       }}
-                    >
-                      <MaterialCommunityIcons
-                        name="trash-can-outline"
-                        size={tokens.semantic.icon.md}
-                        color={tokens.semantic.color.error}
-                      />
-                    </Pressable>
+                    />
                   )}
                 </View>
               ))}
@@ -340,147 +309,110 @@ export const AdedonhaLobbySection = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    gap: tokens.semantic.space.lg,
-  },
-  tabsRow: {
-    flexDirection: 'row',
-    gap: tokens.semantic.space.sm,
-  },
-  tabContent: {
-    gap: tokens.semantic.space.lg,
-  },
-  cardBox: {
-    backgroundColor: tokens.component.card.bg,
-    borderColor: tokens.component.card.border,
-    borderWidth: tokens.semantic.border.thin,
-    borderRadius: tokens.component.card.radius,
-    padding: tokens.component.card.padding,
-    gap: tokens.semantic.space.md,
-    elevation: tokens.semantic.elevation.card,
-  },
-  sectionTitle: {
-    fontFamily: tokens.semantic.font.subtitle.family,
-    fontSize: tokens.semantic.font.subtitle.size,
-    lineHeight: tokens.semantic.font.subtitle.lineHeight,
-    fontWeight: tokens.semantic.font.subtitle.weight,
-    color: tokens.semantic.color.onSurface,
-  },
-  sectionSubtitle: {
-    fontFamily: tokens.semantic.font.body.family,
-    fontSize: tokens.semantic.font.body.size,
-    lineHeight: tokens.semantic.font.body.lineHeight,
-    fontWeight: tokens.semantic.font.body.weight,
-    color: tokens.semantic.color.onSurfaceMuted,
-  },
-  chipsWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: tokens.semantic.space.sm,
-  },
-  playerChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.semantic.space.xs,
-    paddingHorizontal: tokens.semantic.space.md,
-    paddingVertical: tokens.semantic.space.sm,
-    borderRadius: tokens.semantic.radius.full,
-    backgroundColor: tokens.semantic.color.surfaceVariant,
-    borderWidth: tokens.semantic.border.thin,
-    borderColor: tokens.semantic.color.outline,
-  },
-  playerChipHost: {
-    backgroundColor: tokens.semantic.color.actionContainer,
-    borderColor: tokens.semantic.color.action,
-  },
-  playerChipText: {
-    fontFamily: tokens.semantic.font.caption.family,
-    fontSize: tokens.semantic.font.caption.size,
-    lineHeight: tokens.semantic.font.caption.lineHeight,
-    fontWeight: tokens.semantic.font.caption.weight,
-    color: tokens.semantic.color.onSurface,
-  },
-  playerChipHostText: {
-    color: tokens.semantic.color.onActionContainer,
-  },
-  letterGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: tokens.semantic.space.sm,
-  },
-  waitingCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.semantic.space.sm,
-    padding: tokens.semantic.space.md,
-    borderRadius: tokens.semantic.radius.lg,
-    backgroundColor: tokens.semantic.color.actionContainer,
-  },
-  waitingText: {
-    flex: 1,
-    fontFamily: tokens.semantic.font.body.family,
-    fontSize: tokens.semantic.font.body.size,
-    lineHeight: tokens.semantic.font.body.lineHeight,
-    color: tokens.semantic.color.onActionContainer,
-  },
-  columnList: {
-    gap: tokens.semantic.space.sm,
-  },
-  columnItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: tokens.semantic.color.surface,
-    borderRadius: tokens.semantic.radius.md,
-    borderWidth: tokens.semantic.border.thin,
-    borderColor: tokens.semantic.color.outline,
-    padding: tokens.semantic.space.sm,
-    minHeight: tokens.semantic.space.container,
-  },
-  columnInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.semantic.space.sm,
-    flex: 1,
-  },
-  columnAvatar: {
-    width: tokens.semantic.space.xl,
-    height: tokens.semantic.space.xl,
-    borderRadius: tokens.semantic.radius.full,
-    backgroundColor: tokens.semantic.color.actionContainer,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  columnAvatarText: {
-    fontFamily: tokens.semantic.font.label.family,
-    fontSize: tokens.semantic.font.label.size,
-    lineHeight: tokens.semantic.font.label.lineHeight,
-    fontWeight: tokens.semantic.font.label.weight,
-    color: tokens.semantic.color.onActionContainer,
-  },
-  columnName: {
-    flex: 1,
-    fontFamily: tokens.semantic.font.label.family,
-    fontSize: tokens.semantic.font.label.size,
-    lineHeight: tokens.semantic.font.label.lineHeight,
-    fontWeight: tokens.semantic.font.label.weight,
-    color: tokens.semantic.color.onSurface,
-  },
-  removeColumnButton: {
-    width: tokens.semantic.space['2xl'],
-    height: tokens.semantic.space['2xl'],
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: tokens.semantic.radius.full,
-    borderWidth: tokens.semantic.border.thin,
-    borderColor: tokens.semantic.color.transparent,
-  },
-  removeColumnButtonPressed: {
-    backgroundColor: tokens.semantic.color.errorContainer,
-  },
-  removeColumnButtonFocused: {
-    borderWidth: tokens.semantic.border.focus,
-    borderColor: tokens.semantic.color.focus,
-  },
-});
+const createStyles = (activeTokens: AppTokens) => {
+  const { color, font, radius, space, border, elevation } = activeTokens.semantic;
+  const { card, banner } = activeTokens.component;
+  return StyleSheet.create({
+    container: {
+      gap: space.lg,
+    },
+    tabsRow: {
+      flexDirection: 'row',
+      gap: space.sm,
+    },
+    tabContent: {
+      gap: space.lg,
+    },
+    cardBox: {
+      backgroundColor: card.bg,
+      borderColor: card.border,
+      borderWidth: border.thin,
+      borderRadius: card.radius,
+      padding: card.padding,
+      gap: space.md,
+      elevation: elevation.card,
+    },
+    sectionTitle: {
+      fontFamily: font.subtitle.family,
+      fontSize: font.subtitle.size,
+      lineHeight: font.subtitle.lineHeight,
+      fontWeight: font.subtitle.weight,
+      color: color.onSurface,
+    },
+    sectionSubtitle: {
+      fontFamily: font.body.family,
+      fontSize: font.body.size,
+      lineHeight: font.body.lineHeight,
+      fontWeight: font.body.weight,
+      color: color.onSurfaceMuted,
+    },
+    chipsWrap: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: space.sm,
+    },
+    letterGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: space.sm,
+    },
+    waitingCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.sm,
+      padding: space.md,
+      borderRadius: banner.radius,
+      backgroundColor: banner.info.bg,
+    },
+    waitingText: {
+      flex: 1,
+      fontFamily: font.body.family,
+      fontSize: font.body.size,
+      lineHeight: font.body.lineHeight,
+      color: banner.info.text,
+    },
+    columnList: {
+      gap: space.sm,
+    },
+    columnItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: color.surface,
+      borderRadius: radius.md,
+      borderWidth: border.thin,
+      borderColor: card.border,
+      padding: space.sm,
+      minHeight: space.container,
+    },
+    columnInfo: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.sm,
+      flex: 1,
+    },
+    columnAvatar: {
+      width: space.xl,
+      height: space.xl,
+      borderRadius: radius.full,
+      backgroundColor: color.actionContainer,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    columnAvatarText: {
+      fontFamily: font.label.family,
+      fontSize: font.label.size,
+      lineHeight: font.label.lineHeight,
+      fontWeight: font.label.weight,
+      color: color.onActionContainer,
+    },
+    columnName: {
+      flex: 1,
+      fontFamily: font.label.family,
+      fontSize: font.label.size,
+      lineHeight: font.label.lineHeight,
+      fontWeight: font.label.weight,
+      color: color.onSurface,
+    },
+  });
+};

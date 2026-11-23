@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type {
@@ -6,10 +6,11 @@ import type {
   CidadeDormeRoom,
 } from '@/model/entities/multiplayerSession';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
+import { ExpressiveTag } from '@/view/components/expressiveTag';
 import { ExpressiveTimer } from '@/view/components/expressiveTimer';
 import { GameCard } from '@/view/components/gameCard';
 import { SelectableOptionItem } from '@/view/components/selectableOptionItem';
-import { darkTokens } from '@/view/theme';
+import { useTheme, type AppTokens } from '@/view/theme';
 
 export type CidadeDormeNightSectionProps = {
   room: CidadeDormeRoom;
@@ -42,6 +43,8 @@ export const CidadeDormeNightSection = ({
   onConfirmAngelProtection,
   onConfirmDetectiveInvestigation,
 }: CidadeDormeNightSectionProps) => {
+  const activeTokens = useTheme('dark');
+  const styles = useMemo(() => createStyles(activeTokens), [activeTokens]);
   const narratorFadeAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -52,10 +55,16 @@ export const CidadeDormeNightSection = ({
     narratorFadeAnim.setValue(0.6);
     Animated.timing(narratorFadeAnim, {
       toValue: 1,
-      duration: darkTokens.semantic.motion.duration.short,
+      duration: activeTokens.semantic.motion.duration.short,
       useNativeDriver: true,
     }).start();
-  }, [narratorFadeAnim, reduceMotion, room.narratorCaption]);
+  }, [
+    activeTokens.semantic.motion.duration.short,
+    narratorFadeAnim,
+    reduceMotion,
+    room.narratorCaption,
+  ]);
+
   const alivePlayers = room.players.filter((p) => p.isAlive);
   const isAlive = Boolean(currentPlayer?.isAlive);
   const myRole = currentPlayer?.role ?? null;
@@ -94,22 +103,22 @@ export const CidadeDormeNightSection = ({
     room.phase === 'night_assassin'
       ? 'A Noite · Turno do Assassino'
       : room.phase === 'night_angel'
-      ? 'A Noite · Turno do Anjo'
-      : 'A Noite · Turno do Detetive';
+        ? 'A Noite · Turno do Anjo'
+        : 'A Noite · Turno do Detetive';
 
   const turnDescription =
     room.phase === 'night_assassin'
       ? 'Assassino, acorde em silêncio e escolha uma vítima viva na roda.'
       : room.phase === 'night_angel'
-      ? 'Anjo, acorde em silêncio e escolha um jogador vivo para proteger esta noite.'
-      : 'Detetive, acorde em silêncio e aponte um suspeito para receber o veredito secreto na tela.';
+        ? 'Anjo, acorde em silêncio e escolha um jogador vivo para proteger esta noite.'
+        : 'Detetive, acorde em silêncio e aponte um suspeito para receber o veredito secreto na tela.';
 
   const confirmActionLabel =
     room.phase === 'night_assassin'
       ? 'Confirmar Alvo'
       : room.phase === 'night_angel'
-      ? 'Proteger Jogador'
-      : 'Investigar Suspeito';
+        ? 'Proteger Jogador'
+        : 'Investigar Suspeito';
 
   const handleConfirmNightAction = async () => {
     if (room.phase === 'night_assassin') {
@@ -132,13 +141,15 @@ export const CidadeDormeNightSection = ({
       >
         <MaterialCommunityIcons
           name="weather-night"
-          size={darkTokens.semantic.icon.md}
-          color={darkTokens.semantic.color.onActionContainer}
+          size={activeTokens.semantic.icon.md}
+          color={activeTokens.component.banner.info.text}
         />
         <View style={styles.narratorTextWrap}>
-          <Text allowFontScaling style={styles.narratorVoiceTag}>
-            {`NARRADOR (${room.config.narratorVoice.toUpperCase()}) · NOITE ${room.currentRound}`}
-          </Text>
+          <ExpressiveTag
+            label={`NARRADOR (${room.config.narratorVoice.toUpperCase()}) · NOITE ${room.currentRound}`}
+            tone="action"
+            themeMode="dark"
+          />
           <Text allowFontScaling style={styles.narratorText}>
             {room.narratorCaption}
           </Text>
@@ -153,8 +164,8 @@ export const CidadeDormeNightSection = ({
         >
           <MaterialCommunityIcons
             name="ghost-outline"
-            size={darkTokens.semantic.icon.md}
-            color={darkTokens.semantic.color.onErrorContainer}
+            size={activeTokens.semantic.icon.md}
+            color={activeTokens.component.banner.error.text}
           />
           <Text allowFontScaling style={styles.spectatorText}>
             Você foi eliminado — Acompanhe em silêncio (Modo Espectador).
@@ -166,6 +177,7 @@ export const CidadeDormeNightSection = ({
         <ExpressiveTimer
           secondsRemaining={secondsRemaining}
           reduceMotion={reduceMotion}
+          themeMode="dark"
         />
       </View>
 
@@ -174,14 +186,15 @@ export const CidadeDormeNightSection = ({
         description={turnDescription}
         playersTag={`${alivePlayers.length} vivos na cidade`}
         icon="weather-night"
+        themeMode="dark"
       />
 
       {!isAlive || !isNightCardRevealed ? (
         <View style={styles.sleepingCard}>
           <MaterialCommunityIcons
             name="sleep"
-            size={darkTokens.semantic.icon.lg}
-            color={darkTokens.semantic.color.onSurface}
+            size={activeTokens.semantic.icon.lg}
+            color={activeTokens.semantic.color.onSurface}
           />
           <Text allowFontScaling style={styles.sleepingTitle}>
             A Cidade Dorme... Mantenha os olhos fechados
@@ -194,6 +207,7 @@ export const CidadeDormeNightSection = ({
               label="Tocar para Consultar Turno"
               variant="tonal"
               icon="eye-outline"
+              themeMode="dark"
               onPress={() => {
                 onToggleNightCardVisibility?.();
               }}
@@ -222,11 +236,11 @@ export const CidadeDormeNightSection = ({
                   ? 'alert-circle'
                   : 'check-circle'
               }
-              size={darkTokens.semantic.icon.lg}
+              size={activeTokens.semantic.icon.lg}
               color={
                 room.detectiveVerdict.isAssassin
-                  ? darkTokens.semantic.color.onErrorContainer
-                  : darkTokens.semantic.color.onSuccess
+                  ? activeTokens.component.banner.error.text
+                  : activeTokens.component.banner.success.text
               }
             />
             <Text
@@ -259,11 +273,11 @@ export const CidadeDormeNightSection = ({
           <View style={styles.verdictWaitRow}>
             <MaterialCommunityIcons
               name="clock-outline"
-              size={darkTokens.semantic.icon.sm}
+              size={activeTokens.semantic.icon.sm}
               color={
                 room.detectiveVerdict.isAssassin
-                  ? darkTokens.semantic.color.onErrorContainer
-                  : darkTokens.semantic.color.onSuccess
+                  ? activeTokens.component.banner.error.text
+                  : activeTokens.component.banner.success.text
               }
             />
             <Text
@@ -282,6 +296,7 @@ export const CidadeDormeNightSection = ({
             label="Ocultar Tela Noturna"
             variant="outlined"
             icon="eye-off-outline"
+            themeMode="dark"
             onPress={() => {
               (onHideNightCard ?? onToggleNightCardVisibility)?.();
             }}
@@ -301,8 +316,8 @@ export const CidadeDormeNightSection = ({
             >
               <MaterialCommunityIcons
                 name="check-circle"
-                size={darkTokens.semantic.icon.md}
-                color={darkTokens.semantic.color.onActionContainer}
+                size={activeTokens.semantic.icon.md}
+                color={activeTokens.component.banner.info.text}
               />
               <Text allowFontScaling style={styles.submittedBannerText}>
                 Escolha registrada — aguarde o fim do turno.
@@ -329,6 +344,7 @@ export const CidadeDormeNightSection = ({
             variant="primaryJumbo"
             icon="check-circle-outline"
             disabled={!selectedNightTargetId}
+            themeMode="dark"
             onPress={() => {
               void handleConfirmNightAction();
             }}
@@ -338,6 +354,7 @@ export const CidadeDormeNightSection = ({
             label="Ocultar Tela Noturna"
             variant="outlined"
             icon="eye-off-outline"
+            themeMode="dark"
             onPress={() => {
               (onHideNightCard ?? onToggleNightCardVisibility)?.();
             }}
@@ -347,8 +364,8 @@ export const CidadeDormeNightSection = ({
         <View style={styles.sleepingCard}>
           <MaterialCommunityIcons
             name="eye-off-outline"
-            size={darkTokens.semantic.icon.lg}
-            color={darkTokens.semantic.color.onSurface}
+            size={activeTokens.semantic.icon.lg}
+            color={activeTokens.semantic.color.onSurface}
           />
           <Text allowFontScaling style={styles.sleepingTitle}>
             Não é seu turno de ação — mantenha os olhos fechados
@@ -360,6 +377,7 @@ export const CidadeDormeNightSection = ({
             label="Ocultar Tela Noturna"
             variant="outlined"
             icon="eye-off-outline"
+            themeMode="dark"
             onPress={() => {
               (onHideNightCard ?? onToggleNightCardVisibility)?.();
             }}
@@ -370,173 +388,170 @@ export const CidadeDormeNightSection = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    gap: darkTokens.semantic.space.lg,
-  },
-  narratorBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: darkTokens.semantic.space.sm,
-    padding: darkTokens.semantic.space.md,
-    borderRadius: darkTokens.semantic.radius.lg,
-    backgroundColor: darkTokens.semantic.color.actionContainer,
-    borderWidth: darkTokens.semantic.border.thin,
-    borderColor: darkTokens.semantic.color.action,
-  },
-  narratorTextWrap: {
-    flex: 1,
-    gap: darkTokens.semantic.space.xs,
-  },
-  narratorVoiceTag: {
-    fontFamily: darkTokens.semantic.font.caption.family,
-    fontSize: darkTokens.semantic.font.caption.size,
-    lineHeight: darkTokens.semantic.font.caption.lineHeight,
-    fontWeight: darkTokens.semantic.font.caption.weight,
-    color: darkTokens.semantic.color.onActionContainer,
-  },
-  narratorText: {
-    fontFamily: darkTokens.semantic.font.body.family,
-    fontSize: darkTokens.semantic.font.body.size,
-    lineHeight: darkTokens.semantic.font.body.lineHeight,
-    fontWeight: darkTokens.semantic.font.label.weight,
-    color: darkTokens.semantic.color.onActionContainer,
-  },
-  spectatorBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: darkTokens.semantic.space.sm,
-    padding: darkTokens.semantic.space.md,
-    borderRadius: darkTokens.semantic.radius.sm,
-    backgroundColor: darkTokens.semantic.color.errorContainer,
-    borderWidth: darkTokens.semantic.border.thin,
-    borderColor: darkTokens.semantic.color.error,
-  },
-  spectatorText: {
-    flex: 1,
-    fontFamily: darkTokens.semantic.font.label.family,
-    fontSize: darkTokens.semantic.font.label.size,
-    lineHeight: darkTokens.semantic.font.label.lineHeight,
-    fontWeight: darkTokens.semantic.font.label.weight,
-    color: darkTokens.semantic.color.onErrorContainer,
-  },
-  timerRow: {
-    alignItems: 'center',
-  },
-  nightCard: {
-    minHeight: darkTokens.semantic.space['3xl'] * 4,
-    justifyContent: 'center',
-    backgroundColor: darkTokens.component.card.bg,
-    borderColor: darkTokens.component.card.border,
-    borderWidth: darkTokens.semantic.border.thin,
-    borderRadius: darkTokens.component.card.radius,
-    padding: darkTokens.component.card.padding,
-    gap: darkTokens.semantic.space.md,
-    elevation: darkTokens.semantic.elevation.card,
-  },
-  sectionTitle: {
-    fontFamily: darkTokens.semantic.font.subtitle.family,
-    fontSize: darkTokens.semantic.font.subtitle.size,
-    lineHeight: darkTokens.semantic.font.subtitle.lineHeight,
-    fontWeight: darkTokens.semantic.font.subtitle.weight,
-    color: darkTokens.semantic.color.onSurface,
-  },
-  optionsList: {
-    gap: darkTokens.semantic.space.sm,
-  },
-  verdictCard: {
-    minHeight: darkTokens.semantic.space['3xl'] * 4,
-    justifyContent: 'center',
-    padding: darkTokens.component.card.padding,
-    borderWidth: darkTokens.semantic.border.focus,
-    gap: darkTokens.semantic.space.md,
-    elevation: darkTokens.semantic.elevation.card,
-  },
-  verdictCardAssassin: {
-    backgroundColor: darkTokens.semantic.color.errorContainer,
-    borderColor: darkTokens.semantic.color.error,
-    borderRadius: darkTokens.semantic.radius.sm,
-  },
-  verdictCardInnocent: {
-    backgroundColor: darkTokens.semantic.color.success,
-    borderColor: darkTokens.semantic.color.success,
-    borderRadius: darkTokens.semantic.radius.md,
-  },
-  verdictHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: darkTokens.semantic.space.sm,
-  },
-  verdictTitle: {
-    flex: 1,
-    fontFamily: darkTokens.semantic.font.subtitle.family,
-    fontSize: darkTokens.semantic.font.subtitle.size,
-    lineHeight: darkTokens.semantic.font.subtitle.lineHeight,
-    fontWeight: darkTokens.semantic.font.subtitle.weight,
-  },
-  verdictTitleAssassin: {
-    color: darkTokens.semantic.color.onErrorContainer,
-  },
-  verdictTitleInnocent: {
-    color: darkTokens.semantic.color.onSuccess,
-  },
-  verdictBody: {
-    fontFamily: darkTokens.semantic.font.body.family,
-    fontSize: darkTokens.semantic.font.body.size,
-    lineHeight: darkTokens.semantic.font.body.lineHeight,
-  },
-  verdictWaitRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: darkTokens.semantic.space.xs,
-  },
-  verdictWaitText: {
-    flex: 1,
-    fontFamily: darkTokens.semantic.font.caption.family,
-    fontSize: darkTokens.semantic.font.caption.size,
-    lineHeight: darkTokens.semantic.font.caption.lineHeight,
-    fontWeight: darkTokens.semantic.font.caption.weight,
-  },
-  submittedBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: darkTokens.semantic.space.sm,
-    padding: darkTokens.semantic.space.md,
-    borderRadius: darkTokens.semantic.radius.lg,
-    backgroundColor: darkTokens.semantic.color.actionContainer,
-  },
-  submittedBannerText: {
-    flex: 1,
-    fontFamily: darkTokens.semantic.font.label.family,
-    fontSize: darkTokens.semantic.font.label.size,
-    lineHeight: darkTokens.semantic.font.label.lineHeight,
-    fontWeight: darkTokens.semantic.font.label.weight,
-    color: darkTokens.semantic.color.onActionContainer,
-  },
-  sleepingCard: {
-    minHeight: darkTokens.semantic.space['3xl'] * 4,
-    justifyContent: 'center',
-    backgroundColor: darkTokens.component.card.bg,
-    borderColor: darkTokens.component.card.border,
-    borderWidth: darkTokens.semantic.border.thin,
-    borderRadius: darkTokens.component.card.radius,
-    padding: darkTokens.component.card.padding,
-    alignItems: 'center',
-    gap: darkTokens.semantic.space.sm,
-  },
-  sleepingTitle: {
-    fontFamily: darkTokens.semantic.font.subtitle.family,
-    fontSize: darkTokens.semantic.font.subtitle.size,
-    lineHeight: darkTokens.semantic.font.subtitle.lineHeight,
-    fontWeight: darkTokens.semantic.font.subtitle.weight,
-    color: darkTokens.semantic.color.onSurface,
-    textAlign: 'center',
-  },
-  sleepingSubtitle: {
-    fontFamily: darkTokens.semantic.font.body.family,
-    fontSize: darkTokens.semantic.font.body.size,
-    lineHeight: darkTokens.semantic.font.body.lineHeight,
-    color: darkTokens.semantic.color.onSurfaceMuted,
-    textAlign: 'center',
-  },
-});
+const createStyles = (activeTokens: AppTokens) => {
+  const { color, font, radius, space, border, elevation } = activeTokens.semantic;
+  const { card, banner } = activeTokens.component;
+  return StyleSheet.create({
+    container: {
+      gap: space.lg,
+    },
+    narratorBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.sm,
+      padding: space.md,
+      borderRadius: banner.radius,
+      backgroundColor: banner.info.bg,
+      borderWidth: border.thin,
+      borderColor: banner.info.border,
+    },
+    narratorTextWrap: {
+      flex: 1,
+      gap: space.xs,
+    },
+    narratorText: {
+      fontFamily: font.body.family,
+      fontSize: font.body.size,
+      lineHeight: font.body.lineHeight,
+      fontWeight: font.label.weight,
+      color: banner.info.text,
+    },
+    spectatorBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.sm,
+      padding: space.md,
+      borderRadius: radius.sm,
+      backgroundColor: banner.error.bg,
+      borderWidth: border.thin,
+      borderColor: banner.error.border,
+    },
+    spectatorText: {
+      flex: 1,
+      fontFamily: font.label.family,
+      fontSize: font.label.size,
+      lineHeight: font.label.lineHeight,
+      fontWeight: font.label.weight,
+      color: banner.error.text,
+    },
+    timerRow: {
+      alignItems: 'center',
+    },
+    nightCard: {
+      minHeight: space['3xl'] * 4,
+      justifyContent: 'center',
+      backgroundColor: card.bg,
+      borderColor: card.border,
+      borderWidth: border.thin,
+      borderRadius: card.radius,
+      padding: card.padding,
+      gap: space.md,
+      elevation: elevation.card,
+    },
+    sectionTitle: {
+      fontFamily: font.subtitle.family,
+      fontSize: font.subtitle.size,
+      lineHeight: font.subtitle.lineHeight,
+      fontWeight: font.subtitle.weight,
+      color: color.onSurface,
+    },
+    optionsList: {
+      gap: space.sm,
+    },
+    verdictCard: {
+      minHeight: space['3xl'] * 4,
+      justifyContent: 'center',
+      padding: card.padding,
+      borderWidth: border.focus,
+      gap: space.md,
+      elevation: elevation.card,
+    },
+    verdictCardAssassin: {
+      backgroundColor: banner.error.bg,
+      borderColor: banner.error.border,
+      borderRadius: radius.sm,
+    },
+    verdictCardInnocent: {
+      backgroundColor: banner.success.bg,
+      borderColor: banner.success.border,
+      borderRadius: radius.md,
+    },
+    verdictHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.sm,
+    },
+    verdictTitle: {
+      flex: 1,
+      fontFamily: font.subtitle.family,
+      fontSize: font.subtitle.size,
+      lineHeight: font.subtitle.lineHeight,
+      fontWeight: font.subtitle.weight,
+    },
+    verdictTitleAssassin: {
+      color: banner.error.text,
+    },
+    verdictTitleInnocent: {
+      color: banner.success.text,
+    },
+    verdictBody: {
+      fontFamily: font.body.family,
+      fontSize: font.body.size,
+      lineHeight: font.body.lineHeight,
+    },
+    verdictWaitRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.xs,
+    },
+    verdictWaitText: {
+      flex: 1,
+      fontFamily: font.caption.family,
+      fontSize: font.caption.size,
+      lineHeight: font.caption.lineHeight,
+      fontWeight: font.caption.weight,
+    },
+    submittedBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.sm,
+      padding: space.md,
+      borderRadius: banner.radius,
+      backgroundColor: banner.info.bg,
+    },
+    submittedBannerText: {
+      flex: 1,
+      fontFamily: font.label.family,
+      fontSize: font.label.size,
+      lineHeight: font.label.lineHeight,
+      fontWeight: font.label.weight,
+      color: banner.info.text,
+    },
+    sleepingCard: {
+      minHeight: space['3xl'] * 4,
+      justifyContent: 'center',
+      backgroundColor: card.bg,
+      borderColor: card.border,
+      borderWidth: border.thin,
+      borderRadius: card.radius,
+      padding: card.padding,
+      alignItems: 'center',
+      gap: space.sm,
+    },
+    sleepingTitle: {
+      fontFamily: font.subtitle.family,
+      fontSize: font.subtitle.size,
+      lineHeight: font.subtitle.lineHeight,
+      fontWeight: font.subtitle.weight,
+      color: color.onSurface,
+      textAlign: 'center',
+    },
+    sleepingSubtitle: {
+      fontFamily: font.body.family,
+      fontSize: font.body.size,
+      lineHeight: font.body.lineHeight,
+      color: color.onSurfaceMuted,
+      textAlign: 'center',
+    },
+  });
+};

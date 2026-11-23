@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 import { Stack } from 'expo-router';
 import Head from 'expo-router/head';
@@ -12,21 +12,15 @@ import {
   PlusJakartaSans_700Bold,
   PlusJakartaSans_800ExtraBold,
 } from '@expo-google-fonts/plus-jakarta-sans';
-import { color } from '@/view/theme';
+import { ThemeProvider, useTheme, type AppTokens } from '@/view/theme';
 
-export const RootLayout = () => {
-  const [fontsLoaded] = useFonts({
-    'Plus Jakarta Sans': PlusJakartaSans_400Regular,
-    PlusJakartaSans_400Regular,
-    PlusJakartaSans_500Medium,
-    PlusJakartaSans_600SemiBold,
-    PlusJakartaSans_700Bold,
-    PlusJakartaSans_800ExtraBold,
-  });
+const LayoutShell = () => {
+  const activeTokens = useTheme();
+  const styles = useMemo(() => createStyles(activeTokens), [activeTokens]);
 
   return (
     <SafeAreaProvider>
-      <StatusBar style="dark" />
+      <StatusBar style={activeTokens.mode === 'dark' ? 'light' : 'dark'} />
       <Head>
         <title>PG PLAY</title>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -36,13 +30,16 @@ export const RootLayout = () => {
           crossOrigin=""
         />
         <link
-          href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Roboto:wght@400;500;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
           rel="stylesheet"
         />
         <style type="text/css">{`
-          @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Roboto:wght@400;500;700&display=swap');
+          @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
           body, html, * {
-            font-family: 'Plus Jakarta Sans', Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+          }
+          :focus:not(:focus-visible) {
+            outline: none;
           }
         `}</style>
       </Head>
@@ -50,7 +47,7 @@ export const RootLayout = () => {
         <Stack
           screenOptions={{
             headerShown: false,
-            contentStyle: { backgroundColor: color.surface },
+            contentStyle: { backgroundColor: activeTokens.semantic.color.surface },
           }}
         />
       </SafeAreaView>
@@ -58,11 +55,28 @@ export const RootLayout = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: color.surface,
-  },
-});
+export const RootLayout = () => {
+  useFonts({
+    PlusJakartaSans_400Regular,
+    PlusJakartaSans_500Medium,
+    PlusJakartaSans_600SemiBold,
+    PlusJakartaSans_700Bold,
+    PlusJakartaSans_800ExtraBold,
+  });
+
+  return (
+    <ThemeProvider>
+      <LayoutShell />
+    </ThemeProvider>
+  );
+};
+
+const createStyles = (activeTokens: AppTokens) =>
+  StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: activeTokens.semantic.color.surface,
+    },
+  });
 
 export default RootLayout;

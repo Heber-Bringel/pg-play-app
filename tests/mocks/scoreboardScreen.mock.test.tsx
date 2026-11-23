@@ -6,7 +6,6 @@ import * as scoreboardVmModule from '@/viewmodel/useScoreboardViewModel';
 import type { ScoreboardActions, ScoreboardState } from '@/viewmodel/useScoreboardViewModel';
 
 const createMockActions = (): ScoreboardActions => ({
-  handleAwardBonus: jest.fn(async () => {}),
   handleRequestReset: jest.fn(),
   handleCancelReset: jest.fn(),
   handleResetScoreboard: jest.fn(async () => {}),
@@ -93,7 +92,7 @@ describe('ScoreboardScreen — Testes de Tela com Mocks de ViewModel (UC06)', ()
     expect(texts.some((t) => t.props.children === 'Nenhuma Equipe no Placar')).toBe(true);
   });
 
-  it('deve renderizar o ranking completo e acionar bônus, escolher outro jogo e zerar placar (RF16, RF17)', () => {
+  it('deve renderizar o ranking completo sem botão de bônus manual e acionar escolher outro jogo e zerar placar (RF16, RF17)', () => {
     const actions = createMockActions();
     jest
       .spyOn(scoreboardVmModule, 'useScoreboardViewModel')
@@ -104,9 +103,13 @@ describe('ScoreboardScreen — Testes de Tela com Mocks de ViewModel (UC06)', ()
       tree = renderer.create(<ScoreboardScreen />);
     });
 
-    const bonusBtn = tree.root.findByProps({
-      accessibilityLabel: 'Bônus +10 pts · Tribo de Judá',
-    } as any);
+    const bonusButtons = tree.root.findAll(
+      (node) =>
+        typeof node.props?.accessibilityLabel === 'string' &&
+        node.props.accessibilityLabel.includes('Bônus')
+    );
+    expect(bonusButtons).toHaveLength(0);
+
     const chooseBtn = tree.root.findByProps({
       accessibilityLabel: 'Escolher Outro Jogo',
     } as any);
@@ -115,12 +118,10 @@ describe('ScoreboardScreen — Testes de Tela com Mocks de ViewModel (UC06)', ()
     } as any);
 
     act(() => {
-      bonusBtn.props.onPress();
       chooseBtn.props.onPress();
       resetBtn.props.onPress();
     });
 
-    expect(actions.handleAwardBonus).toHaveBeenCalledWith('t1');
     expect(actions.handleChooseAnotherGame).toHaveBeenCalledTimes(1);
     expect(actions.handleRequestReset).toHaveBeenCalledTimes(1);
     expect(actions.handleResetScoreboard).not.toHaveBeenCalled();
@@ -149,5 +150,37 @@ describe('ScoreboardScreen — Testes de Tela com Mocks de ViewModel (UC06)', ()
 
     expect(actions.handleCancelReset).toHaveBeenCalledTimes(1);
     expect(actions.handleResetScoreboard).toHaveBeenCalledTimes(1);
+  });
+
+  it('deve exibir resumo do encontro e desabilitar Zerar Placar quando pontuação total for zero', () => {
+    const actions = createMockActions();
+    jest.spyOn(scoreboardVmModule, 'useScoreboardViewModel').mockReturnValue([
+      {
+        ...baseState,
+        teams: [
+          { id: 't1', name: 'Tribo de Judá', score: 0 },
+          { id: 't2', name: 'Leões da Fé', score: 0 },
+        ],
+        leaderTeam: null,
+        totalPoints: 0,
+      },
+      actions,
+    ]);
+
+    let tree!: renderer.ReactTestRenderer;
+    act(() => {
+      tree = renderer.create(<ScoreboardScreen />);
+    });
+
+    const texts = tree.root.findAllByType('Text' as any);
+    expect(texts.some((t) => t.props.children === '2 equipes · 0 pts no encontro')).toBe(true);
+    expect(
+      texts.some((t) => t.props.children === 'Jogue uma dinâmica para começar a pontuar')
+    ).toBe(true);
+
+    const resetBtn = tree.root.findByProps({
+      accessibilityLabel: 'Zerar Placar do PG',
+    } as any);
+    expect(resetBtn.props.disabled).toBe(true);
   });
 });
