@@ -21,6 +21,7 @@ const CONNECTION_TIMEOUT_MS = 10_000;
 const NIGHT_SYNC_WATCHDOG_INTERVAL_MS = 1_500;
 const NIGHT_SYNC_WATCHDOG_MAX_ATTEMPTS = 4;
 const NIGHT_VERDICT_AUTO_HIDE_MS = 4_000;
+const DAWN_HIGHLIGHT_DURATION_MS = 4_000;
 
 export type CidadeDormeTimelineStepId = 'night' | 'dawn' | 'debate' | 'voting';
 
@@ -108,7 +109,8 @@ const TIMELINE_STEPS: Array<{ id: CidadeDormeTimelineStepId; label: string }> = 
 ];
 
 function buildPhaseTimeline(
-  phase: CidadeDormePhase | undefined
+  phase: CidadeDormePhase | undefined,
+  isDawnActive = false
 ): CidadeDormeTimelineStep[] {
   let activeIndex = -1;
   let completedUpTo = -1;
@@ -116,8 +118,13 @@ function buildPhaseTimeline(
   if (isPhaseNight(phase)) {
     activeIndex = 0;
   } else if (phase === 'day_debate') {
-    activeIndex = 2;
-    completedUpTo = 1;
+    if (isDawnActive) {
+      activeIndex = 1;
+      completedUpTo = 0;
+    } else {
+      activeIndex = 2;
+      completedUpTo = 1;
+    }
   } else if (phase === 'day_voting') {
     activeIndex = 3;
     completedUpTo = 2;
@@ -162,6 +169,8 @@ export function useCidadeDormeViewModel(
   const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
   const [isRoleVisible, setIsRoleVisible] = useState<boolean>(false);
   const [isNightCardRevealed, setIsNightCardRevealed] = useState<boolean>(false);
+  const [isDawnHighlightActive, setIsDawnHighlightActive] =
+    useState<boolean>(false);
   const [hasSubmittedNightAction, setHasSubmittedNightAction] =
     useState<boolean>(false);
   const [selectedNightTargetId, setSelectedNightTargetId] = useState<
@@ -183,6 +192,9 @@ export function useCidadeDormeViewModel(
   const lastRoomIdRef = useRef<string | null>(null);
   const lastVersionRef = useRef<number>(-1);
   const nightHideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dawnHighlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
   const activeTimeoutsRef = useRef<Set<ReturnType<typeof setTimeout>>>(
     new Set()
   );
@@ -196,12 +208,21 @@ export function useCidadeDormeViewModel(
     }
   }, []);
 
+  const clearDawnHighlightTimeout = useCallback(() => {
+    if (dawnHighlightTimeoutRef.current !== null) {
+      clearTimeout(dawnHighlightTimeoutRef.current);
+      activeTimeoutsRef.current.delete(dawnHighlightTimeoutRef.current);
+      dawnHighlightTimeoutRef.current = null;
+    }
+  }, []);
+
   useEffect(() => {
     isMountedRef.current = true;
     const timeouts = activeTimeoutsRef.current;
     return () => {
       isMountedRef.current = false;
       nightHideTimeoutRef.current = null;
+      dawnHighlightTimeoutRef.current = null;
       timeouts.forEach((id) => clearTimeout(id));
       timeouts.clear();
     };
@@ -244,6 +265,7 @@ export function useCidadeDormeViewModel(
         lastPhaseKeyRef.current = phaseKey;
         autoAdvancedPhaseKeyRef.current = null;
         clearNightHideTimeout();
+        clearDawnHighlightTimeout();
         setIsNightCardRevealed(false);
         setSelectedNightTargetId(null);
         setSelectedVoteTargetId(null);
@@ -252,11 +274,27 @@ export function useCidadeDormeViewModel(
         if (nextRoom.phase !== 'role_reveal') {
           setIsRoleVisible(false);
         }
+        if (nextRoom.phase === 'day_debate' && nextRoom.dawnReport !== null) {
+          setIsDawnHighlightActive(true);
+          const timeoutId = setTimeout(() => {
+            activeTimeoutsRef.current.delete(timeoutId);
+            if (dawnHighlightTimeoutRef.current === timeoutId) {
+              dawnHighlightTimeoutRef.current = null;
+            }
+            if (isMountedRef.current) {
+              setIsDawnHighlightActive(false);
+            }
+          }, DAWN_HIGHLIGHT_DURATION_MS);
+          dawnHighlightTimeoutRef.current = timeoutId;
+          activeTimeoutsRef.current.add(timeoutId);
+        } else {
+          setIsDawnHighlightActive(false);
+        }
       } else if (nextRoom.phaseEndsAt) {
         setSecondsRemaining(computeSecondsRemaining(nextRoom));
       }
     },
-    [clearNightHideTimeout]
+    [clearDawnHighlightTimeout, clearNightHideTimeout]
   );
 
   const acceptRoomSnapshot = useCallback(
@@ -277,10 +315,12 @@ export function useCidadeDormeViewModel(
           // Saída em best-effort para limpar linha órfã do jogador removido.
         });
         clearNightHideTimeout();
+        clearDawnHighlightTimeout();
         setRoom(null);
         setCurrentPlayerId(null);
         setIsRoleVisible(false);
         setIsNightCardRevealed(false);
+        setIsDawnHighlightActive(false);
         setHasSubmittedNightAction(false);
         setSelectedNightTargetId(null);
         setSelectedVoteTargetId(null);
@@ -301,7 +341,12 @@ export function useCidadeDormeViewModel(
       setRoom(nextRoom);
       return true;
     },
-    [clearNightHideTimeout, syncPhaseTimerAndSelection, useCase]
+    [
+      clearDawnHighlightTimeout,
+      clearNightHideTimeout,
+      syncPhaseTimerAndSelection,
+      useCase,
+    ]
   );
 
   const applyRoomState = useCallback(
@@ -883,6 +928,7 @@ export function useCidadeDormeViewModel(
   const handleExitArena = useCallback((): void => {
     setConfirmingExit(false);
     clearNightHideTimeout();
+    clearDawnHighlightTimeout();
     lastSpokenKeyRef.current = null;
     lastPhaseKeyRef.current = null;
     autoAdvancedPhaseKeyRef.current = null;
@@ -902,11 +948,19 @@ export function useCidadeDormeViewModel(
     setError(null);
     setIsRoleVisible(false);
     setIsNightCardRevealed(false);
+    setIsDawnHighlightActive(false);
     setHasSubmittedNightAction(false);
     setSelectedNightTargetId(null);
     setSelectedVoteTargetId(null);
     router.replace('/');
-  }, [activePlayerId, clearNightHideTimeout, room?.id, router, useCase]);
+  }, [
+    activePlayerId,
+    clearDawnHighlightTimeout,
+    clearNightHideTimeout,
+    room?.id,
+    router,
+    useCase,
+  ]);
 
   const handleRetry = useCallback(async (): Promise<void> => {
     if (!room) {
@@ -938,7 +992,7 @@ export function useCidadeDormeViewModel(
     : null;
 
   const isNightPhase = isPhaseNight(room?.phase);
-  const phaseTimeline = buildPhaseTimeline(room?.phase);
+  const phaseTimeline = buildPhaseTimeline(room?.phase, isDawnHighlightActive);
   const aliveCount = room ? room.players.filter((p) => p.isAlive).length : 0;
   const eliminatedCount = room
     ? room.players.filter((p) => !p.isAlive).length
