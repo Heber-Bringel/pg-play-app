@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import type {
   AdedonhaAwards,
@@ -7,7 +7,7 @@ import type {
 } from '@/model/entities/multiplayerSession';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
 import { GameCard } from '@/view/components/gameCard';
-import { tokens } from '@/view/theme';
+import { useTheme, type AppTokens } from '@/view/theme';
 
 export type AdedonhaSummarySectionProps = {
   room: AdedonhaRoom;
@@ -26,6 +26,9 @@ export const AdedonhaSummarySection = ({
   onAdvanceToNextRound,
   onGoToScoreboard,
 }: AdedonhaSummarySectionProps) => {
+  const activeTokens = useTheme();
+  const styles = useMemo(() => createStyles(activeTokens), [activeTokens]);
+
   return (
     <View style={styles.container}>
       <GameCard
@@ -84,14 +87,17 @@ export const AdedonhaSummarySection = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    gap: tokens.semantic.space.lg,
-  },
-  rankingList: {
-    gap: tokens.semantic.space.md,
-  },
-  actionsStack: {
-    gap: tokens.semantic.space.md,
-  },
-});
+const createStyles = (activeTokens: AppTokens) => {
+  const { space } = activeTokens.semantic;
+  return StyleSheet.create({
+    container: {
+      gap: space.lg,
+    },
+    rankingList: {
+      gap: space.md,
+    },
+    actionsStack: {
+      gap: space.md,
+    },
+  });
+};

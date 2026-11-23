@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import {
   AccessibilityInfo,
   Animated,
@@ -20,8 +20,19 @@ import { CidadeDormePhaseTimeline } from '@/view/components/cidadeDormePhaseTime
 import { CidadeDormeRoleSection } from '@/view/components/cidadeDormeRoleSection';
 import { ConfirmModal } from '@/view/components/confirmModal';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
-import { darkTokens, tokens } from '@/view/theme';
-import { useCidadeDormeViewModel } from '@/viewmodel/useCidadeDormeViewModel';
+import { ExpressiveTag } from '@/view/components/expressiveTag';
+import {
+  darkTokens,
+  ThemeProvider,
+  tokens,
+  useTheme,
+  type AppTokens,
+} from '@/view/theme';
+import {
+  useCidadeDormeViewModel,
+  type CidadeDormeActions,
+  type CidadeDormeState,
+} from '@/viewmodel/useCidadeDormeViewModel';
 
 const resolvePhaseBadge = (
   room: CidadeDormeRoom
@@ -69,41 +80,22 @@ const resolvePhaseBadge = (
   };
 };
 
-export const CidadeDormeScreen = () => {
-  const [state, actions] = useCidadeDormeViewModel();
-  const { handleSetReduceMotion } = actions;
+type CidadeDormeRoomContentProps = {
+  state: CidadeDormeState;
+  actions: CidadeDormeActions;
+  room: CidadeDormeRoom;
+};
 
+const CidadeDormeRoomContent = ({
+  state,
+  actions,
+  room,
+}: CidadeDormeRoomContentProps) => {
+  const activeTokens = useTheme();
+  const styles = useMemo(() => createStyles(activeTokens), [activeTokens]);
   const themeTransitionAnim = useRef(
     new Animated.Value(state.isNightPhase ? 1 : 0)
   ).current;
-
-  useEffect(() => {
-    let active = true;
-    if (AccessibilityInfo?.isReduceMotionEnabled) {
-      void AccessibilityInfo.isReduceMotionEnabled().then(
-        (enabled) => {
-          if (active) {
-            handleSetReduceMotion(Boolean(enabled));
-          }
-        },
-        () => {
-          // Ignora falha de leitura de acessibilidade em ambientes sem suporte.
-        }
-      );
-    }
-
-    const subscription = AccessibilityInfo?.addEventListener?.(
-      'reduceMotionChanged',
-      (enabled: boolean) => {
-        handleSetReduceMotion(Boolean(enabled));
-      }
-    );
-
-    return () => {
-      active = false;
-      subscription?.remove?.();
-    };
-  }, [handleSetReduceMotion]);
 
   useEffect(() => {
     const target = state.isNightPhase ? 1 : 0;
@@ -113,11 +105,17 @@ export const CidadeDormeScreen = () => {
     }
     Animated.spring(themeTransitionAnim, {
       toValue: target,
-      damping: tokens.semantic.motion.spring.spatial.damping,
-      stiffness: tokens.semantic.motion.spring.spatial.stiffness,
+      damping: activeTokens.semantic.motion.spring.spatial.damping,
+      stiffness: activeTokens.semantic.motion.spring.spatial.stiffness,
       useNativeDriver: false,
     }).start();
-  }, [state.isNightPhase, state.reduceMotion, themeTransitionAnim]);
+  }, [
+    activeTokens.semantic.motion.spring.spatial.damping,
+    activeTokens.semantic.motion.spring.spatial.stiffness,
+    state.isNightPhase,
+    state.reduceMotion,
+    themeTransitionAnim,
+  ]);
 
   const animatedSurfaceColor = themeTransitionAnim.interpolate({
     inputRange: [0, 1],
@@ -127,51 +125,6 @@ export const CidadeDormeScreen = () => {
     ],
   });
 
-  if (state.loading && state.room) {
-    return (
-      <View
-        style={styles.centerScreen}
-        accessibilityRole="progressbar"
-        accessibilityLabel="Conectando à Sala Multiplayer do Cidade Dorme"
-      >
-        <Text
-          allowFontScaling
-          maxFontSizeMultiplier={tokens.semantic.typography.maxScale}
-          style={styles.title}
-        >
-          Conectando à Sala do Cidade Dorme...
-        </Text>
-      </View>
-    );
-  }
-
-  if (!state.room) {
-    return (
-      <KeyboardAvoidingView
-        style={styles.scroll}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.screenContent}
-          keyboardShouldPersistTaps="handled"
-          automaticallyAdjustKeyboardInsets
-        >
-          <CidadeDormeEntrySection
-            isRealtimeEnabled={state.isRealtimeEnabled}
-            loading={state.loading}
-            error={state.error}
-            onExitArena={actions.handleExitArena}
-            onCreateRoom={actions.handleCreateRoom}
-            onJoinRoom={actions.handleJoinRoom}
-          />
-        </ScrollView>
-      </KeyboardAvoidingView>
-    );
-  }
-
-  const { room } = state;
-  const activeTokens = state.isNightPhase ? darkTokens : tokens;
   const phaseBadge = resolvePhaseBadge(room);
   const showTimeline =
     room.phase !== 'lobby' &&
@@ -188,12 +141,12 @@ export const CidadeDormeScreen = () => {
     room.phase === 'role_reveal'
       ? { label: 'Prontos', current: readyCount, total: room.players.length }
       : room.phase === 'day_voting'
-      ? {
-          label: 'Votos',
-          current: totalVotesCast,
-          total: Math.max(1, state.aliveCount),
-        }
-      : null;
+        ? {
+            label: 'Votos',
+            current: totalVotesCast,
+            total: Math.max(1, state.aliveCount),
+          }
+        : null;
 
   return (
     <Animated.View
@@ -219,30 +172,12 @@ export const CidadeDormeScreen = () => {
               icon="arrow-left"
               onPress={actions.handleRequestExit}
             />
-            <View
-              style={[
-                styles.roomBadge,
-                state.isNightPhase && styles.roomBadgeNight,
-              ]}
-              accessibilityRole="text"
+            <ExpressiveTag
+              label={phaseBadge.label}
+              icon={phaseBadge.icon}
+              tone="action"
               accessibilityLabel={phaseBadge.accessibilityLabel}
-            >
-              <MaterialCommunityIcons
-                name={phaseBadge.icon}
-                size={activeTokens.semantic.icon.sm}
-                color={activeTokens.semantic.color.onActionContainer}
-              />
-              <Text
-                allowFontScaling
-                maxFontSizeMultiplier={activeTokens.semantic.typography.maxScale}
-                style={[
-                  styles.roomBadgeText,
-                  state.isNightPhase && styles.roomBadgeTextNight,
-                ]}
-              >
-                {phaseBadge.label}
-              </Text>
-            </View>
+            />
           </View>
 
           <ConfirmModal
@@ -254,25 +189,13 @@ export const CidadeDormeScreen = () => {
           />
 
           {state.error && (
-            <View
-              style={[
-                styles.errorBanner,
-                state.isNightPhase && styles.errorBannerNight,
-              ]}
-              accessibilityLiveRegion="assertive"
-            >
+            <View style={styles.errorBanner} accessibilityLiveRegion="assertive">
               <MaterialCommunityIcons
                 name="alert-circle"
                 size={activeTokens.semantic.icon.md}
-                color={activeTokens.semantic.color.error}
+                color={activeTokens.component.banner.error.text}
               />
-              <Text
-                allowFontScaling
-                style={[
-                  styles.errorBannerText,
-                  state.isNightPhase && styles.errorBannerTextNight,
-                ]}
-              >
+              <Text allowFontScaling style={styles.errorBannerText}>
                 {state.error}
               </Text>
             </View>
@@ -364,93 +287,154 @@ export const CidadeDormeScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  animatedSurface: {
-    flex: 1,
-  },
-  flexFill: {
-    flex: 1,
-  },
-  scroll: {
-    flex: 1,
-    backgroundColor: tokens.semantic.color.surface,
-  },
-  scrollNight: {
-    backgroundColor: darkTokens.semantic.color.surface,
-  },
-  screenContent: {
-    padding: tokens.semantic.space.md,
-    paddingBottom: tokens.semantic.space['3xl'],
-    gap: tokens.semantic.space.lg,
-  },
-  centerScreen: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: tokens.semantic.color.surface,
-    padding: tokens.semantic.space.lg,
-  },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: tokens.semantic.space.sm,
-  },
-  roomBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.semantic.space.xs,
-    paddingHorizontal: tokens.semantic.space.md,
-    paddingVertical: tokens.semantic.space.sm,
-    borderRadius: tokens.semantic.radius.full,
-    backgroundColor: tokens.semantic.color.actionContainer,
-  },
-  roomBadgeNight: {
-    backgroundColor: darkTokens.semantic.color.actionContainer,
-  },
-  roomBadgeText: {
-    fontFamily: tokens.semantic.font.caption.family,
-    fontSize: tokens.semantic.font.caption.size,
-    lineHeight: tokens.semantic.font.caption.lineHeight,
-    fontWeight: tokens.semantic.font.caption.weight,
-    color: tokens.semantic.color.onActionContainer,
-  },
-  roomBadgeTextNight: {
-    color: darkTokens.semantic.color.onActionContainer,
-  },
-  errorBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.semantic.space.sm,
-    padding: tokens.semantic.space.md,
-    borderRadius: tokens.semantic.radius.md,
-    borderWidth: tokens.semantic.border.thin,
-    borderColor: tokens.semantic.color.error,
-    backgroundColor: tokens.semantic.color.errorContainer,
-  },
-  errorBannerNight: {
-    borderColor: darkTokens.semantic.color.error,
-    backgroundColor: darkTokens.semantic.color.errorContainer,
-  },
-  errorBannerText: {
-    flexShrink: 1,
-    fontFamily: tokens.semantic.font.body.family,
-    fontSize: tokens.semantic.font.body.size,
-    fontWeight: tokens.semantic.font.body.weight,
-    lineHeight: tokens.semantic.font.body.lineHeight,
-    color: tokens.semantic.color.onErrorContainer,
-  },
-  errorBannerTextNight: {
-    color: darkTokens.semantic.color.onErrorContainer,
-  },
-  title: {
-    fontFamily: tokens.semantic.font.title.family,
-    fontSize: tokens.semantic.font.title.size,
-    lineHeight: tokens.semantic.font.title.lineHeight,
-    fontWeight: tokens.semantic.font.title.weight,
-    color: tokens.semantic.color.onSurface,
-    textAlign: 'center',
-  },
-});
+export const CidadeDormeScreen = () => {
+  const [state, actions] = useCidadeDormeViewModel();
+  const { handleSetReduceMotion } = actions;
+  const activeTokens = useTheme();
+  const styles = useMemo(() => createStyles(activeTokens), [activeTokens]);
+
+  useEffect(() => {
+    let active = true;
+    if (AccessibilityInfo?.isReduceMotionEnabled) {
+      void AccessibilityInfo.isReduceMotionEnabled().then(
+        (enabled) => {
+          if (active) {
+            handleSetReduceMotion(Boolean(enabled));
+          }
+        },
+        () => {
+          // Ignora falha de leitura de acessibilidade em ambientes sem suporte.
+        }
+      );
+    }
+
+    const subscription = AccessibilityInfo?.addEventListener?.(
+      'reduceMotionChanged',
+      (enabled: boolean) => {
+        handleSetReduceMotion(Boolean(enabled));
+      }
+    );
+
+    return () => {
+      active = false;
+      subscription?.remove?.();
+    };
+  }, [handleSetReduceMotion]);
+
+  if (state.loading && state.room) {
+    return (
+      <View
+        style={styles.centerScreen}
+        accessibilityRole="progressbar"
+        accessibilityLabel="Conectando à Sala Multiplayer do Cidade Dorme"
+      >
+        <Text
+          allowFontScaling
+          maxFontSizeMultiplier={activeTokens.semantic.typography.maxScale}
+          style={styles.title}
+        >
+          Conectando à Sala do Cidade Dorme...
+        </Text>
+      </View>
+    );
+  }
+
+  if (!state.room) {
+    return (
+      <KeyboardAvoidingView
+        style={styles.scroll}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.screenContent}
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
+        >
+          <CidadeDormeEntrySection
+            isRealtimeEnabled={state.isRealtimeEnabled}
+            loading={state.loading}
+            error={state.error}
+            onExitArena={actions.handleExitArena}
+            onCreateRoom={actions.handleCreateRoom}
+            onJoinRoom={actions.handleJoinRoom}
+          />
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
+  }
+
+  return (
+    <ThemeProvider mode={state.isNightPhase ? 'dark' : undefined}>
+      <CidadeDormeRoomContent
+        state={state}
+        actions={actions}
+        room={state.room}
+      />
+    </ThemeProvider>
+  );
+};
+
+const createStyles = (activeTokens: AppTokens) => {
+  const { color, font, radius, space, border } = activeTokens.semantic;
+  const { banner } = activeTokens.component;
+  return StyleSheet.create({
+    animatedSurface: {
+      flex: 1,
+    },
+    flexFill: {
+      flex: 1,
+    },
+    scroll: {
+      flex: 1,
+      backgroundColor: color.surface,
+    },
+    screenContent: {
+      padding: space.md,
+      paddingBottom: space['3xl'],
+      gap: space.lg,
+    },
+    centerScreen: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: color.surface,
+      padding: space.lg,
+    },
+    topBar: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: space.sm,
+      flexWrap: 'wrap',
+    },
+    errorBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.sm,
+      padding: space.md,
+      borderRadius: radius.md,
+      borderWidth: border.thin,
+      borderColor: banner.error.border,
+      backgroundColor: banner.error.bg,
+    },
+    errorBannerText: {
+      flexShrink: 1,
+      fontFamily: font.body.family,
+      fontSize: font.body.size,
+      fontWeight: font.body.weight,
+      lineHeight: font.body.lineHeight,
+      color: banner.error.text,
+    },
+    title: {
+      fontFamily: font.title.family,
+      fontSize: font.title.size,
+      lineHeight: font.title.lineHeight,
+      fontWeight: font.title.weight,
+      color: color.onSurface,
+      textAlign: 'center',
+    },
+  });
+};
 
 export default CidadeDormeScreen;
