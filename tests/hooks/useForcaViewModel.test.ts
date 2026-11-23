@@ -336,6 +336,7 @@ describe('useForcaViewModel — Hook da Arena do Jogo da Forca (UC05)', () => {
         throw new ValidationError('Erro simulado.');
       },
       planQuizMatch: () => ({ totalQuestions: 0, questionsPerTeam: 0, limitedByBank: false }),
+      listAvailableQuizQuestionCounts: () => [5],
     };
     const errorHarness = createHookHarness(failingUseCases);
     await errorHarness.mount();

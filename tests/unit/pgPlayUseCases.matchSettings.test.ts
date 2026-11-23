@@ -155,4 +155,21 @@ describe('PgPlayUseCases — Parâmetros da Partida (RF29)', () => {
       expect(useCases.planQuizMatch(5, 12, 0).totalQuestions).toBe(5);
     });
   });
+
+  describe('listAvailableQuizQuestionCounts — opções que o pacote cumpre', () => {
+    it('oferece só as quantidades que cabem no pacote atual', () => {
+      const { useCases } = buildSut();
+
+      expect(useCases.listAvailableQuizQuestionCounts(12)).toEqual([5, 10]);
+      expect(useCases.listAvailableQuizQuestionCounts(15)).toEqual([5, 10, 15]);
+      expect(useCases.listAvailableQuizQuestionCounts(40)).toEqual([5, 10, 15]);
+    });
+
+    it('mantém a menor opção quando o pacote é menor que todas', () => {
+      const { useCases } = buildSut();
+
+      expect(useCases.listAvailableQuizQuestionCounts(3)).toEqual([5]);
+      expect(useCases.listAvailableQuizQuestionCounts(0)).toEqual([5]);
+    });
+  });
 });

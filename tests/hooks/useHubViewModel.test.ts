@@ -173,6 +173,8 @@ describe('useHubViewModel — Hook do Hub de Jogos (UC01)', () => {
       updateForcaSettings: (s) => baseUseCases.updateForcaSettings(s),
       planQuizMatch: (count, available, teamCount) =>
         baseUseCases.planQuizMatch(count, available, teamCount),
+      listAvailableQuizQuestionCounts: (available) =>
+        baseUseCases.listAvailableQuizQuestionCounts(available),
     };
 
     const harness = createHookHarness(flakyUseCases);

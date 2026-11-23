@@ -137,6 +137,7 @@ describe('useScoreboardViewModel — Hook do Placar e Ranking Geral do PG (UC06)
         throw new ValidationError('Falha ao salvar parâmetros.');
       },
       planQuizMatch: () => ({ totalQuestions: 0, questionsPerTeam: 0, limitedByBank: false }),
+      listAvailableQuizQuestionCounts: () => [5],
     };
 
     const harness = createHookHarness(failingUseCases);

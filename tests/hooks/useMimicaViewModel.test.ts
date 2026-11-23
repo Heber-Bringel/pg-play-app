@@ -296,6 +296,7 @@ describe('useMimicaViewModel — Hook da Arena de Mímica Expressiva (UC03)', ()
         throw new ValidationError('Erro simulado.');
       },
       planQuizMatch: () => ({ totalQuestions: 0, questionsPerTeam: 0, limitedByBank: false }),
+      listAvailableQuizQuestionCounts: () => [5],
     };
     const errorHarness = createHookHarness(failingUseCases);
     await errorHarness.mount();
