@@ -51,8 +51,6 @@ export const CidadeDormeRoleSection = ({
   const activeTokens = useTheme();
   const styles = useMemo(() => createStyles(activeTokens), [activeTokens]);
 
-  const readyCount = room.players.filter((p) => p.isReady).length;
-  const totalCount = room.players.length;
   const isPlayerAlreadyReady = Boolean(currentPlayer?.isReady);
   const isAssassin = roleInfo?.role === 'assassino';
   const roleIcon = roleInfo ? ROLE_ICONS[roleInfo.role] : 'home-account';
@@ -118,7 +116,7 @@ export const CidadeDormeRoleSection = ({
       <GameCard
         title="Fase 0 · Revelação Secreta de Papel"
         description="Apenas você deve olhar para a tela agora. Proteja o celular dos jogadores ao lado antes de tocar para revelar."
-        playersTag={`Prontos: ${readyCount}/${totalCount}`}
+        playersTag="Sigilo Individual"
         icon="weather-night"
       />
 

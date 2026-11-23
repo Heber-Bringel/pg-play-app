@@ -19,6 +19,15 @@ export type CidadeDormeCityPanelProps = {
   progress?: CidadeDormeCityPanelProgress | null;
 };
 
+export function getAvatarInitials(nickname: string): string {
+  const words = nickname.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return '?';
+  if (words.length >= 2) {
+    return `${words[0].charAt(0)}${words[1].charAt(0)}`.toUpperCase();
+  }
+  return words[0].slice(0, 2).toUpperCase();
+}
+
 export const CidadeDormeCityPanel = ({
   players,
   aliveCount,
@@ -125,7 +134,7 @@ export const CidadeDormeCityPanel = ({
 
       <View style={styles.avatarGrid}>
         {players.map((player) => {
-          const initial = player.nickname.trim().charAt(0).toUpperCase() || '?';
+          const initial = getAvatarInitials(player.nickname);
           const isAlive = player.isAlive;
 
           return (
