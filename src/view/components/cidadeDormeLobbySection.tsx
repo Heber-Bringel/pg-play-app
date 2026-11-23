@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type {
   CidadeDormeAssassinCount,
@@ -12,7 +12,7 @@ import type {
 import { ExpressiveButton } from '@/view/components/expressiveButton';
 import { ExpressiveChip } from '@/view/components/expressiveChip';
 import { GameCard } from '@/view/components/gameCard';
-import { tokens } from '@/view/theme';
+import { useTheme, type AppTokens } from '@/view/theme';
 
 const VOICE_OPTIONS: Array<{
   value: CidadeDormeVoiceProfile;
@@ -54,8 +54,9 @@ export const CidadeDormeLobbySection = ({
   onRemovePlayer,
   onUpdateConfig,
 }: CidadeDormeLobbySectionProps) => {
+  const activeTokens = useTheme();
+  const styles = useMemo(() => createStyles(activeTokens), [activeTokens]);
   const [activeTab, setActiveTab] = useState<LobbyTab>('play');
-  const [focusedPlayerId, setFocusedPlayerId] = useState<string | null>(null);
 
   const canStart = room.players.length >= 5 && room.players.length <= 16;
 
@@ -128,8 +129,8 @@ export const CidadeDormeLobbySection = ({
               <View style={styles.waitingCard}>
                 <MaterialCommunityIcons
                   name="cellphone-link"
-                  size={tokens.semantic.icon.md}
-                  color={tokens.semantic.color.onActionContainer}
+                  size={activeTokens.semantic.icon.md}
+                  color={activeTokens.component.banner.info.text}
                 />
                 <Text allowFontScaling style={styles.waitingText}>
                   {`Compartilhe o PIN ${room.code} para que cada participante entre pelo próprio celular (mínimo de 5 jogadores).`}
@@ -157,7 +158,7 @@ export const CidadeDormeLobbySection = ({
                         <Text
                           allowFontScaling
                           maxFontSizeMultiplier={
-                            tokens.semantic.typography.maxScale
+                            activeTokens.semantic.typography.maxScale
                           }
                           style={styles.playerName}
                         >
@@ -172,27 +173,15 @@ export const CidadeDormeLobbySection = ({
                     </View>
 
                     {isCurrentPlayerHost && !player.isHost && (
-                      <Pressable
-                        accessibilityRole="button"
+                      <ExpressiveButton
+                        variant="icon"
+                        tone="danger"
+                        icon="trash-can-outline"
                         accessibilityLabel={`Remover participante ${player.nickname}`}
-                        onFocus={() => setFocusedPlayerId(player.id)}
-                        onBlur={() => setFocusedPlayerId(null)}
-                        style={({ pressed }) => [
-                          styles.removeButton,
-                          pressed && styles.removeButtonPressed,
-                          focusedPlayerId === player.id &&
-                            styles.removeButtonFocused,
-                        ]}
                         onPress={() => {
                           void onRemovePlayer(player.id);
                         }}
-                      >
-                        <MaterialCommunityIcons
-                          name="trash-can-outline"
-                          size={tokens.semantic.icon.md}
-                          color={tokens.semantic.color.error}
-                        />
-                      </Pressable>
+                      />
                     )}
                   </View>
                 );
@@ -222,8 +211,8 @@ export const CidadeDormeLobbySection = ({
             <View style={styles.waitingCard}>
               <MaterialCommunityIcons
                 name="clock-outline"
-                size={tokens.semantic.icon.md}
-                color={tokens.semantic.color.onActionContainer}
+                size={activeTokens.semantic.icon.md}
+                color={activeTokens.component.banner.info.text}
               />
               <Text allowFontScaling style={styles.waitingText}>
                 Aguardando o Moderador distribuir os papéis secretos da partida.
@@ -246,8 +235,8 @@ export const CidadeDormeLobbySection = ({
               >
                 <MaterialCommunityIcons
                   name="information-outline"
-                  size={tokens.semantic.icon.md}
-                  color={tokens.semantic.color.onActionContainer}
+                  size={activeTokens.semantic.icon.md}
+                  color={activeTokens.component.banner.info.text}
                 />
                 <View style={styles.guestNoticeContent}>
                   <Text allowFontScaling style={styles.guestNoticeTitle}>
@@ -348,154 +337,142 @@ export const CidadeDormeLobbySection = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    gap: tokens.semantic.space.lg,
-  },
-  tabsRow: {
-    flexDirection: 'row',
-    gap: tokens.semantic.space.sm,
-  },
-  tabContent: {
-    gap: tokens.semantic.space.lg,
-  },
-  cardBox: {
-    backgroundColor: tokens.component.card.bg,
-    borderColor: tokens.component.card.border,
-    borderWidth: tokens.semantic.border.thin,
-    borderRadius: tokens.component.card.radius,
-    padding: tokens.component.card.padding,
-    gap: tokens.semantic.space.md,
-    elevation: tokens.semantic.elevation.card,
-  },
-  sectionTitle: {
-    fontFamily: tokens.semantic.font.subtitle.family,
-    fontSize: tokens.semantic.font.subtitle.size,
-    lineHeight: tokens.semantic.font.subtitle.lineHeight,
-    fontWeight: tokens.semantic.font.subtitle.weight,
-    color: tokens.semantic.color.onSurface,
-  },
-  sectionSubtitle: {
-    fontFamily: tokens.semantic.font.body.family,
-    fontSize: tokens.semantic.font.body.size,
-    lineHeight: tokens.semantic.font.body.lineHeight,
-    fontWeight: tokens.semantic.font.body.weight,
-    color: tokens.semantic.color.onSurfaceMuted,
-  },
-  chipsWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: tokens.semantic.space.sm,
-  },
-  playerList: {
-    gap: tokens.semantic.space.sm,
-  },
-  playerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: tokens.semantic.color.surface,
-    borderRadius: tokens.semantic.radius.md,
-    borderWidth: tokens.semantic.border.thin,
-    borderColor: tokens.semantic.color.outline,
-    padding: tokens.semantic.space.sm,
-    minHeight: tokens.semantic.space.container,
-  },
-  playerInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.semantic.space.sm,
-    flex: 1,
-  },
-  playerAvatar: {
-    width: tokens.semantic.space.xl,
-    height: tokens.semantic.space.xl,
-    borderRadius: tokens.semantic.radius.full,
-    backgroundColor: tokens.semantic.color.surfaceVariant,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  playerAvatarHost: {
-    backgroundColor: tokens.semantic.color.actionContainer,
-  },
-  playerAvatarText: {
-    fontFamily: tokens.semantic.font.label.family,
-    fontSize: tokens.semantic.font.label.size,
-    lineHeight: tokens.semantic.font.label.lineHeight,
-    fontWeight: tokens.semantic.font.label.weight,
-    color: tokens.semantic.color.onActionContainer,
-  },
-  playerNameWrap: {
-    flex: 1,
-  },
-  playerName: {
-    fontFamily: tokens.semantic.font.label.family,
-    fontSize: tokens.semantic.font.label.size,
-    lineHeight: tokens.semantic.font.label.lineHeight,
-    fontWeight: tokens.semantic.font.label.weight,
-    color: tokens.semantic.color.onSurface,
-  },
-  playerRoleHint: {
-    fontFamily: tokens.semantic.font.caption.family,
-    fontSize: tokens.semantic.font.caption.size,
-    lineHeight: tokens.semantic.font.caption.lineHeight,
-    fontWeight: tokens.semantic.font.caption.weight,
-    color: tokens.semantic.color.onSurfaceMuted,
-  },
-  removeButton: {
-    width: tokens.semantic.space['2xl'],
-    height: tokens.semantic.space['2xl'],
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: tokens.semantic.radius.full,
-    borderWidth: tokens.semantic.border.thin,
-    borderColor: tokens.semantic.color.transparent,
-  },
-  removeButtonPressed: {
-    backgroundColor: tokens.semantic.color.errorContainer,
-  },
-  removeButtonFocused: {
-    borderWidth: tokens.semantic.border.focus,
-    borderColor: tokens.semantic.color.focus,
-  },
-  waitingCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.semantic.space.sm,
-    padding: tokens.semantic.space.md,
-    borderRadius: tokens.semantic.radius.lg,
-    backgroundColor: tokens.semantic.color.actionContainer,
-  },
-  waitingText: {
-    flex: 1,
-    fontFamily: tokens.semantic.font.body.family,
-    fontSize: tokens.semantic.font.body.size,
-    lineHeight: tokens.semantic.font.body.lineHeight,
-    color: tokens.semantic.color.onActionContainer,
-  },
-  guestNoticeBanner: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: tokens.semantic.space.sm,
-    padding: tokens.semantic.space.md,
-    borderRadius: tokens.semantic.radius.lg,
-    backgroundColor: tokens.semantic.color.actionContainer,
-  },
-  guestNoticeContent: {
-    flex: 1,
-    gap: tokens.semantic.space.xs,
-  },
-  guestNoticeTitle: {
-    fontFamily: tokens.semantic.font.label.family,
-    fontSize: tokens.semantic.font.label.size,
-    lineHeight: tokens.semantic.font.label.lineHeight,
-    fontWeight: tokens.semantic.font.label.weight,
-    color: tokens.semantic.color.onActionContainer,
-  },
-  guestNoticeSummary: {
-    fontFamily: tokens.semantic.font.caption.family,
-    fontSize: tokens.semantic.font.caption.size,
-    lineHeight: tokens.semantic.font.caption.lineHeight,
-    color: tokens.semantic.color.onActionContainer,
-  },
-});
+const createStyles = (activeTokens: AppTokens) => {
+  const { color, font, radius, space, border, elevation } = activeTokens.semantic;
+  const { card, banner } = activeTokens.component;
+  return StyleSheet.create({
+    container: {
+      gap: space.lg,
+    },
+    tabsRow: {
+      flexDirection: 'row',
+      gap: space.sm,
+    },
+    tabContent: {
+      gap: space.lg,
+    },
+    cardBox: {
+      backgroundColor: card.bg,
+      borderColor: card.border,
+      borderWidth: border.thin,
+      borderRadius: card.radius,
+      padding: card.padding,
+      gap: space.md,
+      elevation: elevation.card,
+    },
+    sectionTitle: {
+      fontFamily: font.subtitle.family,
+      fontSize: font.subtitle.size,
+      lineHeight: font.subtitle.lineHeight,
+      fontWeight: font.subtitle.weight,
+      color: color.onSurface,
+    },
+    sectionSubtitle: {
+      fontFamily: font.body.family,
+      fontSize: font.body.size,
+      lineHeight: font.body.lineHeight,
+      fontWeight: font.body.weight,
+      color: color.onSurfaceMuted,
+    },
+    chipsWrap: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: space.sm,
+    },
+    playerList: {
+      gap: space.sm,
+    },
+    playerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: color.surface,
+      borderRadius: radius.md,
+      borderWidth: border.thin,
+      borderColor: card.border,
+      padding: space.sm,
+      minHeight: space.container,
+    },
+    playerInfo: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.sm,
+      flex: 1,
+    },
+    playerAvatar: {
+      width: space.xl,
+      height: space.xl,
+      borderRadius: radius.full,
+      backgroundColor: color.surfaceVariant,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    playerAvatarHost: {
+      backgroundColor: color.actionContainer,
+    },
+    playerAvatarText: {
+      fontFamily: font.label.family,
+      fontSize: font.label.size,
+      lineHeight: font.label.lineHeight,
+      fontWeight: font.label.weight,
+      color: color.onActionContainer,
+    },
+    playerNameWrap: {
+      flex: 1,
+    },
+    playerName: {
+      fontFamily: font.label.family,
+      fontSize: font.label.size,
+      lineHeight: font.label.lineHeight,
+      fontWeight: font.label.weight,
+      color: color.onSurface,
+    },
+    playerRoleHint: {
+      fontFamily: font.caption.family,
+      fontSize: font.caption.size,
+      lineHeight: font.caption.lineHeight,
+      fontWeight: font.caption.weight,
+      color: color.onSurfaceMuted,
+    },
+    waitingCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.sm,
+      padding: space.md,
+      borderRadius: banner.radius,
+      backgroundColor: banner.info.bg,
+    },
+    waitingText: {
+      flex: 1,
+      fontFamily: font.body.family,
+      fontSize: font.body.size,
+      lineHeight: font.body.lineHeight,
+      color: banner.info.text,
+    },
+    guestNoticeBanner: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: space.sm,
+      padding: space.md,
+      borderRadius: banner.radius,
+      backgroundColor: banner.info.bg,
+    },
+    guestNoticeContent: {
+      flex: 1,
+      gap: space.xs,
+    },
+    guestNoticeTitle: {
+      fontFamily: font.label.family,
+      fontSize: font.label.size,
+      lineHeight: font.label.lineHeight,
+      fontWeight: font.label.weight,
+      color: banner.info.text,
+    },
+    guestNoticeSummary: {
+      fontFamily: font.caption.family,
+      fontSize: font.caption.size,
+      lineHeight: font.caption.lineHeight,
+      color: banner.info.text,
+    },
+  });
+};

@@ -1,24 +1,12 @@
-import React from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import React, { useMemo } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { GameModalityFilter } from '@/model/entities/minigame';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
+import { ExpressiveChip } from '@/view/components/expressiveChip';
+import { ExpressiveTag } from '@/view/components/expressiveTag';
 import { GameCard } from '@/view/components/gameCard';
-import {
-  border,
-  color,
-  font,
-  icon,
-  radius,
-  space,
-  typography,
-} from '@/view/theme';
+import { useTheme, type AppTokens } from '@/view/theme';
 import { useHubViewModel } from '@/viewmodel/useHubViewModel';
 
 type ModalityOption = {
@@ -39,6 +27,8 @@ const MODALITY_OPTIONS: ModalityOption[] = [
 
 export const HubScreen = () => {
   const [state, actions] = useHubViewModel();
+  const activeTokens = useTheme();
+  const styles = useMemo(() => createStyles(activeTokens), [activeTokens]);
 
   if (state.loading) {
     return (
@@ -61,6 +51,7 @@ export const HubScreen = () => {
           title="Erro ao Carregar Hub"
           description={state.error}
           playersTag="Erro"
+          playersTagTone="error"
           icon="alert-circle"
         />
         <ExpressiveButton
@@ -79,8 +70,8 @@ export const HubScreen = () => {
     state.leaderTeam && state.leaderTeam.score > 0
       ? `${state.leaderTeam.name} lidera o encontro com ${state.leaderTeam.score} pts!`
       : state.leaderTeam
-      ? `${state.totalTeams} equipes prontas para começar. Toque para ver o placar do PG.`
-      : 'Nenhuma equipe cadastrada ainda. Configure as equipes do encontro!';
+        ? `${state.totalTeams} equipes prontas para começar. Toque para ver o placar do PG.`
+        : 'Nenhuma equipe cadastrada ainda. Configure as equipes do encontro!';
 
   const leaderTag =
     state.leaderTeam && state.leaderTeam.score > 0
@@ -99,15 +90,14 @@ export const HubScreen = () => {
           <View style={styles.brandBadge}>
             <MaterialCommunityIcons
               name="gamepad-variant"
-              size={icon.md}
-              color={color.onActionContainer}
+              size={activeTokens.semantic.icon.md}
+              color={activeTokens.semantic.color.onActionContainer}
             />
           </View>
-          <View style={styles.countPill}>
-            <Text allowFontScaling style={styles.countText}>
-              {`${state.games.length} de ${state.allGamesCount} jogos`}
-            </Text>
-          </View>
+          <ExpressiveTag
+            label={`${state.games.length} de ${state.allGamesCount} jogos`}
+            tone="neutral"
+          />
         </View>
 
         <Text allowFontScaling style={styles.title}>
@@ -158,35 +148,16 @@ export const HubScreen = () => {
           {MODALITY_OPTIONS.map((option) => {
             const selected = state.selectedModality === option.value;
             return (
-              <Pressable
+              <ExpressiveChip
                 key={option.value}
+                label={option.label}
+                icon={selected ? 'check-circle' : option.iconName}
+                selected={selected}
+                accessibilityLabel={`Filtrar por ${option.label}`}
                 onPress={() => {
                   void actions.setSelectedModality(option.value);
                 }}
-                accessibilityRole="button"
-                accessibilityLabel={`Filtrar por ${option.label}`}
-                accessibilityState={{ selected }}
-                style={[
-                  styles.chip,
-                  selected ? styles.chipSelected : styles.chipDefault,
-                ]}
-              >
-                <MaterialCommunityIcons
-                  name={selected ? 'check-circle' : option.iconName}
-                  size={icon.sm}
-                  color={selected ? color.onActionContainer : color.onSurfaceMuted}
-                />
-                <Text
-                  allowFontScaling
-                  maxFontSizeMultiplier={typography.maxScale}
-                  style={[
-                    styles.chipLabel,
-                    selected ? styles.chipLabelSelected : styles.chipLabelDefault,
-                  ]}
-                >
-                  {option.label}
-                </Text>
-              </Pressable>
+              />
             );
           })}
         </View>
@@ -201,8 +172,8 @@ export const HubScreen = () => {
           <View style={styles.emptyCard}>
             <MaterialCommunityIcons
               name="magnify-close"
-              size={icon.lg}
-              color={color.onSurfaceMuted}
+              size={activeTokens.semantic.icon.lg}
+              color={activeTokens.semantic.color.onSurfaceMuted}
             />
             <Text allowFontScaling style={styles.emptyTitle}>
               Nenhum minigame encontrado
@@ -243,158 +214,119 @@ export const HubScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: color.surface,
-  },
-  scrollContent: {
-    padding: space.lg,
-    paddingBottom: space.xl,
-    gap: space.md,
-  },
-  centerScreen: {
-    flex: 1,
-    backgroundColor: color.surface,
-    padding: space.lg,
-    justifyContent: 'center',
-    gap: space.md,
-  },
-  loadingTitle: {
-    fontFamily: font.subtitle.family,
-    fontSize: font.subtitle.size,
-    fontWeight: font.subtitle.weight,
-    lineHeight: font.subtitle.lineHeight,
-    color: color.onSurface,
-    textAlign: 'center',
-  },
-  header: {
-    gap: space.xs,
-  },
-  brandRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: space.xs,
-  },
-  brandBadge: {
-    width: space['2xl'],
-    height: space['2xl'],
-    borderRadius: radius.lg,
-    backgroundColor: color.actionContainer,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  countPill: {
-    backgroundColor: color.surfaceVariant,
-    paddingHorizontal: space.md,
-    paddingVertical: space.xs,
-    borderRadius: radius.full,
-  },
-  countText: {
-    fontFamily: font.caption.family,
-    fontSize: font.caption.size,
-    fontWeight: font.caption.weight,
-    lineHeight: font.caption.lineHeight,
-    color: color.onSurfaceMuted,
-  },
-  title: {
-    fontFamily: font.display.family,
-    fontSize: font.display.size,
-    fontWeight: font.display.weight,
-    lineHeight: font.display.lineHeight,
-    color: color.onSurface,
-  },
-  subtitle: {
-    fontFamily: font.body.family,
-    fontSize: font.body.size,
-    fontWeight: font.body.weight,
-    lineHeight: font.body.lineHeight,
-    color: color.onSurfaceMuted,
-  },
-  shortcutsRow: {
-    flexDirection: 'row',
-    gap: space.sm,
-  },
-  shortcutItem: {
-    flex: 1,
-  },
-  filterSection: {
-    gap: space.sm,
-  },
-  sectionTitle: {
-    fontFamily: font.subtitle.family,
-    fontSize: font.subtitle.size,
-    fontWeight: font.subtitle.weight,
-    lineHeight: font.subtitle.lineHeight,
-    color: color.onSurface,
-  },
-  chipsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: space.sm,
-  },
-  chip: {
-    minHeight: space['2xl'],
-    paddingHorizontal: space.md,
-    borderRadius: radius.full,
-    borderWidth: border.thin,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.xs,
-  },
-  chipDefault: {
-    backgroundColor: color.surfaceContainer,
-    borderColor: color.outline,
-  },
-  chipSelected: {
-    backgroundColor: color.actionContainer,
-    borderColor: color.action,
-  },
-  chipLabel: {
-    fontFamily: font.label.family,
-    fontSize: font.label.size,
-    fontWeight: font.label.weight,
-    lineHeight: font.label.lineHeight,
-  },
-  chipLabelDefault: {
-    color: color.onSurface,
-  },
-  chipLabelSelected: {
-    color: color.onActionContainer,
-  },
-  catalogSection: {
-    gap: space.sm,
-  },
-  gamesList: {
-    gap: space.md,
-  },
-  emptyCard: {
-    alignItems: 'center',
-    gap: space.sm,
-    padding: space.lg,
-    borderRadius: radius.xl,
-    borderWidth: border.thin,
-    borderStyle: 'dashed',
-    borderColor: color.outline,
-    backgroundColor: color.surfaceContainer,
-  },
-  emptyTitle: {
-    fontFamily: font.subtitle.family,
-    fontSize: font.subtitle.size,
-    fontWeight: font.subtitle.weight,
-    lineHeight: font.subtitle.lineHeight,
-    color: color.onSurface,
-    textAlign: 'center',
-  },
-  emptyDescription: {
-    fontFamily: font.body.family,
-    fontSize: font.body.size,
-    fontWeight: font.body.weight,
-    lineHeight: font.body.lineHeight,
-    color: color.onSurfaceMuted,
-    textAlign: 'center',
-  },
-});
+const createStyles = (activeTokens: AppTokens) => {
+  const { color, font, radius, space, border } = activeTokens.semantic;
+  return StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: color.surface,
+    },
+    scrollContent: {
+      padding: space.lg,
+      paddingBottom: space.xl,
+      gap: space.md,
+    },
+    centerScreen: {
+      flex: 1,
+      backgroundColor: color.surface,
+      padding: space.lg,
+      justifyContent: 'center',
+      gap: space.md,
+    },
+    loadingTitle: {
+      fontFamily: font.subtitle.family,
+      fontSize: font.subtitle.size,
+      fontWeight: font.subtitle.weight,
+      lineHeight: font.subtitle.lineHeight,
+      color: color.onSurface,
+      textAlign: 'center',
+    },
+    header: {
+      gap: space.xs,
+    },
+    brandRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: space.xs,
+    },
+    brandBadge: {
+      width: space['2xl'],
+      height: space['2xl'],
+      borderRadius: radius.lg,
+      backgroundColor: color.actionContainer,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    title: {
+      fontFamily: font.display.family,
+      fontSize: font.display.size,
+      fontWeight: font.display.weight,
+      lineHeight: font.display.lineHeight,
+      color: color.onSurface,
+    },
+    subtitle: {
+      fontFamily: font.body.family,
+      fontSize: font.body.size,
+      fontWeight: font.body.weight,
+      lineHeight: font.body.lineHeight,
+      color: color.onSurfaceMuted,
+    },
+    shortcutsRow: {
+      flexDirection: 'row',
+      gap: space.sm,
+    },
+    shortcutItem: {
+      flex: 1,
+    },
+    filterSection: {
+      gap: space.sm,
+    },
+    sectionTitle: {
+      fontFamily: font.subtitle.family,
+      fontSize: font.subtitle.size,
+      fontWeight: font.subtitle.weight,
+      lineHeight: font.subtitle.lineHeight,
+      color: color.onSurface,
+    },
+    chipsRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: space.sm,
+    },
+    catalogSection: {
+      gap: space.sm,
+    },
+    gamesList: {
+      gap: space.md,
+    },
+    emptyCard: {
+      alignItems: 'center',
+      gap: space.sm,
+      padding: space.lg,
+      borderRadius: radius.xl,
+      borderWidth: border.thin,
+      borderStyle: 'dashed',
+      borderColor: activeTokens.component.card.border,
+      backgroundColor: activeTokens.component.card.bg,
+    },
+    emptyTitle: {
+      fontFamily: font.subtitle.family,
+      fontSize: font.subtitle.size,
+      fontWeight: font.subtitle.weight,
+      lineHeight: font.subtitle.lineHeight,
+      color: color.onSurface,
+      textAlign: 'center',
+    },
+    emptyDescription: {
+      fontFamily: font.body.family,
+      fontSize: font.body.size,
+      fontWeight: font.body.weight,
+      lineHeight: font.body.lineHeight,
+      color: color.onSurfaceMuted,
+      textAlign: 'center',
+    },
+  });
+};
 
 export default HubScreen;
