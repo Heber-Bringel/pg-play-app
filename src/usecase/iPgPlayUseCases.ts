@@ -11,6 +11,7 @@ import type {
   MatchSettings,
   MimicaSettings,
   QuizMatchPlan,
+  QuizQuestionCountOption,
   QuizSettings,
 } from '@/model/entities/matchSettings';
 import type { GameModalityFilter, Minigame } from '@/model/entities/minigame';
@@ -39,4 +40,5 @@ export interface IPgPlayUseCases {
     availableQuestions: number,
     teamCount: number
   ): QuizMatchPlan;
+  listAvailableQuizQuestionCounts(availableQuestions: number): QuizQuestionCountOption[];
 }

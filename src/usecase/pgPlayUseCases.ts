@@ -11,6 +11,7 @@ import type {
 } from '@/model/entities/arenaChallenge';
 import {
   DEFAULT_MATCH_SETTINGS,
+  QUIZ_QUESTION_COUNT_OPTIONS,
   type ForcaAttemptsOption,
   type ForcaSettings,
   type MatchSettings,
@@ -48,9 +49,9 @@ export const DEFAULT_QUIZ_CORRECT_POINTS = 10;
 
 const VALID_MIMICA_DURATIONS: ReadonlySet<number> = new Set<MimicaDurationOption>([45, 60, 90]);
 const VALID_QUIZ_DURATIONS: ReadonlySet<number> = new Set<QuizDurationOption>([15, 20, 30]);
-const VALID_QUIZ_QUESTION_COUNTS: ReadonlySet<number> = new Set<QuizQuestionCountOption>([
-  5, 10, 15,
-]);
+const VALID_QUIZ_QUESTION_COUNTS: ReadonlySet<number> = new Set<QuizQuestionCountOption>(
+  QUIZ_QUESTION_COUNT_OPTIONS
+);
 const VALID_FORCA_ATTEMPTS: ReadonlySet<number> = new Set<ForcaAttemptsOption>([5, 6, 8]);
 const MIN_ROUNDS = 1;
 const MAX_ROUNDS = 5;
@@ -380,6 +381,13 @@ export class PgPlayUseCases implements IPgPlayUseCases {
       questionsPerTeam,
       limitedByBank: availableQuestions < configuredCount,
     };
+  }
+
+  // Só oferece quantidades que o pacote atual consegue cumprir. A menor opção
+  // fica sempre disponível para a partida poder começar com pacotes pequenos.
+  listAvailableQuizQuestionCounts(availableQuestions: number): QuizQuestionCountOption[] {
+    const fitting = QUIZ_QUESTION_COUNT_OPTIONS.filter((count) => count <= availableQuestions);
+    return fitting.length > 0 ? fitting : [QUIZ_QUESTION_COUNT_OPTIONS[0]];
   }
 
   private saveSettingsSection(
