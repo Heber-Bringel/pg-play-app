@@ -8,41 +8,46 @@ import { DataSourceError } from '@/model/errors';
 
 const MATCH_SETTINGS_STORAGE_KEY = '@pgplay:match_settings:v1';
 
-function mergeWithDefaults(parsed: Partial<MatchSettings>): MatchSettings {
-  return {
-    mimica: {
-      ...DEFAULT_MATCH_SETTINGS.mimica,
-      ...(parsed.mimica ?? {}),
-    },
-    quiz: {
-      ...DEFAULT_MATCH_SETTINGS.quiz,
-      ...(parsed.quiz ?? {}),
-    },
-    forca: {
-      ...DEFAULT_MATCH_SETTINGS.forca,
-      ...(parsed.forca ?? {}),
-    },
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+// Seções ausentes ou que não são objetos voltam ao padrão; os valores de cada
+// campo são saneados depois pelo PgPlayUseCases.
+function mergeWithDefaults(parsed: unknown): MatchSettings {
+  const source = isRecord(parsed) ? parsed : {};
+  const section = (key: keyof MatchSettings): Record<string, unknown> => {
+    const value = source[key];
+    return isRecord(value) ? value : {};
   };
+  return {
+    mimica: { ...DEFAULT_MATCH_SETTINGS.mimica, ...section('mimica') },
+    quiz: { ...DEFAULT_MATCH_SETTINGS.quiz, ...section('quiz') },
+    forca: { ...DEFAULT_MATCH_SETTINGS.forca, ...section('forca') },
+  };
+}
+
+// JSON corrompido não pode impedir a abertura dos jogos: volta ao padrão.
+function parseStoredSettings(raw: string): unknown {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
 }
 
 export class AsyncStorageMatchSettingsDataSource
   implements IMatchSettingsDataSource
 {
   async getSettings(): Promise<MatchSettings> {
+    let raw: string | null;
     try {
-      const raw = await AsyncStorage.getItem(MATCH_SETTINGS_STORAGE_KEY);
-      if (!raw) {
-        return mergeWithDefaults({});
-      }
-      const parsed = JSON.parse(raw) as Partial<MatchSettings>;
-      return mergeWithDefaults(parsed);
-    } catch (err: unknown) {
+      raw = await AsyncStorage.getItem(MATCH_SETTINGS_STORAGE_KEY);
+    } catch {
       throw new DataSourceError(
-        err instanceof Error
-          ? err.message
-          : 'Não foi possível carregar os parâmetros da partida.'
+        'Não foi possível carregar os parâmetros da partida.'
       );
     }
+    return mergeWithDefaults(raw ? parseStoredSettings(raw) : null);
   }
 
   async saveSettings(settings: MatchSettings): Promise<void> {
@@ -51,11 +56,9 @@ export class AsyncStorageMatchSettingsDataSource
         MATCH_SETTINGS_STORAGE_KEY,
         JSON.stringify(settings)
       );
-    } catch (err: unknown) {
+    } catch {
       throw new DataSourceError(
-        err instanceof Error
-          ? err.message
-          : 'Não foi possível salvar os parâmetros da partida.'
+        'Não foi possível salvar os parâmetros da partida.'
       );
     }
   }
