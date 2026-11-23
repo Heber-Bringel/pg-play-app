@@ -5,11 +5,13 @@ import { useTheme, type AppTokens, type ThemeMode } from '@/view/theme';
 
 export type ExpressiveTimerProps = {
   secondsRemaining: number;
+  reduceMotion?: boolean;
   themeMode?: ThemeMode;
 };
 
 export const ExpressiveTimer = ({
   secondsRemaining,
+  reduceMotion = false,
   themeMode,
 }: ExpressiveTimerProps) => {
   const activeTokens = useTheme(themeMode);
@@ -29,7 +31,7 @@ export const ExpressiveTimer = ({
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    if (isCritical && !isExpired) {
+    if (isCritical && !isExpired && !reduceMotion) {
       scaleAnim.setValue(1.08);
       Animated.spring(scaleAnim, {
         toValue: 1,
@@ -44,6 +46,7 @@ export const ExpressiveTimer = ({
     safeSeconds,
     isCritical,
     isExpired,
+    reduceMotion,
     scaleAnim,
     activeTokens.semantic.motion.spring.spatial.damping,
     activeTokens.semantic.motion.spring.spatial.stiffness,

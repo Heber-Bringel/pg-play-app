@@ -1,0 +1,17 @@
+appId: br.edu.ifpi.pgplay
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Jogo da Forca"
+- tapOn: "Jogo da Forca"
+- assertVisible: "Estou Pronto!"
+- tapOn: "Estou Pronto!"
+- assertVisible: "A"
+- tapOn: "A"
+- tapOn: "E"
+- tapOn: "O"
+- tapOn:
+    text: "Nova Rodada"
+    optional: true
+- assertVisible: "PG PLAY"
+    optional: true
