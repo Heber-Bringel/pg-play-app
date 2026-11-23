@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useMemo, useRef } from 'react';
+import { Animated, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type {
   CidadeDormePlayer,
@@ -10,6 +10,16 @@ import { ExpressiveButton } from '@/view/components/expressiveButton';
 import { ExpressiveTag } from '@/view/components/expressiveTag';
 import { GameCard } from '@/view/components/gameCard';
 import { useTheme, type AppTokens } from '@/view/theme';
+
+const ROLE_ICONS: Record<
+  CidadeDormeRole,
+  keyof typeof MaterialCommunityIcons.glyphMap
+> = {
+  assassino: 'incognito',
+  anjo: 'shield-check',
+  detetive: 'magnify',
+  cidadao: 'home-account',
+};
 
 export type CidadeDormeRoleViewInfo = {
   role: CidadeDormeRole;
@@ -24,6 +34,7 @@ export type CidadeDormeRoleSectionProps = {
   currentPlayer: CidadeDormePlayer | null;
   roleInfo: CidadeDormeRoleViewInfo | null;
   isRoleVisible: boolean;
+  reduceMotion?: boolean;
   onToggleRoleVisibility: () => void;
   onConfirmRoleReady: () => Promise<void>;
 };
@@ -33,6 +44,7 @@ export const CidadeDormeRoleSection = ({
   currentPlayer,
   roleInfo,
   isRoleVisible,
+  reduceMotion = false,
   onToggleRoleVisibility,
   onConfirmRoleReady,
 }: CidadeDormeRoleSectionProps) => {
@@ -43,11 +55,53 @@ export const CidadeDormeRoleSection = ({
   const totalCount = room.players.length;
   const isPlayerAlreadyReady = Boolean(currentPlayer?.isReady);
   const isAssassin = roleInfo?.role === 'assassino';
+  const roleIcon = roleInfo ? ROLE_ICONS[roleInfo.role] : 'home-account';
+
+  const flipScaleAnim = useRef(new Animated.Value(1)).current;
+  const narratorFadeAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (reduceMotion) {
+      flipScaleAnim.setValue(1);
+      return;
+    }
+    flipScaleAnim.setValue(0.88);
+    Animated.spring(flipScaleAnim, {
+      toValue: 1,
+      damping: activeTokens.semantic.motion.spring.spatial.damping,
+      stiffness: activeTokens.semantic.motion.spring.spatial.stiffness,
+      useNativeDriver: true,
+    }).start();
+  }, [
+    activeTokens.semantic.motion.spring.spatial.damping,
+    activeTokens.semantic.motion.spring.spatial.stiffness,
+    flipScaleAnim,
+    isRoleVisible,
+    reduceMotion,
+  ]);
+
+  useEffect(() => {
+    if (reduceMotion) {
+      narratorFadeAnim.setValue(1);
+      return;
+    }
+    narratorFadeAnim.setValue(0.6);
+    Animated.timing(narratorFadeAnim, {
+      toValue: 1,
+      duration: activeTokens.semantic.motion.duration.short,
+      useNativeDriver: true,
+    }).start();
+  }, [
+    activeTokens.semantic.motion.duration.short,
+    narratorFadeAnim,
+    reduceMotion,
+    room.narratorCaption,
+  ]);
 
   return (
     <View style={styles.container}>
-      <View
-        style={styles.narratorBanner}
+      <Animated.View
+        style={[styles.narratorBanner, { opacity: narratorFadeAnim }]}
         accessibilityRole="text"
         accessibilityLabel={`Legenda do Narrador: ${room.narratorCaption}`}
       >
@@ -59,7 +113,7 @@ export const CidadeDormeRoleSection = ({
         <Text allowFontScaling style={styles.narratorText}>
           {room.narratorCaption}
         </Text>
-      </View>
+      </Animated.View>
 
       <GameCard
         title="Fase 0 · Revelação Secreta de Papel"
@@ -69,7 +123,9 @@ export const CidadeDormeRoleSection = ({
       />
 
       {!isRoleVisible ? (
-        <View style={styles.secretCard}>
+        <Animated.View
+          style={[styles.secretCard, { transform: [{ scaleX: flipScaleAnim }] }]}
+        >
           <View style={styles.lockBadge}>
             <MaterialCommunityIcons
               name="shield-lock-outline"
@@ -94,12 +150,13 @@ export const CidadeDormeRoleSection = ({
             icon="eye-outline"
             onPress={onToggleRoleVisibility}
           />
-        </View>
+        </Animated.View>
       ) : (
-        <View
+        <Animated.View
           style={[
             styles.revealedCard,
             isAssassin ? styles.revealedCardAssassin : styles.revealedCardCity,
+            { transform: [{ scaleX: flipScaleAnim }] },
           ]}
         >
           <ExpressiveTag
@@ -108,13 +165,24 @@ export const CidadeDormeRoleSection = ({
             tone={isAssassin ? 'error' : 'success'}
           />
 
-          <Text
-            allowFontScaling
-            maxFontSizeMultiplier={activeTokens.semantic.typography.maxScale}
-            style={styles.roleTitle}
-          >
-            {roleInfo?.title ?? 'Cidadão'}
-          </Text>
+          <View style={styles.roleTitleRow}>
+            <MaterialCommunityIcons
+              name={roleIcon}
+              size={activeTokens.semantic.icon.lg}
+              color={
+                isAssassin
+                  ? activeTokens.semantic.color.error
+                  : activeTokens.semantic.color.action
+              }
+            />
+            <Text
+              allowFontScaling
+              maxFontSizeMultiplier={activeTokens.semantic.typography.maxScale}
+              style={styles.roleTitle}
+            >
+              {roleInfo?.title ?? 'Cidadão'}
+            </Text>
+          </View>
 
           <Text allowFontScaling style={styles.roleDescription}>
             {roleInfo?.description ?? ''}
@@ -128,7 +196,7 @@ export const CidadeDormeRoleSection = ({
               void onConfirmRoleReady();
             }}
           />
-        </View>
+        </Animated.View>
       )}
 
       {isPlayerAlreadyReady && (
@@ -219,6 +287,11 @@ const createStyles = (activeTokens: AppTokens) => {
     revealedCardAssassin: {
       borderColor: banner.error.border,
       borderRadius: radius.md,
+    },
+    roleTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.sm,
     },
     roleTitle: {
       fontFamily: font.display.family,

@@ -12,6 +12,7 @@ export type ExpressiveTimerProps = {
   totalSeconds?: number;
   paused?: boolean;
   onTogglePause?: () => void;
+  reduceMotion?: boolean;
   themeMode?: ThemeMode;
 };
 
@@ -21,6 +22,7 @@ export const ExpressiveTimer = ({
   totalSeconds = 60,
   paused = false,
   onTogglePause,
+  reduceMotion = false,
   themeMode,
 }: ExpressiveTimerProps) => {
   const activeTokens = useTheme(themeMode);
@@ -36,7 +38,13 @@ export const ExpressiveTimer = ({
   const isExpired = safeSeconds === 0;
 
   useEffect(() => {
-    if (variant === 'countdown' && isCritical && !isExpired && !paused) {
+    if (
+      variant === 'countdown' &&
+      isCritical &&
+      !isExpired &&
+      !paused &&
+      !reduceMotion
+    ) {
       scaleAnim.setValue(1.08);
       Animated.spring(scaleAnim, {
         toValue: 1,
@@ -53,6 +61,7 @@ export const ExpressiveTimer = ({
     isCritical,
     isExpired,
     paused,
+    reduceMotion,
     scaleAnim,
     activeTokens.semantic.motion.spring.spatial.damping,
     activeTokens.semantic.motion.spring.spatial.stiffness,

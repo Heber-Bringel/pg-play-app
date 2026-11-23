@@ -570,4 +570,93 @@ describe('useCidadeDormeViewModel — Hook do Cidade Dorme em Sala Multiplayer (
 
     harness.unmount();
   });
+
+  it('deve expor phaseTimeline, aliveCount, eliminatedCount e handleSetReduceMotion (#56)', async () => {
+    const useCases = new CidadeDormeUseCases(
+      new MemoryMultiplayerRoomService(),
+      new MemoryNarratorAudioService()
+    );
+    const harness = createHookHarness(useCases);
+    await harness.mount();
+
+    expect(harness.getState().reduceMotion).toBe(false);
+    act(() => {
+      harness.getActions().handleSetReduceMotion(true);
+    });
+    expect(harness.getState().reduceMotion).toBe(true);
+
+    await act(async () => {
+      await harness.getActions().handleCreateRoom('Héber');
+    });
+    const code = harness.getState().room!.code;
+    if (harness.getState().room!.players.length < 5) {
+      await act(async () => {
+        await useCases.joinRoom(code, 'Pedro');
+      });
+    }
+
+    const totalPlayers = harness.getState().room!.players.length;
+    expect(harness.getState().aliveCount).toBe(totalPlayers);
+    expect(harness.getState().eliminatedCount).toBe(0);
+
+    await act(async () => {
+      await harness
+        .getActions()
+        .handleStartMatch([
+          'detetive',
+          'assassino',
+          'anjo',
+          'cidadao',
+          'cidadao',
+          'cidadao',
+        ]);
+    });
+    await act(async () => {
+      await harness.getActions().handleConfirmRoleReady(true);
+    });
+
+    expect(harness.getState().room?.phase).toBe('night_assassin');
+    expect(harness.getState().phaseTimeline).toEqual([
+      { id: 'night', label: 'Noite', isActive: true, isCompleted: false },
+      { id: 'dawn', label: 'Amanhecer', isActive: false, isCompleted: false },
+      { id: 'debate', label: 'Debate', isActive: false, isCompleted: false },
+      { id: 'voting', label: 'Votação', isActive: false, isCompleted: false },
+    ]);
+
+    const detective = harness.getState().room!.players[0];
+    const assassin = harness.getState().room!.players[1];
+    const angel = harness.getState().room!.players[2];
+    const citizen = harness.getState().room!.players[3];
+    await act(async () => {
+      const roomId = harness.getState().room!.id;
+      await useCases.submitAssassinTarget(roomId, assassin.id, citizen.id);
+      await useCases.autoAdvanceNightTurn(roomId, 'night_assassin', 1);
+      await useCases.submitAngelProtection(roomId, angel.id, detective.id);
+      await useCases.autoAdvanceNightTurn(roomId, 'night_angel', 1);
+      await useCases.submitDetectiveInvestigation(roomId, detective.id, assassin.id);
+      await useCases.advanceToDawn(roomId);
+    });
+
+    expect(harness.getState().room?.phase).toBe('day_debate');
+    expect(harness.getState().aliveCount).toBe(totalPlayers - 1);
+    expect(harness.getState().eliminatedCount).toBe(1);
+    expect(harness.getState().phaseTimeline).toEqual([
+      { id: 'night', label: 'Noite', isActive: false, isCompleted: true },
+      { id: 'dawn', label: 'Amanhecer', isActive: false, isCompleted: true },
+      { id: 'debate', label: 'Debate', isActive: true, isCompleted: false },
+      { id: 'voting', label: 'Votação', isActive: false, isCompleted: false },
+    ]);
+
+    await act(async () => {
+      await harness.getActions().handleStartVotingPhase();
+    });
+    expect(harness.getState().phaseTimeline[3]).toEqual({
+      id: 'voting',
+      label: 'Votação',
+      isActive: true,
+      isCompleted: false,
+    });
+
+    harness.unmount();
+  });
 });

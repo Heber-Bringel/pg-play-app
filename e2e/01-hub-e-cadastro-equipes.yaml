@@ -1,0 +1,14 @@
+appId: br.edu.ifpi.pgplay
+---
+- launchApp:
+    clearState: true
+- assertVisible: "PG PLAY"
+- assertVisible: "Mímica Expressiva"
+- tapOn: "Configurar Equipes"
+- assertVisible: "Configuração de Equipes"
+- tapOn: "Nome da Equipe"
+- inputText: "Atletas de Cristo"
+- tapOn: "Adicionar Equipe"
+- assertVisible: "Atletas de Cristo"
+- tapOn: "Voltar"
+- assertVisible: "PG PLAY"

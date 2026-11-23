@@ -1,6 +1,6 @@
 import React from 'react';
 import renderer, { act } from 'react-test-renderer';
-import { StyleSheet } from 'react-native';
+import { Animated, StyleSheet } from 'react-native';
 import { SelectableOptionItem } from '@/view/components/selectableOptionItem';
 import { setInputModalityForTest } from '@/view/components/useKeyboardFocus';
 import { darkTokens, tokens } from '@/view/theme';
@@ -135,5 +135,22 @@ describe('SelectableOptionItem (item-selecionavel.md + DS v1.1.0)', () => {
     const flatStyle = StyleSheet.flatten(pressable.props.style);
     expect(flatStyle.backgroundColor).toBe(tokens.component.option.bg.error);
     expect(flatStyle.borderColor).toBe(tokens.component.option.border.error);
+  });
+
+  it('não dispara Animated.spring quando reduceMotion=true (RNF09)', () => {
+    const springSpy = jest.spyOn(Animated, 'spring');
+    act(() => {
+      renderer.create(
+        <SelectableOptionItem
+          index={1}
+          label="Lucas"
+          selected
+          reduceMotion
+          onPress={jest.fn()}
+        />
+      );
+    });
+    expect(springSpy).not.toHaveBeenCalled();
+    springSpy.mockRestore();
   });
 });
