@@ -8,7 +8,8 @@ export type MinigameRoute =
   | '/forca'
   | '/adedonha'
   | '/cidade-dorme'
-  | '/versiculo';
+  | '/versiculo'
+  | '/quem-sou-eu';
 
 export type MinigameIconName =
   | 'drama-masks'
@@ -16,7 +17,8 @@ export type MinigameIconName =
   | 'alphabetical-variant'
   | 'format-list-checks'
   | 'weather-night'
-  | 'book-open-variant';
+  | 'book-open-variant'
+  | 'account-question-outline';
 
 export type Minigame = {
   id: string;

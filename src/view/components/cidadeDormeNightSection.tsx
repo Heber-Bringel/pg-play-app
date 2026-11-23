@@ -17,8 +17,11 @@ export type CidadeDormeNightSectionProps = {
   currentPlayer: CidadeDormePlayer | null;
   selectedNightTargetId: string | null;
   hasSubmittedNightAction?: boolean;
+  isNightCardRevealed?: boolean;
   secondsRemaining: number;
   reduceMotion?: boolean;
+  onToggleNightCardVisibility?: () => void;
+  onHideNightCard?: () => void;
   onSelectNightTarget: (targetPlayerId: string) => void;
   onConfirmAssassinTarget: () => Promise<void>;
   onConfirmAngelProtection: () => Promise<void>;
@@ -30,8 +33,11 @@ export const CidadeDormeNightSection = ({
   currentPlayer,
   selectedNightTargetId,
   hasSubmittedNightAction = false,
+  isNightCardRevealed = false,
   secondsRemaining,
   reduceMotion = false,
+  onToggleNightCardVisibility,
+  onHideNightCard,
   onSelectNightTarget,
   onConfirmAssassinTarget,
   onConfirmAngelProtection,
@@ -183,7 +189,32 @@ export const CidadeDormeNightSection = ({
         themeMode="dark"
       />
 
-      {hasVerdictThisRound && room.detectiveVerdict ? (
+      {!isAlive || !isNightCardRevealed ? (
+        <View style={styles.sleepingCard}>
+          <MaterialCommunityIcons
+            name="sleep"
+            size={activeTokens.semantic.icon.lg}
+            color={activeTokens.semantic.color.onSurface}
+          />
+          <Text allowFontScaling style={styles.sleepingTitle}>
+            A Cidade Dorme... Mantenha os olhos fechados
+          </Text>
+          <Text allowFontScaling style={styles.sleepingSubtitle}>
+            Aguarde o Narrador conduzir os turnos noturnos até o amanhecer.
+          </Text>
+          {isAlive && (
+            <ExpressiveButton
+              label="Tocar para Consultar Turno"
+              variant="tonal"
+              icon="eye-outline"
+              themeMode="dark"
+              onPress={() => {
+                onToggleNightCardVisibility?.();
+              }}
+            />
+          )}
+        </View>
+      ) : hasVerdictThisRound && room.detectiveVerdict ? (
         <View
           style={[
             styles.verdictCard,
@@ -261,6 +292,15 @@ export const CidadeDormeNightSection = ({
               Investigação concluída — aguarde o término do cronômetro para o amanhecer.
             </Text>
           </View>
+          <ExpressiveButton
+            label="Ocultar Tela Noturna"
+            variant="outlined"
+            icon="eye-off-outline"
+            themeMode="dark"
+            onPress={() => {
+              (onHideNightCard ?? onToggleNightCardVisibility)?.();
+            }}
+          />
         </View>
       ) : isMyActiveTurn ? (
         <View style={styles.nightCard}>
@@ -309,20 +349,39 @@ export const CidadeDormeNightSection = ({
               void handleConfirmNightAction();
             }}
           />
+
+          <ExpressiveButton
+            label="Ocultar Tela Noturna"
+            variant="outlined"
+            icon="eye-off-outline"
+            themeMode="dark"
+            onPress={() => {
+              (onHideNightCard ?? onToggleNightCardVisibility)?.();
+            }}
+          />
         </View>
       ) : (
         <View style={styles.sleepingCard}>
           <MaterialCommunityIcons
-            name="sleep"
+            name="eye-off-outline"
             size={activeTokens.semantic.icon.lg}
             color={activeTokens.semantic.color.onSurface}
           />
           <Text allowFontScaling style={styles.sleepingTitle}>
-            A Cidade Dorme... Mantenha os olhos fechados
+            Não é seu turno de ação — mantenha os olhos fechados
           </Text>
           <Text allowFontScaling style={styles.sleepingSubtitle}>
-            Aguarde o Narrador conduzir os turnos noturnos até o amanhecer.
+            Oculte a tela para manter o sigilo da rodada na mesa.
           </Text>
+          <ExpressiveButton
+            label="Ocultar Tela Noturna"
+            variant="outlined"
+            icon="eye-off-outline"
+            themeMode="dark"
+            onPress={() => {
+              (onHideNightCard ?? onToggleNightCardVisibility)?.();
+            }}
+          />
         </View>
       )}
     </View>
@@ -379,6 +438,8 @@ const createStyles = (activeTokens: AppTokens) => {
       alignItems: 'center',
     },
     nightCard: {
+      minHeight: space['3xl'] * 4,
+      justifyContent: 'center',
       backgroundColor: card.bg,
       borderColor: card.border,
       borderWidth: border.thin,
@@ -398,6 +459,8 @@ const createStyles = (activeTokens: AppTokens) => {
       gap: space.sm,
     },
     verdictCard: {
+      minHeight: space['3xl'] * 4,
+      justifyContent: 'center',
       padding: card.padding,
       borderWidth: border.focus,
       gap: space.md,
@@ -465,6 +528,8 @@ const createStyles = (activeTokens: AppTokens) => {
       color: banner.info.text,
     },
     sleepingCard: {
+      minHeight: space['3xl'] * 4,
+      justifyContent: 'center',
       backgroundColor: card.bg,
       borderColor: card.border,
       borderWidth: border.thin,

@@ -27,6 +27,9 @@ module.exports = {
     '^@expo/vector-icons$': '<rootDir>/tests/__mocks__/expo-vector-icons.tsx',
     '^expo-router$': '<rootDir>/tests/__mocks__/expo-router.ts',
     '^expo-speech$': '<rootDir>/tests/__mocks__/expo-speech.ts',
+    '^expo-sensors$': '<rootDir>/tests/__mocks__/expo-sensors.ts',
+    '^expo-screen-orientation$': '<rootDir>/tests/__mocks__/expo-screen-orientation.ts',
+    '^expo-haptics$': '<rootDir>/tests/__mocks__/expo-haptics.ts',
   },
   collectCoverageFrom: [
     'src/view/theme.ts',

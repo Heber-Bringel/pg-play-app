@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { CidadeDormePlayer } from '@/model/entities/multiplayerSession';
-import { darkTokens, tokens, type ThemeMode } from '@/view/theme';
+import { tokens, useTheme, type ThemeMode } from '@/view/theme';
 
 export type CidadeDormeCityPanelProgress = {
   label: string;
@@ -19,15 +19,24 @@ export type CidadeDormeCityPanelProps = {
   progress?: CidadeDormeCityPanelProgress | null;
 };
 
+export function getAvatarInitials(nickname: string): string {
+  const words = nickname.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return '?';
+  if (words.length >= 2) {
+    return `${words[0].charAt(0)}${words[1].charAt(0)}`.toUpperCase();
+  }
+  return words[0].slice(0, 2).toUpperCase();
+}
+
 export const CidadeDormeCityPanel = ({
   players,
   aliveCount,
   eliminatedCount,
-  themeMode = 'light',
+  themeMode,
   reduceMotion = false,
   progress = null,
 }: CidadeDormeCityPanelProps) => {
-  const activeTokens = themeMode === 'dark' ? darkTokens : tokens;
+  const activeTokens = useTheme(themeMode);
   const safeTotal = progress && progress.total > 0 ? progress.total : 1;
   const targetRatio = progress
     ? Math.min(1, Math.max(0, progress.current / safeTotal))
@@ -125,7 +134,7 @@ export const CidadeDormeCityPanel = ({
 
       <View style={styles.avatarGrid}>
         {players.map((player) => {
-          const initial = player.nickname.trim().charAt(0).toUpperCase() || '?';
+          const initial = getAvatarInitials(player.nickname);
           const isAlive = player.isAlive;
 
           return (
