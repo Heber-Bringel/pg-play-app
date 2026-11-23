@@ -1,9 +1,16 @@
 import React from 'react';
-import { AccessibilityInfo, Animated } from 'react-native';
+import { AccessibilityInfo, Animated, StyleSheet, useColorScheme } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 import CidadeDormeRoute from '@/app/cidade-dorme';
 import type { CidadeDormeRoom } from '@/model/entities/multiplayerSession';
 import CidadeDormeScreen from '@/view/cidade-dorme';
+import {
+  darkTokens,
+  ThemeProvider,
+  tokens,
+  useTheme,
+  type AppTokens,
+} from '@/view/theme';
 import * as cidadeDormeVmModule from '@/viewmodel/useCidadeDormeViewModel';
 import type {
   CidadeDormeActions,
@@ -150,6 +157,7 @@ const baseState: CidadeDormeState = {
 describe('CidadeDormeScreen — Testes de Tela com Mocks de ViewModel (UC07)', () => {
   afterEach(() => {
     jest.restoreAllMocks();
+    (useColorScheme as jest.Mock).mockReturnValue('light');
   });
 
   it('deve reexportar a tela corretamente na rota fina src/app/cidade-dorme.tsx', () => {
@@ -1029,5 +1037,200 @@ describe('CidadeDormeScreen — Testes de Tela com Mocks de ViewModel (UC07)', (
       title: 'Resultado da Votação · Ana Eliminado',
     } as any);
     expect(voteResultCard.props.icon).toBe('vote-outline');
+  });
+
+  it('força modo claro fora da Noite e modo escuro na Noite mesmo com sistema em dark, mantendo entrada e retorno ao sistema em dark', () => {
+    (useColorScheme as jest.Mock).mockReturnValue('dark');
+    const actions = createMockActions();
+    const vmSpy = jest.spyOn(cidadeDormeVmModule, 'useCidadeDormeViewModel');
+
+    let observedRootTokens!: AppTokens;
+    const RootProbe = () => {
+      observedRootTokens = useTheme();
+      return null;
+    };
+
+    const renderWithRoot = (
+      showScreen: boolean,
+      treeRef?: renderer.ReactTestRenderer
+    ): renderer.ReactTestRenderer => {
+      const element = (
+        <ThemeProvider>
+          <RootProbe />
+          {showScreen ? <CidadeDormeScreen /> : null}
+        </ThemeProvider>
+      );
+      if (treeRef) {
+        act(() => {
+          treeRef.update(element);
+        });
+        return treeRef;
+      }
+      let created!: renderer.ReactTestRenderer;
+      act(() => {
+        created = renderer.create(element);
+      });
+      return created;
+    };
+
+    // 1. Entrada (room: null) acompanha o sistema operacional em modo escuro
+    vmSpy.mockReturnValue([{ ...baseState, room: null }, actions]);
+    const entryTree = renderWithRoot(true);
+    expect(observedRootTokens).toBe(darkTokens);
+    const entryScroll = entryTree.root.findByType('ScrollView' as any);
+    expect(StyleSheet.flatten(entryScroll.props.style).backgroundColor).toBe(
+      darkTokens.semantic.color.surface
+    );
+    const entryCard = entryTree.root.findByProps({
+      accessibilityRole: 'summary',
+    } as any);
+    expect(StyleSheet.flatten(entryCard.props.style).backgroundColor).toBe(
+      darkTokens.component.card.bg
+    );
+
+    // 2. Todas as fases fora da Noite forçam modo claro (tokens) na sala e no ThemeProvider raiz
+    const nonNightPhases: CidadeDormeRoom['phase'][] = [
+      'lobby',
+      'role_reveal',
+      'day_debate',
+      'day_voting',
+      'vote_result',
+      'finished',
+    ];
+    for (const phase of nonNightPhases) {
+      const roomForPhase: CidadeDormeRoom = {
+        ...baseRoom,
+        phase,
+        dawnReport:
+          phase === 'day_debate'
+            ? {
+                roundNumber: 1,
+                attackedPlayerId: 'cd-player-4',
+                attackedNickname: 'Beatriz',
+                eliminatedPlayerId: null,
+                eliminatedNickname: null,
+                eliminatedRole: null,
+                savedByAngel: true,
+              }
+            : null,
+        voteReport:
+          phase === 'vote_result'
+            ? {
+                roundNumber: 1,
+                eliminatedPlayerId: null,
+                eliminatedNickname: null,
+                eliminatedRole: null,
+                tieOrSkipped: true,
+                voteCounts: {},
+                skipCount: 2,
+              }
+            : null,
+        winner: phase === 'finished' ? 'cidade' : null,
+      };
+      vmSpy.mockReturnValue([
+        {
+          ...baseState,
+          isNightPhase: false,
+          room: roomForPhase,
+        },
+        actions,
+      ]);
+
+      const phaseTree = renderWithRoot(true);
+      expect(observedRootTokens).toBe(tokens);
+      const animatedRootView = phaseTree.root.findAllByType('View' as any)[0];
+      expect(
+        StyleSheet.flatten(animatedRootView.props.style).backgroundColor
+      ).toBe(tokens.semantic.color.surface);
+
+      const summaryCards = phaseTree.root.findAllByProps({
+        accessibilityRole: 'summary',
+      } as any);
+      if (summaryCards.length > 0) {
+        expect(
+          StyleSheet.flatten(summaryCards[0].props.style).backgroundColor
+        ).toBe(tokens.component.card.bg);
+      }
+
+      if (phase === 'day_debate') {
+        const timeline = phaseTree.root.findByProps({
+          accessibilityLabel: 'Linha do tempo da partida, Dia 1',
+        } as any);
+        expect(StyleSheet.flatten(timeline.props.style).backgroundColor).toBe(
+          tokens.component.card.bg
+        );
+        const cityPanelText = phaseTree.root.findByProps({
+          children: 'Vivos 5 · Eliminados 0',
+        } as any);
+        expect(StyleSheet.flatten(cityPanelText.props.style).color).toBe(
+          tokens.semantic.color.onSurface
+        );
+      }
+    }
+
+    // 3. Transição contínua na mesma montagem sob sistema 'dark':
+    // lobby (light) -> night_assassin (dark) -> day_debate (light) -> night_angel (dark) -> finished (light)
+    const sequence: Array<{
+      phase: CidadeDormeRoom['phase'];
+      isNightPhase: boolean;
+      expectedTokens: AppTokens;
+    }> = [
+      { phase: 'lobby', isNightPhase: false, expectedTokens: tokens },
+      { phase: 'night_assassin', isNightPhase: true, expectedTokens: darkTokens },
+      { phase: 'day_debate', isNightPhase: false, expectedTokens: tokens },
+      { phase: 'night_angel', isNightPhase: true, expectedTokens: darkTokens },
+      { phase: 'finished', isNightPhase: false, expectedTokens: tokens },
+    ];
+
+    let transitionTree: renderer.ReactTestRenderer | undefined;
+    for (const step of sequence) {
+      vmSpy.mockReturnValue([
+        {
+          ...baseState,
+          reduceMotion: true,
+          isNightPhase: step.isNightPhase,
+          room: {
+            ...baseRoom,
+            phase: step.phase,
+            winner: step.phase === 'finished' ? 'cidade' : null,
+          },
+        },
+        actions,
+      ]);
+
+      transitionTree = renderWithRoot(true, transitionTree);
+      expect(observedRootTokens).toBe(step.expectedTokens);
+
+      const animatedRootView = transitionTree.root.findAllByType('View' as any)[0];
+      expect(
+        StyleSheet.flatten(animatedRootView.props.style).backgroundColor
+      ).toBe(step.expectedTokens.semantic.color.surface);
+
+      if (step.phase === 'night_assassin' || step.phase === 'night_angel') {
+        const timeline = transitionTree.root.findByProps({
+          accessibilityLabel: 'Linha do tempo da partida, Noite 1',
+        } as any);
+        expect(StyleSheet.flatten(timeline.props.style).backgroundColor).toBe(
+          darkTokens.component.card.bg
+        );
+        expect(StyleSheet.flatten(timeline.props.style).borderColor).toBe(
+          darkTokens.semantic.color.outline
+        );
+      } else if (step.phase === 'day_debate') {
+        const timeline = transitionTree.root.findByProps({
+          accessibilityLabel: 'Linha do tempo da partida, Dia 1',
+        } as any);
+        expect(StyleSheet.flatten(timeline.props.style).backgroundColor).toBe(
+          tokens.component.card.bg
+        );
+        expect(StyleSheet.flatten(timeline.props.style).borderColor).toBe(
+          tokens.semantic.color.outline
+        );
+      }
+    }
+
+    // 4. Ao sair/desmontar a tela do Cidade Dorme, o ThemeProvider raiz volta para 'dark' (sistema)
+    renderWithRoot(false, transitionTree);
+    expect(observedRootTokens).toBe(darkTokens);
   });
 });
