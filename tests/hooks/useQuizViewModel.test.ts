@@ -7,6 +7,7 @@ import { PgPlayUseCases } from '@/usecase/pgPlayUseCases';
 import {
   useQuizViewModel,
   type QuizActions,
+  type QuizQuestionCountOption,
   type QuizState,
 } from '@/viewmodel/useQuizViewModel';
 import { mockPush, mockReplace } from '../__mocks__/expo-router';
@@ -64,6 +65,8 @@ describe('useQuizViewModel — Hook da Arena de Quiz Relâmpago (UC04)', () => {
     expect(state.totalQuestions).toBe(10);
     expect(state.questionsPerTeam).toBe(5);
     expect(state.configuredQuestionCount).toBe(10);
+    // O pacote padrão tem 12 perguntas: 15 não é oferecido.
+    expect(state.availableQuestionCounts).toEqual([5, 10]);
     expect(state.questionCountNotice).toBeNull();
     expect(state.currentQuestion).toBeDefined();
 
@@ -325,6 +328,71 @@ describe('useQuizViewModel — Hook da Arena de Quiz Relâmpago (UC04)', () => {
       harness.getActions().handleGoToScoreboard();
     });
     expect(mockPush).toHaveBeenCalledWith('/scoreboard');
+
+    harness.unmount();
+  });
+
+  it('deve sinalizar isLastQuestion apenas na última pergunta configurada', async () => {
+    const useCases = new PgPlayUseCases(
+      new MemoryTeamDataSource(),
+      new MemoryGameCatalogDataSource(),
+      new MemoryMatchSettingsDataSource()
+    );
+    const harness = createHookHarness(useCases);
+    await harness.mount();
+
+    // 5 perguntas com 2 equipes viram 4 (alternância justa).
+    await act(async () => {
+      await harness.getActions().handleSelectQuestionCount(5);
+    });
+    expect(harness.getState().totalQuestions).toBe(4);
+
+    for (let i = 0; i < 3; i += 1) {
+      expect(harness.getState().isLastQuestion).toBe(false);
+      act(() => {
+        harness.getActions().handleNextQuestion();
+      });
+    }
+    expect(harness.getState().currentQuestionIndex).toBe(3);
+    expect(harness.getState().isLastQuestion).toBe(true);
+
+    act(() => {
+      harness.getActions().handleNextQuestion();
+    });
+    expect(harness.getState().phase).toBe('finished');
+
+    harness.unmount();
+  });
+
+  it('deve marcar o chip na hora e voltar ao valor salvo quando o UseCase rejeitar', async () => {
+    const useCases = new PgPlayUseCases(
+      new MemoryTeamDataSource(),
+      new MemoryGameCatalogDataSource(),
+      new MemoryMatchSettingsDataSource()
+    );
+    const harness = createHookHarness(useCases);
+    await harness.mount();
+
+    let pending!: Promise<void>;
+    act(() => {
+      pending = harness.getActions().handleSelectDuration(30);
+    });
+    // Atualização otimista: o chip já aparece selecionado antes da gravação.
+    expect(harness.getState().turnDurationSeconds).toBe(30);
+    await act(async () => {
+      await pending;
+    });
+
+    await act(async () => {
+      await harness
+        .getActions()
+        .handleSelectQuestionCount(25 as QuizQuestionCountOption);
+    });
+    expect(harness.getState().error).toBe(
+      'A quantidade de perguntas do Quiz deve ser 5, 10 ou 15.'
+    );
+    expect(harness.getState().configuredQuestionCount).toBe(10);
+    expect(harness.getState().turnDurationSeconds).toBe(30);
 
     harness.unmount();
   });
