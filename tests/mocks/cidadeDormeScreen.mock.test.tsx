@@ -18,6 +18,8 @@ const createMockActions = (): CidadeDormeActions => ({
   handleStartMatch: jest.fn(async () => {}),
   handleToggleRoleVisibility: jest.fn(),
   handleConfirmRoleReady: jest.fn(async () => {}),
+  handleToggleNightCardVisibility: jest.fn(),
+  handleHideNightCard: jest.fn(),
   handleSelectNightTarget: jest.fn(),
   handleConfirmAssassinTarget: jest.fn(async () => {}),
   handleConfirmAngelProtection: jest.fn(async () => {}),
@@ -126,6 +128,7 @@ const baseState: CidadeDormeState = {
   isRealtimeEnabled: false,
   isNightPhase: false,
   isRoleVisible: false,
+  isNightCardRevealed: false,
   hasSubmittedNightAction: false,
   selectedNightTargetId: 'cd-player-2',
   selectedVoteTargetId: 'cd-player-2',
@@ -282,6 +285,7 @@ describe('CidadeDormeScreen — Testes de Tela com Mocks de ViewModel (UC07)', (
         {
           ...baseState,
           isNightPhase: true,
+          isNightCardRevealed: true,
           room: {
             ...baseRoom,
             phase: 'night_detective',
@@ -581,6 +585,7 @@ describe('CidadeDormeScreen — Testes de Tela com Mocks de ViewModel (UC07)', (
         {
           ...baseState,
           isNightPhase: true,
+          isNightCardRevealed: true,
           isCurrentPlayerHost: false,
           hasSubmittedNightAction: true,
           currentPlayerId: 'cd-player-2',
@@ -814,5 +819,137 @@ describe('CidadeDormeScreen — Testes de Tela com Mocks de ViewModel (UC07)', (
     expect(actions.handleSetReduceMotion).toHaveBeenCalledWith(true);
     expect(springSpy).not.toHaveBeenCalled();
     expect(timingSpy).not.toHaveBeenCalled();
+  });
+
+  it('deve garantir paridade visual estrita à noite antes do toque (RNF11, Issue #66)', () => {
+    const actions = createMockActions();
+    const nightTimeline = [
+      { id: 'night' as const, label: 'Noite', isActive: true, isCompleted: false },
+      { id: 'dawn' as const, label: 'Amanhecer', isActive: false, isCompleted: false },
+      { id: 'debate' as const, label: 'Debate', isActive: false, isCompleted: false },
+      { id: 'voting' as const, label: 'Votação', isActive: false, isCompleted: false },
+    ];
+
+    const nightPhases: Array<{
+      phase: CidadeDormeRoom['phase'];
+      actorIndex: number;
+    }> = [
+      { phase: 'night_assassin', actorIndex: 1 },
+      { phase: 'night_angel', actorIndex: 2 },
+      { phase: 'night_detective', actorIndex: 0 },
+    ];
+
+    for (const scenario of nightPhases) {
+      const nightRoom: CidadeDormeRoom = {
+        ...baseRoom,
+        phase: scenario.phase,
+        currentRound: 2,
+      };
+      const actor = nightRoom.players[scenario.actorIndex];
+      const sleeper = nightRoom.players[3];
+
+      jest
+        .spyOn(cidadeDormeVmModule, 'useCidadeDormeViewModel')
+        .mockReturnValue([
+          {
+            ...baseState,
+            isNightPhase: true,
+            isNightCardRevealed: false,
+            isCurrentPlayerHost: actor.isHost,
+            currentPlayerId: actor.id,
+            currentPlayer: actor,
+            phaseTimeline: nightTimeline,
+            room: nightRoom,
+          },
+          actions,
+        ]);
+      let actorTree!: renderer.ReactTestRenderer;
+      act(() => {
+        actorTree = renderer.create(<CidadeDormeScreen />);
+      });
+
+      jest
+        .spyOn(cidadeDormeVmModule, 'useCidadeDormeViewModel')
+        .mockReturnValue([
+          {
+            ...baseState,
+            isNightPhase: true,
+            isNightCardRevealed: false,
+            isCurrentPlayerHost: sleeper.isHost,
+            currentPlayerId: sleeper.id,
+            currentPlayer: sleeper,
+            phaseTimeline: nightTimeline,
+            room: nightRoom,
+          },
+          actions,
+        ]);
+      let sleeperTree!: renderer.ReactTestRenderer;
+      act(() => {
+        sleeperTree = renderer.create(<CidadeDormeScreen />);
+      });
+
+      // Antes de qualquer interação, a árvore renderizada de quem age e de quem dorme deve ser idêntica
+      expect(JSON.stringify(actorTree.toJSON())).toEqual(
+        JSON.stringify(sleeperTree.toJSON())
+      );
+    }
+
+    // Toque em "Tocar para Consultar Turno" dispara handleToggleNightCardVisibility
+    jest
+      .spyOn(cidadeDormeVmModule, 'useCidadeDormeViewModel')
+      .mockReturnValue([
+        {
+          ...baseState,
+          isNightPhase: true,
+          isNightCardRevealed: false,
+          currentPlayerId: baseRoom.players[3].id,
+          currentPlayer: baseRoom.players[3],
+          room: { ...baseRoom, phase: 'night_assassin' },
+        },
+        actions,
+      ]);
+    let beforeTapTree!: renderer.ReactTestRenderer;
+    act(() => {
+      beforeTapTree = renderer.create(<CidadeDormeScreen />);
+    });
+    const consultBtn = beforeTapTree.root.findByProps({
+      accessibilityLabel: 'Tocar para Consultar Turno',
+    } as any);
+    act(() => {
+      consultBtn.props.onPress();
+    });
+    expect(actions.handleToggleNightCardVisibility).toHaveBeenCalledTimes(1);
+
+    // Quem dorme ao tocar vê aviso neutro + botão Ocultar Tela Noturna
+    jest
+      .spyOn(cidadeDormeVmModule, 'useCidadeDormeViewModel')
+      .mockReturnValue([
+        {
+          ...baseState,
+          isNightPhase: true,
+          isNightCardRevealed: true,
+          currentPlayerId: baseRoom.players[3].id,
+          currentPlayer: baseRoom.players[3],
+          room: { ...baseRoom, phase: 'night_assassin' },
+        },
+        actions,
+      ]);
+    let sleeperRevealedTree!: renderer.ReactTestRenderer;
+    act(() => {
+      sleeperRevealedTree = renderer.create(<CidadeDormeScreen />);
+    });
+    const revealedTexts = sleeperRevealedTree.root
+      .findAllByType('Text' as any)
+      .map((t) => t.props.children);
+    expect(revealedTexts).toContain(
+      'Não é seu turno de ação — mantenha os olhos fechados'
+    );
+    const hideBtn = sleeperRevealedTree.root.findByProps({
+      accessibilityLabel: 'Ocultar Tela Noturna',
+    } as any);
+    act(() => {
+      hideBtn.props.onPress();
+    });
+    expect(actions.handleHideNightCard).toHaveBeenCalledTimes(1);
   });
 });
