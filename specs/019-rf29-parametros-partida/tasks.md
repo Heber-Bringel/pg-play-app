@@ -50,6 +50,14 @@
 - [x] **T018** Alinhar padrões às docs dos jogos (Quiz `10` perguntas, Forca `6` tentativas) e documentar a alternância justa em `docs/jogos/quiz-relampago.md`
 - [x] **T019** Atualizar a branch com a `develop` (`08f31e1`) e resolver o conflito em `src/di/container.ts`
 
+## Fase 5c: Ajustes da revisão no navegador
+
+- [x] **T020** `AsyncStorageMatchSettingsDataSource`: JSON corrompido ou fora do formato volta aos padrões em vez de bloquear Mímica, Quiz e Forca; falhas reais de leitura/gravação seguem como `DataSourceError` com mensagem em português
+- [x] **T021** Quiz: `isLastQuestion` na ViewModel e botão "Ver Resultado" (`flag-checkered`) na última pergunta, como na Mímica
+- [x] **T022** Chips de parâmetros com atualização otimista nas três ViewModels; se o `UseCase` rejeitar, o valor volta ao que está salvo
+- [x] **T023** Estados iniciais das ViewModels lidos de `DEFAULT_MATCH_SETTINGS` (sem `20`, `60` e `3` fixos)
+- [x] **T024** `listAvailableQuizQuestionCounts` no `UseCase`: chips de quantidade de perguntas acima do tamanho do pacote ficam desativados (a menor opção e a quantidade já salva continuam visíveis)
+
 ## Fase 6: Verificação e PR
 
 - [x] **T011** Executar `npm run check` e confirmar **0 violações**

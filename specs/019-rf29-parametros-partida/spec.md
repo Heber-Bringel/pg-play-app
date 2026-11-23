@@ -42,6 +42,7 @@ O sistema deve validar os parâmetros no `UseCase` e lembrar a última configura
 - Quando o Quiz configura `10` ou `15` perguntas, mas o banco possui menos perguntas disponíveis, a partida encerra de forma limpa ao esgotar as perguntas disponíveis (`RF12`).
 - Os padrões seguem as docs dos jogos (`docs/jogos/`): Mímica `60s` e `3` rodadas, Quiz `20s` e `10` perguntas, Forca `6` tentativas e `3` palavras.
 - **Alternância justa no Quiz:** as perguntas se alternam entre as equipes, então o total efetivo é arredondado para baixo até um múltiplo do número de equipes (ex.: `5` perguntas com `2` equipes viram `4`, `2` por equipe). Quando o total efetivo difere do escolhido, a tela mostra um aviso com o total e a quantidade por equipe, incluindo o caso em que o pacote tem menos perguntas.
+- Quantidades de perguntas maiores que o pacote atual ficam desativadas nos chips do Quiz (`listAvailableQuizQuestionCounts`). A menor opção (`5`) fica sempre disponível, e uma quantidade já salva continua marcada, com o aviso explicando o total efetivo.
 - Toques seguidos em chips diferentes não podem se sobrescrever: o `UseCase` grava só o campo alterado e serializa as gravações.
 - Valores inválidos encontrados no armazenamento (corrompidos ou de versão antiga) voltam ao padrão ao carregar.
 - Os chips de parâmetros só ficam editáveis antes do início efetivo da partida (turno 1 em `pass-turn`), evitando alteração no meio de uma partida em andamento.
