@@ -2,7 +2,11 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { pgPlayUseCases } from '@/di/container';
 import type { MimicaCard, MimicaCategory } from '@/model/entities/arenaChallenge';
-import type { MatchSettings, MimicaDurationOption } from '@/model/entities/matchSettings';
+import {
+  DEFAULT_MATCH_SETTINGS,
+  type MatchSettings,
+  type MimicaDurationOption,
+} from '@/model/entities/matchSettings';
 import type { Team } from '@/model/entities/team';
 import { DomainError } from '@/model/errors';
 import type { IPgPlayUseCases } from '@/usecase/iPgPlayUseCases';
@@ -69,9 +73,15 @@ export function useMimicaViewModel(
   const [teams, setTeams] = useState<Team[]>([]);
   const [currentTeamIndex, setCurrentTeamIndex] = useState<number>(0);
   const [currentRound, setCurrentRound] = useState<number>(1);
-  const [totalRounds, setTotalRounds] = useState<number>(3);
-  const [turnDurationSeconds, setTurnDurationSeconds] = useState<MimicaDurationOption>(60);
-  const [secondsRemaining, setSecondsRemaining] = useState<number>(60);
+  const [totalRounds, setTotalRounds] = useState<number>(
+    DEFAULT_MATCH_SETTINGS.mimica.totalRounds
+  );
+  const [turnDurationSeconds, setTurnDurationSeconds] = useState<MimicaDurationOption>(
+    DEFAULT_MATCH_SETTINGS.mimica.durationSeconds
+  );
+  const [secondsRemaining, setSecondsRemaining] = useState<number>(
+    DEFAULT_MATCH_SETTINGS.mimica.durationSeconds
+  );
   const [selectedCategories, setSelectedCategories] = useState<MimicaCategory[]>(ALL_MIMICA_CATEGORIES);
   const [freshDeck, setFreshDeck] = useState<MimicaCard[]>([]);
   const [skippedDeck, setSkippedDeck] = useState<MimicaCard[]>([]);
@@ -271,23 +281,38 @@ export function useMimicaViewModel(
     setPhase('pass-turn');
   }, [remainingCardsCount, currentTeamIndex, teams.length, turnDurationSeconds, currentRound, totalRounds]);
 
+  const applySettings = useCallback((changes: Partial<MatchSettings['mimica']>) => {
+    if (changes.totalRounds !== undefined) {
+      setTotalRounds(changes.totalRounds);
+    }
+    if (changes.durationSeconds !== undefined) {
+      setTurnDurationSeconds(changes.durationSeconds);
+      setSecondsRemaining(changes.durationSeconds);
+    }
+  }, []);
+
+  // O chip responde na hora; se o UseCase rejeitar, volta ao que está salvo.
   const saveSettings = useCallback(
     async (changes: Partial<MatchSettings['mimica']>) => {
       setError(null);
+      applySettings(changes);
       try {
-        const saved = await useCases.updateMimicaSettings(changes);
-        setTotalRounds(saved.mimica.totalRounds);
-        setTurnDurationSeconds(saved.mimica.durationSeconds);
-        setSecondsRemaining(saved.mimica.durationSeconds);
+        await useCases.updateMimicaSettings(changes);
       } catch (err: unknown) {
         if (err instanceof DomainError) {
           setError(err.message);
         } else {
           setError('Não foi possível salvar os parâmetros da partida.');
         }
+        try {
+          const stored = await useCases.getMatchSettings();
+          applySettings(stored.mimica);
+        } catch {
+          // Mantém a mensagem de erro original.
+        }
       }
     },
-    [useCases]
+    [applySettings, useCases]
   );
 
   const handleSelectDuration = useCallback(

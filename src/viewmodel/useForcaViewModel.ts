@@ -119,7 +119,9 @@ export function useForcaViewModel(
   const [teams, setTeams] = useState<Team[]>([]);
   const [currentTeamIndex, setCurrentTeamIndex] = useState<number>(0);
   const [currentRound, setCurrentRound] = useState<number>(1);
-  const [totalRounds, setTotalRounds] = useState<number>(3);
+  const [totalRounds, setTotalRounds] = useState<number>(
+    DEFAULT_MATCH_SETTINGS.forca.totalRounds
+  );
   const [maxAttempts, setMaxAttempts] = useState<ForcaAttemptsOption>(
     DEFAULT_MATCH_SETTINGS.forca.maxAttempts
   );
@@ -300,23 +302,38 @@ export function useForcaViewModel(
     totalRounds,
   ]);
 
+  const applySettings = useCallback((changes: Partial<MatchSettings['forca']>) => {
+    if (changes.maxAttempts !== undefined) {
+      setMaxAttempts(changes.maxAttempts);
+      setRemainingAttempts(changes.maxAttempts);
+    }
+    if (changes.totalRounds !== undefined) {
+      setTotalRounds(changes.totalRounds);
+    }
+  }, []);
+
+  // O chip responde na hora; se o UseCase rejeitar, volta ao que está salvo.
   const saveSettings = useCallback(
     async (changes: Partial<MatchSettings['forca']>) => {
       setError(null);
+      applySettings(changes);
       try {
-        const saved = await useCases.updateForcaSettings(changes);
-        setMaxAttempts(saved.forca.maxAttempts);
-        setRemainingAttempts(saved.forca.maxAttempts);
-        setTotalRounds(saved.forca.totalRounds);
+        await useCases.updateForcaSettings(changes);
       } catch (err: unknown) {
         if (err instanceof DomainError) {
           setError(err.message);
         } else {
           setError('Não foi possível salvar os parâmetros da partida.');
         }
+        try {
+          const stored = await useCases.getMatchSettings();
+          applySettings(stored.forca);
+        } catch {
+          // Mantém a mensagem de erro original.
+        }
       }
     },
-    [useCases]
+    [applySettings, useCases]
   );
 
   const handleSelectAttempts = useCallback(

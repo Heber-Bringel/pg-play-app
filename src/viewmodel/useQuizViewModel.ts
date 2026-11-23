@@ -33,8 +33,10 @@ export type QuizState = {
   currentTeam: Team | null;
   currentQuestionIndex: number;
   totalQuestions: number;
+  isLastQuestion: boolean;
   questionsPerTeam: number;
   configuredQuestionCount: QuizQuestionCountOption;
+  availableQuestionCounts: QuizQuestionCountOption[];
   questionCountNotice: string | null;
   currentQuestion: QuizQuestion | null;
   selectedOptionKey: QuizOptionKey | null;
@@ -75,8 +77,12 @@ export function useQuizViewModel(
   const [selectedOptionKey, setSelectedOptionKey] = useState<QuizOptionKey | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [turnScoreDelta, setTurnScoreDelta] = useState<number>(0);
-  const [turnDurationSeconds, setTurnDurationSeconds] = useState<QuizDurationOption>(20);
-  const [secondsRemaining, setSecondsRemaining] = useState<number>(20);
+  const [turnDurationSeconds, setTurnDurationSeconds] = useState<QuizDurationOption>(
+    DEFAULT_MATCH_SETTINGS.quiz.durationSeconds
+  );
+  const [secondsRemaining, setSecondsRemaining] = useState<number>(
+    DEFAULT_MATCH_SETTINGS.quiz.durationSeconds
+  );
   const [configuredQuestionCount, setConfiguredQuestionCount] =
     useState<QuizQuestionCountOption>(
       DEFAULT_MATCH_SETTINGS.quiz.questionCount
@@ -199,6 +205,8 @@ export function useQuizViewModel(
     teams.length
   );
   const totalQuestions = matchPlan.totalQuestions;
+  const availableQuestionCounts = useCase.listAvailableQuizQuestionCounts(questions.length);
+  const isLastQuestion = currentQuestionIndex + 1 >= totalQuestions;
 
   let questionCountNotice: string | null = null;
   if (questions.length > 0 && totalQuestions !== configuredQuestionCount) {
@@ -225,23 +233,38 @@ export function useQuizViewModel(
     setPhase('pass-turn');
   }, [currentQuestionIndex, teams.length, totalQuestions]);
 
+  const applySettings = useCallback((changes: Partial<QuizSettings>) => {
+    if (changes.durationSeconds !== undefined) {
+      setTurnDurationSeconds(changes.durationSeconds);
+      setSecondsRemaining(changes.durationSeconds);
+    }
+    if (changes.questionCount !== undefined) {
+      setConfiguredQuestionCount(changes.questionCount);
+    }
+  }, []);
+
+  // O chip responde na hora; se o UseCase rejeitar, volta ao que está salvo.
   const saveSettings = useCallback(
     async (changes: Partial<QuizSettings>) => {
       setError(null);
+      applySettings(changes);
       try {
-        const saved = await useCase.updateQuizSettings(changes);
-        setTurnDurationSeconds(saved.quiz.durationSeconds);
-        setSecondsRemaining(saved.quiz.durationSeconds);
-        setConfiguredQuestionCount(saved.quiz.questionCount);
+        await useCase.updateQuizSettings(changes);
       } catch (err: unknown) {
         if (err instanceof DomainError) {
           setError(err.message);
         } else {
           setError('Não foi possível salvar os parâmetros da partida.');
         }
+        try {
+          const stored = await useCase.getMatchSettings();
+          applySettings(stored.quiz);
+        } catch {
+          // Mantém a mensagem de erro original.
+        }
       }
     },
-    [useCase]
+    [applySettings, useCase]
   );
 
   const handleSelectDuration = useCallback(
@@ -282,8 +305,10 @@ export function useQuizViewModel(
     currentTeam,
     currentQuestionIndex,
     totalQuestions,
+    isLastQuestion,
     questionsPerTeam: matchPlan.questionsPerTeam,
     configuredQuestionCount,
+    availableQuestionCounts,
     questionCountNotice,
     currentQuestion,
     selectedOptionKey,
