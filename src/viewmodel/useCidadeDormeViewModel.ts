@@ -228,6 +228,8 @@ export function useCidadeDormeViewModel(
       if (lastPhaseKeyRef.current !== phaseKey) {
         lastPhaseKeyRef.current = phaseKey;
         autoAdvancedPhaseKeyRef.current = null;
+        clearNightHideTimeout();
+        setIsNightCardRevealed(false);
         setSelectedNightTargetId(null);
         setSelectedVoteTargetId(null);
         setHasSubmittedNightAction(false);
@@ -239,7 +241,7 @@ export function useCidadeDormeViewModel(
         setSecondsRemaining(computeSecondsRemaining(nextRoom));
       }
     },
-    []
+    [clearNightHideTimeout]
   );
 
   const acceptRoomSnapshot = useCallback(
@@ -259,9 +261,11 @@ export function useCidadeDormeViewModel(
         void useCase.leaveRoom(nextRoom.id, activeId).catch(() => {
           // Saída em best-effort para limpar linha órfã do jogador removido.
         });
+        clearNightHideTimeout();
         setRoom(null);
         setCurrentPlayerId(null);
         setIsRoleVisible(false);
+        setIsNightCardRevealed(false);
         setHasSubmittedNightAction(false);
         setSelectedNightTargetId(null);
         setSelectedVoteTargetId(null);
@@ -282,7 +286,7 @@ export function useCidadeDormeViewModel(
       setRoom(nextRoom);
       return true;
     },
-    [syncPhaseTimerAndSelection, useCase]
+    [clearNightHideTimeout, syncPhaseTimerAndSelection, useCase]
   );
 
   const applyRoomState = useCallback(
@@ -483,6 +487,16 @@ export function useCidadeDormeViewModel(
     [acceptRoomSnapshot, activePlayerId, room, useCase]
   );
 
+  const handleToggleNightCardVisibility = useCallback((): void => {
+    clearNightHideTimeout();
+    setIsNightCardRevealed((prev) => !prev);
+  }, [clearNightHideTimeout]);
+
+  const handleHideNightCard = useCallback((): void => {
+    clearNightHideTimeout();
+    setIsNightCardRevealed(false);
+  }, [clearNightHideTimeout]);
+
   const handleSelectNightTarget = useCallback(
     (targetPlayerId: string): void => {
       setError(null);
@@ -502,6 +516,8 @@ export function useCidadeDormeViewModel(
           activePlayerId,
           chosen
         );
+        clearNightHideTimeout();
+        setIsNightCardRevealed(false);
         setHasSubmittedNightAction(true);
         acceptRoomSnapshot(updated);
       } catch (err: unknown) {
@@ -512,7 +528,14 @@ export function useCidadeDormeViewModel(
         }
       }
     },
-    [acceptRoomSnapshot, activePlayerId, room, selectedNightTargetId, useCase]
+    [
+      acceptRoomSnapshot,
+      activePlayerId,
+      clearNightHideTimeout,
+      room,
+      selectedNightTargetId,
+      useCase,
+    ]
   );
 
   const handleConfirmAngelProtection = useCallback(
@@ -529,6 +552,8 @@ export function useCidadeDormeViewModel(
           activePlayerId,
           chosen
         );
+        clearNightHideTimeout();
+        setIsNightCardRevealed(false);
         setHasSubmittedNightAction(true);
         acceptRoomSnapshot(updated);
       } catch (err: unknown) {
@@ -539,7 +564,14 @@ export function useCidadeDormeViewModel(
         }
       }
     },
-    [acceptRoomSnapshot, activePlayerId, room, selectedNightTargetId, useCase]
+    [
+      acceptRoomSnapshot,
+      activePlayerId,
+      clearNightHideTimeout,
+      room,
+      selectedNightTargetId,
+      useCase,
+    ]
   );
 
   const handleConfirmDetectiveInvestigation = useCallback(
@@ -556,6 +588,19 @@ export function useCidadeDormeViewModel(
         );
         setHasSubmittedNightAction(true);
         acceptRoomSnapshot(updated);
+        setIsNightCardRevealed(true);
+        clearNightHideTimeout();
+        const timeoutId = setTimeout(() => {
+          activeTimeoutsRef.current.delete(timeoutId);
+          if (nightHideTimeoutRef.current === timeoutId) {
+            nightHideTimeoutRef.current = null;
+          }
+          if (isMountedRef.current) {
+            setIsNightCardRevealed(false);
+          }
+        }, NIGHT_VERDICT_AUTO_HIDE_MS);
+        nightHideTimeoutRef.current = timeoutId;
+        activeTimeoutsRef.current.add(timeoutId);
       } catch (err: unknown) {
         if (err instanceof DomainError) {
           setError(err.message);
@@ -564,7 +609,14 @@ export function useCidadeDormeViewModel(
         }
       }
     },
-    [acceptRoomSnapshot, activePlayerId, room, selectedNightTargetId, useCase]
+    [
+      acceptRoomSnapshot,
+      activePlayerId,
+      clearNightHideTimeout,
+      room,
+      selectedNightTargetId,
+      useCase,
+    ]
   );
 
   const handleAdvanceToDawn = useCallback(async (): Promise<void> => {
@@ -815,6 +867,7 @@ export function useCidadeDormeViewModel(
 
   const handleExitArena = useCallback((): void => {
     setConfirmingExit(false);
+    clearNightHideTimeout();
     lastSpokenKeyRef.current = null;
     lastPhaseKeyRef.current = null;
     autoAdvancedPhaseKeyRef.current = null;
@@ -833,11 +886,12 @@ export function useCidadeDormeViewModel(
     setCurrentPlayerId(null);
     setError(null);
     setIsRoleVisible(false);
+    setIsNightCardRevealed(false);
     setHasSubmittedNightAction(false);
     setSelectedNightTargetId(null);
     setSelectedVoteTargetId(null);
     router.replace('/');
-  }, [activePlayerId, room?.id, router, useCase]);
+  }, [activePlayerId, clearNightHideTimeout, room?.id, router, useCase]);
 
   const handleRetry = useCallback(async (): Promise<void> => {
     if (!room) {
@@ -884,6 +938,7 @@ export function useCidadeDormeViewModel(
     isRealtimeEnabled: isSupabaseMultiplayerEnabled,
     isNightPhase,
     isRoleVisible,
+    isNightCardRevealed,
     hasSubmittedNightAction,
     selectedNightTargetId,
     selectedVoteTargetId,
@@ -905,6 +960,8 @@ export function useCidadeDormeViewModel(
     handleStartMatch,
     handleToggleRoleVisibility,
     handleConfirmRoleReady,
+    handleToggleNightCardVisibility,
+    handleHideNightCard,
     handleSelectNightTarget,
     handleConfirmAssassinTarget,
     handleConfirmAngelProtection,
