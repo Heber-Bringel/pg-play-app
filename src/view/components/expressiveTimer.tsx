@@ -224,18 +224,6 @@ export const ExpressiveTimer = ({
             >
               {`${minutes}:${seconds}`}
             </Text>
-
-            <View style={styles.thermometerTrack}>
-              <View
-                style={[
-                  styles.thermometerFill,
-                  {
-                    width: `${fillPercent}%`,
-                    backgroundColor: fillBg,
-                  },
-                ]}
-              />
-            </View>
           </View>
         </View>
       </View>
@@ -379,18 +367,5 @@ const createStyles = (activeTokens: AppTokens) =>
       fontWeight: activeTokens.semantic.font.display.weight,
       lineHeight: activeTokens.semantic.font.display.lineHeight,
       color: activeTokens.semantic.color.onSurface,
-    },
-    thermometerTrack: {
-      width: '100%',
-      height: activeTokens.semantic.space.md,
-      borderRadius: activeTokens.semantic.radius.full,
-      borderWidth: activeTokens.semantic.border.thin,
-      borderColor: activeTokens.semantic.color.outline,
-      backgroundColor: activeTokens.semantic.color.surfaceVariant,
-      overflow: 'hidden',
-    },
-    thermometerFill: {
-      height: '100%',
-      borderRadius: activeTokens.semantic.radius.full,
     },
   });

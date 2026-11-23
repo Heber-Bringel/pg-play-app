@@ -107,6 +107,7 @@ describe('TermometroScreen — Testes de Tela com Mocks de ViewModel (UC11)', ()
         stage: 'setup',
         participantMode: 'custom',
         participants: ['Ana'],
+        confirmingExit: true,
         fieldError: 'Digite pelo menos 2 letras.',
         setupError: 'Adicione pelo menos 1 participante.',
       },
@@ -117,6 +118,14 @@ describe('TermometroScreen — Testes de Tela com Mocks de ViewModel (UC11)', ()
     act(() => {
       tree = renderer.create(<TermometroScreen />);
     });
+
+    // Issue #73: textos próprios do modal de saída no Termômetro
+    expect(
+      tree.root.findByProps({ accessibilityLabel: 'Voltar à Roda' } as any)
+    ).toBeDefined();
+    expect(
+      tree.root.findByProps({ accessibilityLabel: 'Sair e Descartar' } as any)
+    ).toBeDefined();
 
     // Rótulo sem prefixo duplicado "Modo Modo livre"
     const freeModeChip = tree.root.findByProps({

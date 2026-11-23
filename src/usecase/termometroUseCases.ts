@@ -1,4 +1,3 @@
-import type { ITeamDataSource } from '@/model/datasources/iTeamDataSource';
 import type {
   TermometroDurationMinutes,
   TermometroOrderMode,
@@ -59,10 +58,7 @@ export class TermometroUseCases implements ITermometroUseCases {
   private session: TermometroSession = createInitialSession();
   private customParticipants: string[] = [];
 
-  constructor(
-    private readonly _teamDataSource?: ITeamDataSource,
-    private readonly randomFn: () => number = Math.random
-  ) {}
+  constructor(private readonly randomFn: () => number = Math.random) {}
 
   private cloneSession(): TermometroSession {
     return {
@@ -125,6 +121,11 @@ export class TermometroUseCases implements ITermometroUseCases {
   }
 
   async addCustomParticipant(name: string): Promise<TermometroSession> {
+    if (this.session.stage !== 'setup') {
+      throw new ValidationError(
+        'Só é possível adicionar participantes durante a configuração da roda.'
+      );
+    }
     const cleanName = name.trim();
     if (cleanName.length < 2) {
       throw new ValidationError(
@@ -150,6 +151,11 @@ export class TermometroUseCases implements ITermometroUseCases {
   }
 
   async removeCustomParticipant(name: string): Promise<TermometroSession> {
+    if (this.session.stage !== 'setup') {
+      throw new ValidationError(
+        'Só é possível remover participantes durante a configuração da roda.'
+      );
+    }
     const cleanName = name.trim();
     if (!cleanName) {
       throw new ValidationError(

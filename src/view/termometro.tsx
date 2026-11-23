@@ -118,6 +118,8 @@ export const TermometroScreen = () => {
         visible={state.confirmingExit}
         title="Deseja encerrar o Termômetro de Pedidos?"
         description="A lista temporária de participantes será descartada ao sair."
+        cancelLabel="Voltar à Roda"
+        confirmLabel="Sair e Descartar"
         onCancel={actions.handleCancelExit}
         onConfirm={() => {
           void actions.handleConfirmExit();

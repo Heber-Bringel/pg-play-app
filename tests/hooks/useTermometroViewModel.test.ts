@@ -1,6 +1,5 @@
 import React from 'react';
 import renderer, { act } from 'react-test-renderer';
-import { MemoryTeamDataSource } from '@/infra/datasources/memoryTeamDataSource';
 import { ValidationError } from '@/model/errors';
 import type { ITermometroUseCases } from '@/usecase/iTermometroUseCases';
 import { TermometroUseCases } from '@/usecase/termometroUseCases';
@@ -50,7 +49,7 @@ describe('useTermometroViewModel — Hook do Termômetro de Pedidos (UC11)', () 
   });
 
   it('deve iniciar na fase setup com modo custom (Lista de nomes) e separar fieldError de setupError (RF38, Issues #48 e #53)', async () => {
-    const useCases = new TermometroUseCases(new MemoryTeamDataSource());
+    const useCases = new TermometroUseCases();
     const harness = createHookHarness(useCases);
     await harness.mount();
 

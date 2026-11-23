@@ -4,8 +4,7 @@ import { TermometroUseCases } from '@/usecase/termometroUseCases';
 
 describe('TermometroUseCases — Regras de Negócio do Termômetro de Pedidos (UC11)', () => {
   it('deve iniciar na fase setup com modo padrão custom (pessoas, não equipes), 1 minuto e ordem da lista (RF38, Issue #48)', async () => {
-    const teamDs = new MemoryTeamDataSource();
-    const useCases = new TermometroUseCases(teamDs);
+    const useCases = new TermometroUseCases();
 
     const session = await useCases.getSession();
 
@@ -18,8 +17,7 @@ describe('TermometroUseCases — Regras de Negócio do Termômetro de Pedidos (U
   });
 
   it('deve configurar tempo (1, 2, 3 min), ordem (list, random) e nomes digitados (custom) (RF38)', async () => {
-    const teamDs = new MemoryTeamDataSource();
-    const useCases = new TermometroUseCases(teamDs, () => 0);
+    const useCases = new TermometroUseCases(() => 0);
 
     await useCases.setDurationMinutes(2);
     await useCases.setOrderMode('random');
@@ -38,11 +36,18 @@ describe('TermometroUseCases — Regras de Negócio do Termômetro de Pedidos (U
     expect(session.participants).toHaveLength(2);
     expect(session.hasStartedSpeaking).toBe(false);
     expect(session.secondsRemaining).toBe(120);
+
+    // Issue #73: impedir adição ou remoção de participantes quando stage !== 'setup'
+    await expect(useCases.addCustomParticipant('Carlos')).rejects.toThrow(
+      ValidationError
+    );
+    await expect(useCases.removeCustomParticipant('Ana')).rejects.toThrow(
+      ValidationError
+    );
   });
 
   it('deve lançar ValidationError para parâmetros inválidos ou lista vazia (RF38, Issue #48)', async () => {
-    const teamDs = new MemoryTeamDataSource([]);
-    const useCases = new TermometroUseCases(teamDs);
+    const useCases = new TermometroUseCases();
 
     await expect(
       useCases.setParticipantMode('teams' as never)
@@ -125,7 +130,7 @@ describe('TermometroUseCases — Regras de Negócio do Termômetro de Pedidos (U
       { id: 't1', name: 'Equipe A', score: 50 },
       { id: 't2', name: 'Equipe B', score: 30 },
     ]);
-    const useCases = new TermometroUseCases(teamDs);
+    const useCases = new TermometroUseCases();
 
     await useCases.addCustomParticipant('Ana');
     await useCases.addCustomParticipant('Bruno');
