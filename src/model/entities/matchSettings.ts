@@ -3,6 +3,8 @@ export type QuizDurationOption = 15 | 20 | 30;
 export type QuizQuestionCountOption = 5 | 10 | 15;
 export type ForcaAttemptsOption = 5 | 6 | 8;
 
+export const QUIZ_QUESTION_COUNT_OPTIONS: readonly QuizQuestionCountOption[] = [5, 10, 15];
+
 export type MimicaSettings = {
   durationSeconds: MimicaDurationOption;
   totalRounds: number;
