@@ -659,4 +659,157 @@ describe('useCidadeDormeViewModel — Hook do Cidade Dorme em Sala Multiplayer (
 
     harness.unmount();
   });
+
+  it('deve recuperar turno noturno do convidado em até 3s via getRoom quando subscribeToRoom omite evento e descartar versão menor (Issue #65)', async () => {
+    const baseService = new MemoryMultiplayerRoomService();
+    const baseUseCases = new CidadeDormeUseCases(
+      baseService,
+      new MemoryNarratorAudioService()
+    );
+
+    const created = await baseUseCases.createRoom('Anfitrião');
+    const guestJoined = await baseUseCases.joinRoom(created.code, 'Ana');
+    const guestId = guestJoined.players.find((p) => p.nickname === 'Ana')!.id;
+
+    await baseUseCases.startMatch(created.id, [
+      'detetive',
+      'anjo',
+      'assassino',
+      'cidadao',
+      'cidadao',
+      'cidadao',
+    ]);
+    const nightAssassinRoom = await baseUseCases.confirmPlayerReady(
+      created.id,
+      created.hostId,
+      true
+    );
+
+    let emitRoomUpdate: ((room: typeof nightAssassinRoom) => void) | null = null;
+    let currentServerRoom = {
+      ...nightAssassinRoom,
+      phaseEndsAt: new Date(Date.now() + 1_000).toISOString(),
+    };
+
+    const mockUseCases: ICidadeDormeUseCases = {
+      ...baseUseCases,
+      getLocalPlayerId: async () => guestId,
+      subscribeToRoom: (_rid, cb) => {
+        emitRoomUpdate = cb;
+        return () => {
+          emitRoomUpdate = null;
+        };
+      },
+      getRoom: jest.fn(async () => currentServerRoom),
+      joinRoom: async () => currentServerRoom,
+      createRoom: async () => currentServerRoom,
+      leaveRoom: async () => {},
+      removePlayer: async () => currentServerRoom,
+      updateConfig: async () => currentServerRoom,
+      getRoleMetadata: (role) => baseUseCases.getRoleMetadata(role),
+      startMatch: async () => currentServerRoom,
+      confirmPlayerReady: async () => currentServerRoom,
+      submitAssassinTarget: async () => currentServerRoom,
+      submitAngelProtection: async () => currentServerRoom,
+      submitDetectiveInvestigation: async () => currentServerRoom,
+      advanceToDawn: async () => currentServerRoom,
+      autoAdvanceNightTurn: async () => currentServerRoom,
+      startVotingPhase: async () => currentServerRoom,
+      castVote: async () => currentServerRoom,
+      tallyVotes: async () => currentServerRoom,
+      startNextNight: async () => currentServerRoom,
+      restartMatch: async () => currentServerRoom,
+      speakNarratorCaption: async () => {},
+      stopNarratorAudio: async () => {},
+    };
+
+    const guestHarness = createHookHarness(mockUseCases);
+    await guestHarness.mount();
+
+    await act(async () => {
+      await guestHarness.getActions().handleJoinRoom(created.code, 'Ana');
+    });
+    expect(guestHarness.getState().isCurrentPlayerHost).toBe(false);
+    expect(guestHarness.getState().room?.phase).toBe('night_assassin');
+
+    // Servidor avança para night_angel com version maior, mas evento Realtime é perdido
+    currentServerRoom = {
+      ...currentServerRoom,
+      phase: 'night_angel',
+      version: currentServerRoom.version + 1,
+      phaseEndsAt: new Date(Date.now() + 15_000).toISOString(),
+    };
+
+    // Avança 1s para phaseEndsAt expirar (secondsRemaining -> 0) e depois 1.5s para o watchdog disparar (<= 3s pós-phaseEndsAt)
+    await act(async () => {
+      jest.advanceTimersByTime(1_000);
+    });
+    expect(guestHarness.getState().secondsRemaining).toBe(0);
+
+    await act(async () => {
+      jest.advanceTimersByTime(1_500);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockUseCases.getRoom).toHaveBeenCalledWith(created.id);
+    expect(guestHarness.getState().room?.phase).toBe('night_angel');
+    expect(guestHarness.getState().room?.version).toBe(
+      currentServerRoom.version
+    );
+
+    // Snapshot atrasado com version menor é descartado sem regredir a fase
+    act(() => {
+      emitRoomUpdate?.({
+        ...nightAssassinRoom,
+        phase: 'night_assassin',
+        version: currentServerRoom.version - 1,
+      });
+    });
+    expect(guestHarness.getState().room?.phase).toBe('night_angel');
+
+    guestHarness.unmount();
+  });
+
+  it('deve expulsar imediatamente o jogador convidado do Lobby quando o Moderador o remove da sala', async () => {
+    const roomService = new MemoryMultiplayerRoomService();
+    const useCases = new CidadeDormeUseCases(
+      roomService,
+      new MemoryNarratorAudioService()
+    );
+    const leaveSpy = jest.spyOn(useCases, 'leaveRoom');
+
+    const hostHarness = createHookHarness(useCases);
+    await hostHarness.mount();
+
+    await act(async () => {
+      await hostHarness.getActions().handleCreateRoom('Héber');
+    });
+    const code = hostHarness.getState().room!.code;
+
+    const guestHarness = createHookHarness(useCases);
+    await guestHarness.mount();
+    await act(async () => {
+      await guestHarness.getActions().handleJoinRoom(code, 'Carlos');
+    });
+
+    const carlos = guestHarness
+      .getState()
+      .room!.players.find((p) => p.nickname === 'Carlos')!;
+    expect(guestHarness.getState().room?.phase).toBe('lobby');
+
+    await act(async () => {
+      await hostHarness.getActions().handleRemovePlayer(carlos.id);
+    });
+
+    expect(guestHarness.getState().room).toBeNull();
+    expect(guestHarness.getState().currentPlayerId).toBeNull();
+    expect(guestHarness.getState().error).toBe(
+      'Você foi removido da sala pelo Moderador.'
+    );
+    expect(leaveSpy).toHaveBeenCalledWith(hostHarness.getState().room!.id, carlos.id);
+
+    guestHarness.unmount();
+    hostHarness.unmount();
+  });
 });
