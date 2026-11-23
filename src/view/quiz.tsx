@@ -180,15 +180,24 @@ export const QuizScreen = () => {
                   Quantidade de perguntas
                 </Text>
                 <View style={styles.chipRow}>
-                  {QUIZ_QUESTION_COUNTS.map((count) => (
-                    <ExpressiveChip
-                      key={count}
-                      label={`${count}`}
-                      accessibilityLabel={`${count} perguntas`}
-                      selected={state.configuredQuestionCount === count}
-                      onPress={() => actions.handleSelectQuestionCount(count)}
-                    />
-                  ))}
+                  {QUIZ_QUESTION_COUNTS.map((count) => {
+                    const selected = state.configuredQuestionCount === count;
+                    const unavailable = !state.availableQuestionCounts.includes(count);
+                    return (
+                      <ExpressiveChip
+                        key={count}
+                        label={`${count}`}
+                        accessibilityLabel={
+                          unavailable
+                            ? `${count} perguntas, indisponível no pacote atual`
+                            : `${count} perguntas`
+                        }
+                        selected={selected}
+                        disabled={unavailable && !selected}
+                        onPress={() => actions.handleSelectQuestionCount(count)}
+                      />
+                    );
+                  })}
                 </View>
                 {state.questionCountNotice ? (
                   <Text
@@ -344,9 +353,9 @@ export const QuizScreen = () => {
       {isAnswered && (
         <View style={styles.fixedFooter}>
           <ExpressiveButton
-            label="Próxima Pergunta"
+            label={state.isLastQuestion ? 'Ver Resultado' : 'Próxima Pergunta'}
             variant="primaryJumbo"
-            icon="arrow-right"
+            icon={state.isLastQuestion ? 'flag-checkered' : 'arrow-right'}
             onPress={actions.handleNextQuestion}
           />
         </View>
