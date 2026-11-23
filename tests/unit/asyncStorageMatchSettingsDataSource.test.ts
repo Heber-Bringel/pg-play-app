@@ -45,10 +45,21 @@ describe('AsyncStorageMatchSettingsDataSource — Parâmetros da Partida (RF29)'
     expect(settings.mimica).toEqual(DEFAULT_MATCH_SETTINGS.mimica);
   });
 
-  it('converte JSON inválido e falhas de gravação em DataSourceError', async () => {
-    await AsyncStorage.setItem(STORAGE_KEY, '{quebrado');
+  it.each(['{quebrado', 'null', '"texto"', '[1,2]', '{"mimica":"x","quiz":null}'])(
+    'volta aos padrões quando o valor salvo está corrompido (%s)',
+    async (corrupted) => {
+      await AsyncStorage.setItem(STORAGE_KEY, corrupted);
+
+      await expect(new AsyncStorageMatchSettingsDataSource().getSettings()).resolves.toEqual(
+        DEFAULT_MATCH_SETTINGS
+      );
+    }
+  );
+
+  it('converte falhas de leitura e de gravação em DataSourceError', async () => {
     const dataSource = new AsyncStorageMatchSettingsDataSource();
 
+    jest.spyOn(AsyncStorage, 'getItem').mockRejectedValueOnce(new Error('falha de leitura'));
     await expect(dataSource.getSettings()).rejects.toBeInstanceOf(DataSourceError);
 
     jest.spyOn(AsyncStorage, 'setItem').mockRejectedValueOnce(new Error('disco cheio'));
