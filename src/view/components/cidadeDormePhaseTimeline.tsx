@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { darkTokens, tokens, type ThemeMode } from '@/view/theme';
+import { tokens, useTheme, type ThemeMode } from '@/view/theme';
 
 export type TimelineStepItem = {
   id: 'night' | 'dawn' | 'debate' | 'voting';
@@ -31,9 +31,9 @@ export const CidadeDormePhaseTimeline = ({
   steps,
   currentRound,
   isNightPhase,
-  themeMode = 'light',
+  themeMode,
 }: CidadeDormePhaseTimelineProps) => {
-  const activeTokens = themeMode === 'dark' ? darkTokens : tokens;
+  const activeTokens = useTheme(themeMode);
   const cycleLabel = isNightPhase
     ? `Noite ${currentRound}`
     : `Dia ${currentRound}`;

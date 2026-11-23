@@ -26,7 +26,9 @@ import {
   ThemeProvider,
   tokens,
   useTheme,
+  useThemeOverride,
   type AppTokens,
+  type ThemeMode,
 } from '@/view/theme';
 import {
   useCidadeDormeViewModel,
@@ -206,7 +208,6 @@ const CidadeDormeRoomContent = ({
               steps={state.phaseTimeline}
               currentRound={room.currentRound}
               isNightPhase={state.isNightPhase}
-              themeMode={state.isNightPhase ? 'dark' : 'light'}
             />
           )}
 
@@ -215,7 +216,6 @@ const CidadeDormeRoomContent = ({
               players={room.players}
               aliveCount={state.aliveCount}
               eliminatedCount={state.eliminatedCount}
-              themeMode={state.isNightPhase ? 'dark' : 'light'}
               reduceMotion={state.reduceMotion}
               progress={panelProgress}
             />
@@ -290,7 +290,13 @@ const CidadeDormeRoomContent = ({
 export const CidadeDormeScreen = () => {
   const [state, actions] = useCidadeDormeViewModel();
   const { handleSetReduceMotion } = actions;
-  const activeTokens = useTheme();
+  const roomThemeMode: ThemeMode | null = state.room
+    ? state.isNightPhase
+      ? 'dark'
+      : 'light'
+    : null;
+  useThemeOverride(roomThemeMode);
+  const activeTokens = useTheme(roomThemeMode ?? undefined);
   const styles = useMemo(() => createStyles(activeTokens), [activeTokens]);
 
   useEffect(() => {
@@ -365,7 +371,7 @@ export const CidadeDormeScreen = () => {
   }
 
   return (
-    <ThemeProvider mode={state.isNightPhase ? 'dark' : undefined}>
+    <ThemeProvider mode={state.isNightPhase ? 'dark' : 'light'}>
       <CidadeDormeRoomContent
         state={state}
         actions={actions}

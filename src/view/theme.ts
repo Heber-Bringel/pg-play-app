@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useMemo } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useColorScheme } from 'react-native';
 
 export type ThemeMode = 'light' | 'dark';
@@ -386,7 +386,12 @@ export type AppTokens = ReturnType<typeof createTokens>;
 export const tokens = createTokens('light');
 export const darkTokens = createTokens('dark');
 
+type ThemeOverrideSetter = (mode: ThemeMode | null) => void;
+
 const ThemeModeContext = createContext<ThemeMode | null>(null);
+const ThemeOverrideSetterContext = createContext<ThemeOverrideSetter | null>(
+  null
+);
 
 export type ThemeProviderProps = {
   mode?: ThemeMode;
@@ -396,14 +401,31 @@ export type ThemeProviderProps = {
 export const ThemeProvider = ({ mode, children }: ThemeProviderProps) => {
   const systemScheme = useColorScheme();
   const parentMode = useContext(ThemeModeContext);
-  const resolvedMode: ThemeMode =
-    mode ?? parentMode ?? (systemScheme === 'dark' ? 'dark' : 'light');
+  const parentOverrideSetter = useContext(ThemeOverrideSetterContext);
+  const [overrideMode, setOverrideMode] = useState<ThemeMode | null>(null);
 
-  return React.createElement(
+  const isRootAutoProvider = parentMode === null && mode === undefined;
+  const resolvedMode: ThemeMode =
+    mode ??
+    parentMode ??
+    (isRootAutoProvider ? overrideMode : null) ??
+    (systemScheme === 'dark' ? 'dark' : 'light');
+
+  const modeElement = React.createElement(
     ThemeModeContext.Provider,
     { value: resolvedMode },
     children
   );
+
+  if (isRootAutoProvider && parentOverrideSetter === null) {
+    return React.createElement(
+      ThemeOverrideSetterContext.Provider,
+      { value: setOverrideMode },
+      modeElement
+    );
+  }
+
+  return modeElement;
 };
 
 export function useTheme(overrideMode?: ThemeMode): AppTokens {
@@ -416,6 +438,22 @@ export function useTheme(overrideMode?: ThemeMode): AppTokens {
     () => (resolvedMode === 'dark' ? darkTokens : tokens),
     [resolvedMode]
   );
+}
+
+export function useThemeOverride(mode: ThemeMode | null): void {
+  const setOverrideMode = useContext(ThemeOverrideSetterContext);
+
+  useEffect(() => {
+    if (!setOverrideMode) return;
+    setOverrideMode(mode);
+  }, [mode, setOverrideMode]);
+
+  useEffect(() => {
+    if (!setOverrideMode) return;
+    return () => {
+      setOverrideMode(null);
+    };
+  }, [setOverrideMode]);
 }
 
 export const {

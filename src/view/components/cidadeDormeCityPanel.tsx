@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { CidadeDormePlayer } from '@/model/entities/multiplayerSession';
-import { darkTokens, tokens, type ThemeMode } from '@/view/theme';
+import { tokens, useTheme, type ThemeMode } from '@/view/theme';
 
 export type CidadeDormeCityPanelProgress = {
   label: string;
@@ -32,11 +32,11 @@ export const CidadeDormeCityPanel = ({
   players,
   aliveCount,
   eliminatedCount,
-  themeMode = 'light',
+  themeMode,
   reduceMotion = false,
   progress = null,
 }: CidadeDormeCityPanelProps) => {
-  const activeTokens = themeMode === 'dark' ? darkTokens : tokens;
+  const activeTokens = useTheme(themeMode);
   const safeTotal = progress && progress.total > 0 ? progress.total : 1;
   const targetRatio = progress
     ? Math.min(1, Math.max(0, progress.current / safeTotal))
