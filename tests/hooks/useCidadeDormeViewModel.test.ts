@@ -659,4 +659,118 @@ describe('useCidadeDormeViewModel — Hook do Cidade Dorme em Sala Multiplayer (
 
     harness.unmount();
   });
+
+  it('deve gerenciar isNightCardRevealed com ocultação imediata no Assassino/Anjo e automática em 4s no Detetive (Issue #66)', async () => {
+    const roomService = new MemoryMultiplayerRoomService();
+    const useCases = new CidadeDormeUseCases(
+      roomService,
+      new MemoryNarratorAudioService()
+    );
+    const harness = createHookHarness(useCases);
+    await harness.mount();
+
+    await act(async () => {
+      await harness.getActions().handleCreateRoom('Héber');
+    });
+    await act(async () => {
+      await harness
+        .getActions()
+        .handleStartMatch([
+          'detetive',
+          'assassino',
+          'anjo',
+          'cidadao',
+          'cidadao',
+          'cidadao',
+        ]);
+    });
+    await act(async () => {
+      await harness.getActions().handleConfirmRoleReady(true);
+    });
+
+    expect(harness.getState().room?.phase).toBe('night_assassin');
+    expect(harness.getState().isNightCardRevealed).toBe(false);
+
+    // Abre manualmente e fecha manualmente
+    act(() => {
+      harness.getActions().handleToggleNightCardVisibility();
+    });
+    expect(harness.getState().isNightCardRevealed).toBe(true);
+
+    act(() => {
+      harness.getActions().handleHideNightCard();
+    });
+    expect(harness.getState().isNightCardRevealed).toBe(false);
+
+    // Ao trocar de turno para night_angel e depois night_detective, mantém oculto e auto-oculta veredito após 4s
+    const roomId = harness.getState().room!.id;
+    await act(async () => {
+      await useCases.autoAdvanceNightTurn(roomId, 'night_assassin', 1);
+    });
+    expect(harness.getState().room?.phase).toBe('night_angel');
+    expect(harness.getState().isNightCardRevealed).toBe(false);
+
+    await act(async () => {
+      await useCases.autoAdvanceNightTurn(roomId, 'night_angel', 1);
+    });
+    expect(harness.getState().room?.phase).toBe('night_detective');
+
+    act(() => {
+      harness.getActions().handleToggleNightCardVisibility();
+      harness.getActions().handleSelectNightTarget('cd-player-2');
+    });
+    expect(harness.getState().isNightCardRevealed).toBe(true);
+
+    await act(async () => {
+      await harness.getActions().handleConfirmDetectiveInvestigation();
+    });
+    expect(harness.getState().room?.detectiveVerdict?.isAssassin).toBe(true);
+    expect(harness.getState().isNightCardRevealed).toBe(true);
+
+    act(() => {
+      jest.advanceTimersByTime(4_000);
+    });
+    expect(harness.getState().isNightCardRevealed).toBe(false);
+
+    // Simula hook como Assassino para verificar ocultação imediata pós-confirmação
+    const assassinRoomService = new MemoryMultiplayerRoomService();
+    const assassinUseCases = new CidadeDormeUseCases(
+      assassinRoomService,
+      new MemoryNarratorAudioService()
+    );
+    const assassinHarness = createHookHarness(assassinUseCases);
+    await assassinHarness.mount();
+    await act(async () => {
+      await assassinHarness.getActions().handleCreateRoom('AssassinoHost');
+    });
+    await act(async () => {
+      await assassinHarness
+        .getActions()
+        .handleStartMatch([
+          'assassino',
+          'anjo',
+          'detetive',
+          'cidadao',
+          'cidadao',
+          'cidadao',
+        ]);
+    });
+    await act(async () => {
+      await assassinHarness.getActions().handleConfirmRoleReady(true);
+    });
+
+    act(() => {
+      assassinHarness.getActions().handleToggleNightCardVisibility();
+      assassinHarness.getActions().handleSelectNightTarget('cd-player-4');
+    });
+    expect(assassinHarness.getState().isNightCardRevealed).toBe(true);
+
+    await act(async () => {
+      await assassinHarness.getActions().handleConfirmAssassinTarget();
+    });
+    expect(assassinHarness.getState().isNightCardRevealed).toBe(false);
+
+    assassinHarness.unmount();
+    harness.unmount();
+  });
 });
