@@ -7,8 +7,10 @@ import {
   tokens,
   useTheme,
   useThemeOverride,
+  useThemePreference,
   type AppTokens,
   type ThemeMode,
+  type ThemePreference,
 } from '@/view/theme';
 
 const mockedUseColorScheme = useColorScheme as jest.Mock;
@@ -170,5 +172,116 @@ describe('ThemeProvider & useTheme (tema claro/escuro automático via useColorSc
     });
     expect(observedRootTokens).toBe(darkTokens);
     expect(observedRootTokens.mode).toBe('dark');
+  });
+
+  it('useThemePreference alterna entre auto, light e dark e preserva precedência do useThemeOverride (Cidade Dorme)', () => {
+    mockedUseColorScheme.mockReturnValue('light');
+    let observedTokens!: AppTokens;
+    let observedPreference!: ThemePreference;
+    let setPrefFn!: (pref: ThemePreference) => void;
+
+    const Probe = () => {
+      observedTokens = useTheme();
+      const prefCtx = useThemePreference();
+      observedPreference = prefCtx.preference;
+      setPrefFn = prefCtx.setPreference;
+      return null;
+    };
+
+    const OverrideChild = ({ mode }: { mode: ThemeMode | null }) => {
+      useThemeOverride(mode);
+      return null;
+    };
+
+    const Host = ({
+      showOverride,
+      overrideMode,
+    }: {
+      showOverride: boolean;
+      overrideMode: ThemeMode | null;
+    }) => (
+      <ThemeProvider>
+        <Probe />
+        {showOverride ? <OverrideChild mode={overrideMode} /> : null}
+      </ThemeProvider>
+    );
+
+    let tree!: renderer.ReactTestRenderer;
+    act(() => {
+      tree = renderer.create(<Host showOverride={false} overrideMode={null} />);
+    });
+    expect(observedPreference).toBe('auto');
+    expect(observedTokens).toBe(tokens);
+
+    // Alterna para escuro no Hub mesmo com sistema em light
+    act(() => {
+      setPrefFn('dark');
+    });
+    expect(observedPreference).toBe('dark');
+    expect(observedTokens).toBe(darkTokens);
+
+    // Entra na sala do Cidade Dorme em fase diurna: override 'light' vence preferência manual 'dark'
+    act(() => {
+      tree.update(<Host showOverride overrideMode="light" />);
+    });
+    expect(observedTokens).toBe(tokens);
+
+    // Sai da sala do Cidade Dorme: restaura preferência manual 'dark'
+    act(() => {
+      tree.update(<Host showOverride={false} overrideMode={null} />);
+    });
+    expect(observedTokens).toBe(darkTokens);
+
+    // Muda sistema para dark e seleciona 'light' manualmente
+    mockedUseColorScheme.mockReturnValue('dark');
+    act(() => {
+      setPrefFn('light');
+    });
+    expect(observedPreference).toBe('light');
+    expect(observedTokens).toBe(tokens);
+
+    // Volta para 'auto': acompanha sistema em dark
+    act(() => {
+      setPrefFn('auto');
+    });
+    expect(observedPreference).toBe('auto');
+    expect(observedTokens).toBe(darkTokens);
+  });
+
+  it('suporta prop controlada preference e callback onChangePreference no ThemeProvider', () => {
+    mockedUseColorScheme.mockReturnValue('light');
+    const onChangePreference = jest.fn();
+    let observedTokens!: AppTokens;
+    let setPrefFn!: (pref: ThemePreference) => void;
+
+    const Probe = () => {
+      observedTokens = useTheme();
+      setPrefFn = useThemePreference().setPreference;
+      return null;
+    };
+
+    let tree!: renderer.ReactTestRenderer;
+    act(() => {
+      tree = renderer.create(
+        <ThemeProvider preference="dark" onChangePreference={onChangePreference}>
+          <Probe />
+        </ThemeProvider>
+      );
+    });
+    expect(observedTokens).toBe(darkTokens);
+
+    act(() => {
+      setPrefFn('light');
+    });
+    expect(onChangePreference).toHaveBeenCalledWith('light');
+
+    act(() => {
+      tree.update(
+        <ThemeProvider preference="light" onChangePreference={onChangePreference}>
+          <Probe />
+        </ThemeProvider>
+      );
+    });
+    expect(observedTokens).toBe(tokens);
   });
 });
