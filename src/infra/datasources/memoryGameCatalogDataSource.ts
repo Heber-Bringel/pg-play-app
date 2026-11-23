@@ -83,6 +83,18 @@ const DEFAULT_MINIGAMES: Minigame[] = [
     themes: ['biblico', 'versiculo', 'memoria', 'equipes', 'passa-celular'],
     available: true,
   },
+  {
+    id: 'quem-sou-eu',
+    title: 'Quem Sou Eu?',
+    description:
+      'Coloque o celular na testa e adivinhe cartas temáticas genéricas inclinando para acertar ou passar.',
+    modality: '1 Celular',
+    playersTag: '1 Celular · 2+ equipes',
+    route: '/quem-sou-eu',
+    icon: 'account-question-outline',
+    themes: ['adivinhacao', 'testa', 'inclinacao', 'temas', 'equipes', 'passa-celular'],
+    available: true,
+  },
 ];
 
 const DEFAULT_MIMICA_CARDS: MimicaCard[] = [
