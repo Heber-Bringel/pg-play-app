@@ -25,6 +25,7 @@ export type ExpressiveButtonProps = {
   variant?: ButtonVariant;
   tone?: ButtonTone;
   disabled?: boolean;
+  accessibilityExpanded?: boolean;
   themeMode?: ThemeMode;
   accessibilityLabel?: string;
   onPress: () => void;
@@ -36,6 +37,7 @@ export const ExpressiveButton = ({
   variant = 'primary',
   tone = 'default',
   disabled = false,
+  accessibilityExpanded,
   themeMode,
   accessibilityLabel,
   onPress,
@@ -119,7 +121,11 @@ export const ExpressiveButton = ({
       onBlur={keyboardFocus.onBlur}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
-      accessibilityState={{ disabled }}
+      accessibilityState={
+        accessibilityExpanded !== undefined
+          ? { disabled, expanded: accessibilityExpanded }
+          : { disabled }
+      }
       style={[
         styles.base,
         {
