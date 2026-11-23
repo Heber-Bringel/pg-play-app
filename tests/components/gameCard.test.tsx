@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { GameCard } from '@/view/components/gameCard';
+import { darkTokens } from '@/view/theme';
 
 describe('GameCard (RNTL)', () => {
   it('renderiza título, tag e dispara onPress quando interativo', async () => {
@@ -43,5 +44,28 @@ describe('GameCard (RNTL)', () => {
     const card = screen.getByLabelText('Forca. 2+ Equipes. Adivinhe a palavra');
     expect(card.props.disabled).toBe(true);
     expect(card.props.accessibilityState).toEqual({ disabled: true });
+  });
+
+  it('aplica tokens escuros quando themeMode="dark" (Issue #67)', async () => {
+    await render(
+      <GameCard
+        title="A Noite · Turno do Assassino"
+        description="Assassino, acorde em silêncio."
+        playersTag="5 vivos na cidade"
+        icon="weather-night"
+        themeMode="dark"
+      />,
+    );
+
+    const card = screen.getByLabelText(
+      'A Noite · Turno do Assassino. 5 vivos na cidade. Assassino, acorde em silêncio.',
+    );
+    expect(card.props.style).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          backgroundColor: darkTokens.component.card.bg,
+        }),
+      ]),
+    );
   });
 });
