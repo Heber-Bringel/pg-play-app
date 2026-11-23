@@ -972,4 +972,301 @@ describe('SupabaseMultiplayerRoomService — Integração Postgres, Auth Anônim
     // Após finished, todos os papéis são revelados
     expect(finished.players.every((p) => p.role !== null)).toBe(true);
   });
+
+  it('deve ler a coluna version no Cidade Dorme e ressincronizar ao recuperar de CHANNEL_ERROR/TIMED_OUT/CLOSED (Issue #65)', async () => {
+    jest.useFakeTimers();
+    try {
+      const fake = createFakeSupabaseClient({ authUserId: 'host-uuid' });
+      let subscribeStatusHandler: ((status?: string) => void) | undefined;
+      fake.mockChannel.subscribe.mockImplementation(
+        (cb?: (status?: string) => void) => {
+          subscribeStatusHandler = cb;
+          return fake.mockChannel;
+        }
+      );
+
+      const service = new SupabaseMultiplayerRoomService(
+        {
+          supabaseUrl: 'https://proj.supabase.co',
+          supabaseAnonKey: 'anon-key',
+        },
+        undefined,
+        fake.client
+      );
+
+      const created = await service.createCidadeDormeRoom('Heber');
+      fake.db.rooms[0].version = 7;
+
+      const loaded = await service.getCidadeDormeRoom(created.id);
+      expect(loaded.version).toBe(7);
+
+      const onUpdated = jest.fn();
+      const unsubscribe = service.subscribeToCidadeDormeRoom(
+        created.id,
+        onUpdated
+      );
+
+      expect(subscribeStatusHandler).toBeDefined();
+
+      // Simula erro de canal seguido de atualização no banco durante a queda
+      fake.db.rooms[0].version = 8;
+      subscribeStatusHandler?.('CHANNEL_ERROR');
+
+      await jest.advanceTimersByTimeAsync(1_000);
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(onUpdated).toHaveBeenCalledWith(
+        expect.objectContaining({ id: created.id, version: 8 })
+      );
+
+      fake.db.rooms[0].version = 9;
+      subscribeStatusHandler?.('TIMED_OUT');
+      await jest.advanceTimersByTimeAsync(1_000);
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(onUpdated).toHaveBeenCalledWith(
+        expect.objectContaining({ id: created.id, version: 9 })
+      );
+
+      unsubscribe();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('deve impedir secret_role NULL ao iniciar partida mesmo com jogador removido retido em room_players por RLS e destravar confirmação de prontos', async () => {
+    const fake = createFakeSupabaseClient({ authUserId: 'host-uuid' });
+    // Simula política RLS que impede DELETE de outro usuário em room_players
+    type NoopFilter = {
+      eq: jest.Mock<NoopFilter, [string, unknown]>;
+      then: (resolve: (val: { data: unknown; error: unknown }) => void) => void;
+    };
+    const originalFrom = fake.rawClient.from;
+    fake.rawClient.from = jest.fn((table: keyof MockTableState) => {
+      const builder = originalFrom(table);
+      if (table === 'room_players') {
+        builder.delete = jest.fn((): NoopFilter => {
+          const noopQuery: NoopFilter = {
+            eq: jest.fn((_col: string, _val: unknown): NoopFilter => noopQuery),
+            then: (resolve: (val: { data: unknown; error: unknown }) => void) => {
+              resolve({ data: [], error: null });
+            },
+          };
+          return noopQuery;
+        });
+      }
+      return builder;
+    });
+
+    const hostService = new SupabaseMultiplayerRoomService(
+      {
+        supabaseUrl: 'https://proj.supabase.co',
+        supabaseAnonKey: 'anon-key',
+      },
+      undefined,
+      fake.client
+    );
+
+    const created = await hostService.createCidadeDormeRoom('Heber');
+    const playerIds = ['p2', 'p3', 'p4', 'p5', 'p-kicked'];
+    const playerServices: Record<string, SupabaseMultiplayerRoomService> = {};
+
+    for (let i = 0; i < playerIds.length; i++) {
+      const uid = playerIds[i];
+      const pFake = createFakeSupabaseClient({
+        rooms: fake.db.rooms,
+        room_players: fake.db.room_players,
+        cidade_dorme_secrets: fake.db.cidade_dorme_secrets,
+        cidade_dorme_actions: fake.db.cidade_dorme_actions,
+        authUserId: uid,
+      });
+      const svc = new SupabaseMultiplayerRoomService(
+        {
+          supabaseUrl: 'https://proj.supabase.co',
+          supabaseAnonKey: 'anon-key',
+        },
+        undefined,
+        pFake.client
+      );
+      await svc.joinCidadeDormeRoom(created.code, `Jogador${i + 2}`);
+      playerServices[uid] = svc;
+    }
+
+    // Host remove 'p-kicked' do lobby (linha permanece em fake.db.room_players pelo RLS simulado)
+    const afterLobbyFetch = await hostService.getCidadeDormeRoom(created.id);
+    const afterRemove = await hostService.saveCidadeDormeRoom({
+      ...afterLobbyFetch,
+      players: afterLobbyFetch.players.filter((p) => p.id !== 'p-kicked'),
+    });
+    expect(afterRemove.players).toHaveLength(5);
+    expect(fake.db.room_players).toHaveLength(6);
+
+    // Host inicia a partida passando papéis apenas para os 5 jogadores ativos
+    const started = await hostService.startCidadeDormeMatch(
+      created.id,
+      {
+        'host-uuid': 'detetive',
+        p2: 'assassino',
+        p3: 'anjo',
+        p4: 'cidadao',
+        p5: 'cidadao',
+      },
+      'Papéis distribuídos!'
+    );
+
+    // Garante que p-kicked recebeu fallback não-nulo na RPC (sem violar NOT NULL) e segue oculto da partida
+    expect(fake.rawClient.rpc).toHaveBeenCalledWith(
+      'cidade_dorme_start_match',
+      expect.objectContaining({
+        p_assigned_roles: expect.objectContaining({
+          'host-uuid': 'detetive',
+          p2: 'assassino',
+          p3: 'anjo',
+          p4: 'cidadao',
+          p5: 'cidadao',
+          'p-kicked': 'cidadao',
+        }),
+      })
+    );
+    expect(started.phase).toBe('role_reveal');
+    expect(started.players).toHaveLength(5);
+    expect(started.players.some((p) => p.id === 'p-kicked')).toBe(false);
+    const kickedDbRow = fake.db.room_players.find(
+      (p) => p.user_id === 'p-kicked'
+    );
+    expect(kickedDbRow).toEqual(
+      expect.objectContaining({
+        is_alive: false,
+        is_ready: true,
+        has_voted: true,
+      })
+    );
+
+    // Todos os 5 jogadores ativos confirmam prontos -> deve destravar e iniciar night_assassin
+    await hostService.markCidadeDormePlayerReady(created.id, 'host-uuid');
+    await playerServices.p2.markCidadeDormePlayerReady(created.id, 'p2');
+    await playerServices.p3.markCidadeDormePlayerReady(created.id, 'p3');
+    await playerServices.p4.markCidadeDormePlayerReady(created.id, 'p4');
+    const afterAllActiveReady = await playerServices.p5.markCidadeDormePlayerReady(
+      created.id,
+      'p5'
+    );
+
+    expect(afterAllActiveReady.phase).toBe('night_assassin');
+  });
+
+  it('deve rotacionar sessão anônima em aba duplicada ao entrar com outro apelido no Cidade Dorme e Adedonha sem sobrescrever o Moderador', async () => {
+    const fakeCd = createFakeSupabaseClient({ authUserId: 'host-cd-1' });
+    const hostCdService = new SupabaseMultiplayerRoomService(
+      {
+        supabaseUrl: 'https://proj.supabase.co',
+        supabaseAnonKey: 'anon-key',
+      },
+      undefined,
+      fakeCd.client
+    );
+    const cdRoom = await hostCdService.createCidadeDormeRoom('Moderador');
+
+    // Simula aba duplicada que herdou a sessão do Moderador via sessionStorage, mas entra com apelido diferente
+    const dupCdFake = createFakeSupabaseClient({
+      rooms: fakeCd.db.rooms,
+      room_players: fakeCd.db.room_players,
+      cidade_dorme_secrets: fakeCd.db.cidade_dorme_secrets,
+      cidade_dorme_actions: fakeCd.db.cidade_dorme_actions,
+    });
+    dupCdFake.rawClient.auth.getSession = jest.fn(async () => ({
+      data: { session: { user: { id: 'host-cd-1' } } as unknown as null },
+      error: null,
+    }));
+    dupCdFake.rawClient.auth.signInAnonymously = jest.fn(async () => ({
+      data: { user: { id: 'guest-cd-new' } },
+      error: null,
+    }));
+    const dupCdService = new SupabaseMultiplayerRoomService(
+      {
+        supabaseUrl: 'https://proj.supabase.co',
+        supabaseAnonKey: 'anon-key',
+      },
+      undefined,
+      dupCdFake.client
+    );
+
+    const joinedCd = await dupCdService.joinCidadeDormeRoom(
+      cdRoom.code,
+      'Douglas'
+    );
+    expect(dupCdFake.rawClient.auth.signInAnonymously).toHaveBeenCalledTimes(1);
+    expect(joinedCd.players).toHaveLength(2);
+    expect(joinedCd.players).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'host-cd-1',
+          nickname: 'Moderador',
+          isHost: true,
+        }),
+        expect.objectContaining({
+          id: 'guest-cd-new',
+          nickname: 'Douglas',
+          isHost: false,
+        }),
+      ])
+    );
+
+    // Mesmo fluxo no Adedonha
+    const fakeAd = createFakeSupabaseClient({ authUserId: 'host-ad-1' });
+    const hostAdService = new SupabaseMultiplayerRoomService(
+      {
+        supabaseUrl: 'https://proj.supabase.co',
+        supabaseAnonKey: 'anon-key',
+      },
+      undefined,
+      fakeAd.client
+    );
+    const adRoom = await hostAdService.createAdedonhaRoom('Lider');
+
+    const dupAdFake = createFakeSupabaseClient({
+      rooms: fakeAd.db.rooms,
+      room_players: fakeAd.db.room_players,
+      adedonha_submissions: fakeAd.db.adedonha_submissions,
+    });
+    dupAdFake.rawClient.auth.getSession = jest.fn(async () => ({
+      data: { session: { user: { id: 'host-ad-1' } } as unknown as null },
+      error: null,
+    }));
+    dupAdFake.rawClient.auth.signInAnonymously = jest.fn(async () => ({
+      data: { user: { id: 'guest-ad-new' } },
+      error: null,
+    }));
+    const dupAdService = new SupabaseMultiplayerRoomService(
+      {
+        supabaseUrl: 'https://proj.supabase.co',
+        supabaseAnonKey: 'anon-key',
+      },
+      undefined,
+      dupAdFake.client
+    );
+
+    const joinedAd = await dupAdService.joinAdedonhaRoom(
+      adRoom.code,
+      'Douglas'
+    );
+    expect(dupAdFake.rawClient.auth.signInAnonymously).toHaveBeenCalledTimes(1);
+    expect(joinedAd.players).toHaveLength(2);
+    expect(joinedAd.players).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'host-ad-1',
+          nickname: 'Lider',
+          isHost: true,
+        }),
+        expect.objectContaining({
+          id: 'guest-ad-new',
+          nickname: 'Douglas',
+          isHost: false,
+        }),
+      ])
+    );
+  });
 });

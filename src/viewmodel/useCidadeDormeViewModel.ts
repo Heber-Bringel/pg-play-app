@@ -18,6 +18,10 @@ import type {
 } from '@/usecase/iCidadeDormeUseCases';
 
 const CONNECTION_TIMEOUT_MS = 10_000;
+const NIGHT_SYNC_WATCHDOG_INTERVAL_MS = 1_500;
+const NIGHT_SYNC_WATCHDOG_MAX_ATTEMPTS = 4;
+const NIGHT_VERDICT_AUTO_HIDE_MS = 4_000;
+const DAWN_HIGHLIGHT_DURATION_MS = 4_000;
 
 export type CidadeDormeTimelineStepId = 'night' | 'dawn' | 'debate' | 'voting';
 
@@ -37,6 +41,7 @@ export type CidadeDormeState = {
   isRealtimeEnabled: boolean;
   isNightPhase: boolean;
   isRoleVisible: boolean;
+  isNightCardRevealed: boolean;
   hasSubmittedNightAction: boolean;
   selectedNightTargetId: string | null;
   selectedVoteTargetId: string | null;
@@ -60,6 +65,8 @@ export type CidadeDormeActions = {
   handleStartMatch: (preferredRoles?: CidadeDormeRole[]) => Promise<void>;
   handleToggleRoleVisibility: () => void;
   handleConfirmRoleReady: (markAllReady?: boolean) => Promise<void>;
+  handleToggleNightCardVisibility: () => void;
+  handleHideNightCard: () => void;
   handleSelectNightTarget: (targetPlayerId: string) => void;
   handleConfirmAssassinTarget: (targetPlayerId?: string) => Promise<void>;
   handleConfirmAngelProtection: (
@@ -102,7 +109,8 @@ const TIMELINE_STEPS: Array<{ id: CidadeDormeTimelineStepId; label: string }> = 
 ];
 
 function buildPhaseTimeline(
-  phase: CidadeDormePhase | undefined
+  phase: CidadeDormePhase | undefined,
+  isDawnActive = false
 ): CidadeDormeTimelineStep[] {
   let activeIndex = -1;
   let completedUpTo = -1;
@@ -110,8 +118,13 @@ function buildPhaseTimeline(
   if (isPhaseNight(phase)) {
     activeIndex = 0;
   } else if (phase === 'day_debate') {
-    activeIndex = 2;
-    completedUpTo = 1;
+    if (isDawnActive) {
+      activeIndex = 1;
+      completedUpTo = 0;
+    } else {
+      activeIndex = 2;
+      completedUpTo = 1;
+    }
   } else if (phase === 'day_voting') {
     activeIndex = 3;
     completedUpTo = 2;
@@ -155,6 +168,9 @@ export function useCidadeDormeViewModel(
   const [room, setRoom] = useState<CidadeDormeRoom | null>(null);
   const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
   const [isRoleVisible, setIsRoleVisible] = useState<boolean>(false);
+  const [isNightCardRevealed, setIsNightCardRevealed] = useState<boolean>(false);
+  const [isDawnHighlightActive, setIsDawnHighlightActive] =
+    useState<boolean>(false);
   const [hasSubmittedNightAction, setHasSubmittedNightAction] =
     useState<boolean>(false);
   const [selectedNightTargetId, setSelectedNightTargetId] = useState<
@@ -172,17 +188,41 @@ export function useCidadeDormeViewModel(
   const lastPhaseKeyRef = useRef<string | null>(null);
   const lastSpokenKeyRef = useRef<string | null>(null);
   const autoAdvancedPhaseKeyRef = useRef<string | null>(null);
+  const currentPlayerIdRef = useRef<string | null>(null);
+  const lastRoomIdRef = useRef<string | null>(null);
   const lastVersionRef = useRef<number>(-1);
+  const nightHideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dawnHighlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
   const activeTimeoutsRef = useRef<Set<ReturnType<typeof setTimeout>>>(
     new Set()
   );
   const isMountedRef = useRef<boolean>(true);
+
+  const clearNightHideTimeout = useCallback(() => {
+    if (nightHideTimeoutRef.current !== null) {
+      clearTimeout(nightHideTimeoutRef.current);
+      activeTimeoutsRef.current.delete(nightHideTimeoutRef.current);
+      nightHideTimeoutRef.current = null;
+    }
+  }, []);
+
+  const clearDawnHighlightTimeout = useCallback(() => {
+    if (dawnHighlightTimeoutRef.current !== null) {
+      clearTimeout(dawnHighlightTimeoutRef.current);
+      activeTimeoutsRef.current.delete(dawnHighlightTimeoutRef.current);
+      dawnHighlightTimeoutRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
     isMountedRef.current = true;
     const timeouts = activeTimeoutsRef.current;
     return () => {
       isMountedRef.current = false;
+      nightHideTimeoutRef.current = null;
+      dawnHighlightTimeoutRef.current = null;
       timeouts.forEach((id) => clearTimeout(id));
       timeouts.clear();
     };
@@ -224,6 +264,9 @@ export function useCidadeDormeViewModel(
       if (lastPhaseKeyRef.current !== phaseKey) {
         lastPhaseKeyRef.current = phaseKey;
         autoAdvancedPhaseKeyRef.current = null;
+        clearNightHideTimeout();
+        clearDawnHighlightTimeout();
+        setIsNightCardRevealed(false);
         setSelectedNightTargetId(null);
         setSelectedVoteTargetId(null);
         setHasSubmittedNightAction(false);
@@ -231,35 +274,100 @@ export function useCidadeDormeViewModel(
         if (nextRoom.phase !== 'role_reveal') {
           setIsRoleVisible(false);
         }
+        if (nextRoom.phase === 'day_debate' && nextRoom.dawnReport !== null) {
+          setIsDawnHighlightActive(true);
+          const timeoutId = setTimeout(() => {
+            activeTimeoutsRef.current.delete(timeoutId);
+            if (dawnHighlightTimeoutRef.current === timeoutId) {
+              dawnHighlightTimeoutRef.current = null;
+            }
+            if (isMountedRef.current) {
+              setIsDawnHighlightActive(false);
+            }
+          }, DAWN_HIGHLIGHT_DURATION_MS);
+          dawnHighlightTimeoutRef.current = timeoutId;
+          activeTimeoutsRef.current.add(timeoutId);
+        } else {
+          setIsDawnHighlightActive(false);
+        }
       } else if (nextRoom.phaseEndsAt) {
         setSecondsRemaining(computeSecondsRemaining(nextRoom));
       }
     },
-    []
+    [clearDawnHighlightTimeout, clearNightHideTimeout]
+  );
+
+  const acceptRoomSnapshot = useCallback(
+    (nextRoom: CidadeDormeRoom, knownPlayerId?: string | null): boolean => {
+      const activeId = knownPlayerId ?? currentPlayerIdRef.current;
+      if (
+        activeId &&
+        activeId !== nextRoom.hostId &&
+        !nextRoom.players.some((p) => p.id === activeId)
+      ) {
+        lastSpokenKeyRef.current = null;
+        lastPhaseKeyRef.current = null;
+        autoAdvancedPhaseKeyRef.current = null;
+        lastRoomIdRef.current = null;
+        lastVersionRef.current = -1;
+        currentPlayerIdRef.current = null;
+        void useCase.leaveRoom(nextRoom.id, activeId).catch(() => {
+          // Saída em best-effort para limpar linha órfã do jogador removido.
+        });
+        clearNightHideTimeout();
+        clearDawnHighlightTimeout();
+        setRoom(null);
+        setCurrentPlayerId(null);
+        setIsRoleVisible(false);
+        setIsNightCardRevealed(false);
+        setIsDawnHighlightActive(false);
+        setHasSubmittedNightAction(false);
+        setSelectedNightTargetId(null);
+        setSelectedVoteTargetId(null);
+        setError('Você foi removido da sala pelo Moderador.');
+        return false;
+      }
+
+      const nextVersion = nextRoom.version ?? 0;
+      if (lastRoomIdRef.current !== nextRoom.id) {
+        lastRoomIdRef.current = nextRoom.id;
+        lastVersionRef.current = nextVersion;
+      } else if (nextVersion < lastVersionRef.current) {
+        return false;
+      } else {
+        lastVersionRef.current = nextVersion;
+      }
+      syncPhaseTimerAndSelection(nextRoom);
+      setRoom(nextRoom);
+      return true;
+    },
+    [
+      clearDawnHighlightTimeout,
+      clearNightHideTimeout,
+      syncPhaseTimerAndSelection,
+      useCase,
+    ]
   );
 
   const applyRoomState = useCallback(
     async (loadedRoom: CidadeDormeRoom) => {
       const localId = await useCase.getLocalPlayerId(loadedRoom.id);
-      setCurrentPlayerId(localId ?? loadedRoom.hostId);
-      syncPhaseTimerAndSelection(loadedRoom);
-      setRoom(loadedRoom);
+      if (!isMountedRef.current) return;
+      const resolvedId = localId ?? loadedRoom.hostId;
+      currentPlayerIdRef.current = resolvedId;
+      setCurrentPlayerId(resolvedId);
+      acceptRoomSnapshot(loadedRoom, resolvedId);
     },
-    [syncPhaseTimerAndSelection, useCase]
+    [acceptRoomSnapshot, useCase]
   );
 
   useEffect(() => {
     if (!room?.id) return;
     const unsubscribe = useCase.subscribeToRoom(room.id, (updatedRoom) => {
-      if (updatedRoom.version < lastVersionRef.current) {
-        return;
-      }
-      lastVersionRef.current = updatedRoom.version;
-      syncPhaseTimerAndSelection(updatedRoom);
-      setRoom(updatedRoom);
+      acceptRoomSnapshot(updatedRoom);
     });
     return () => unsubscribe();
-  }, [room?.id, syncPhaseTimerAndSelection, useCase]);
+  }, [acceptRoomSnapshot, room?.id, useCase]);
 
   const activePlayerId = currentPlayerId ?? room?.hostId ?? '';
   const isCurrentPlayerHost = Boolean(
@@ -299,6 +407,9 @@ export function useCidadeDormeViewModel(
     async (hostNickname: string): Promise<boolean> => {
       setLoading(true);
       setError(null);
+      currentPlayerIdRef.current = null;
+      lastRoomIdRef.current = null;
+      lastVersionRef.current = -1;
       try {
         const created = await runWithConnectionTimeout(
           useCase.createRoom(hostNickname)
@@ -327,6 +438,9 @@ export function useCidadeDormeViewModel(
     async (code: string, nickname: string): Promise<boolean> => {
       setLoading(true);
       setError(null);
+      currentPlayerIdRef.current = null;
+      lastRoomIdRef.current = null;
+      lastVersionRef.current = -1;
       try {
         const joined = await runWithConnectionTimeout(
           useCase.joinRoom(code, nickname)
@@ -357,7 +471,7 @@ export function useCidadeDormeViewModel(
       try {
         setError(null);
         const updated = await useCase.removePlayer(room.id, playerId);
-        setRoom(updated);
+        acceptRoomSnapshot(updated);
       } catch (err: unknown) {
         if (err instanceof DomainError) {
           setError(err.message);
@@ -366,7 +480,7 @@ export function useCidadeDormeViewModel(
         }
       }
     },
-    [room, useCase]
+    [acceptRoomSnapshot, room, useCase]
   );
 
   const handleUpdateConfig = useCallback(
@@ -375,7 +489,7 @@ export function useCidadeDormeViewModel(
       try {
         setError(null);
         const updated = await useCase.updateConfig(room.id, partialConfig);
-        setRoom(updated);
+        acceptRoomSnapshot(updated);
       } catch (err: unknown) {
         if (err instanceof DomainError) {
           setError(err.message);
@@ -384,7 +498,7 @@ export function useCidadeDormeViewModel(
         }
       }
     },
-    [room, useCase]
+    [acceptRoomSnapshot, room, useCase]
   );
 
   const handleStartMatch = useCallback(
@@ -394,8 +508,7 @@ export function useCidadeDormeViewModel(
         setError(null);
         const started = await useCase.startMatch(room.id, preferredRoles);
         setIsRoleVisible(false);
-        syncPhaseTimerAndSelection(started);
-        setRoom(started);
+        acceptRoomSnapshot(started);
       } catch (err: unknown) {
         if (err instanceof DomainError) {
           setError(err.message);
@@ -404,7 +517,7 @@ export function useCidadeDormeViewModel(
         }
       }
     },
-    [room, syncPhaseTimerAndSelection, useCase]
+    [acceptRoomSnapshot, room, useCase]
   );
 
   const handleToggleRoleVisibility = useCallback((): void => {
@@ -422,8 +535,7 @@ export function useCidadeDormeViewModel(
           activePlayerId,
           markAllReady
         );
-        syncPhaseTimerAndSelection(updated);
-        setRoom(updated);
+        acceptRoomSnapshot(updated);
       } catch (err: unknown) {
         if (err instanceof DomainError) {
           setError(err.message);
@@ -432,8 +544,18 @@ export function useCidadeDormeViewModel(
         }
       }
     },
-    [activePlayerId, room, syncPhaseTimerAndSelection, useCase]
+    [acceptRoomSnapshot, activePlayerId, room, useCase]
   );
+
+  const handleToggleNightCardVisibility = useCallback((): void => {
+    clearNightHideTimeout();
+    setIsNightCardRevealed((prev) => !prev);
+  }, [clearNightHideTimeout]);
+
+  const handleHideNightCard = useCallback((): void => {
+    clearNightHideTimeout();
+    setIsNightCardRevealed(false);
+  }, [clearNightHideTimeout]);
 
   const handleSelectNightTarget = useCallback(
     (targetPlayerId: string): void => {
@@ -454,9 +576,10 @@ export function useCidadeDormeViewModel(
           activePlayerId,
           chosen
         );
+        clearNightHideTimeout();
+        setIsNightCardRevealed(false);
         setHasSubmittedNightAction(true);
-        syncPhaseTimerAndSelection(updated);
-        setRoom(updated);
+        acceptRoomSnapshot(updated);
       } catch (err: unknown) {
         if (err instanceof DomainError) {
           setError(err.message);
@@ -465,7 +588,14 @@ export function useCidadeDormeViewModel(
         }
       }
     },
-    [activePlayerId, room, selectedNightTargetId, syncPhaseTimerAndSelection, useCase]
+    [
+      acceptRoomSnapshot,
+      activePlayerId,
+      clearNightHideTimeout,
+      room,
+      selectedNightTargetId,
+      useCase,
+    ]
   );
 
   const handleConfirmAngelProtection = useCallback(
@@ -482,9 +612,10 @@ export function useCidadeDormeViewModel(
           activePlayerId,
           chosen
         );
+        clearNightHideTimeout();
+        setIsNightCardRevealed(false);
         setHasSubmittedNightAction(true);
-        syncPhaseTimerAndSelection(updated);
-        setRoom(updated);
+        acceptRoomSnapshot(updated);
       } catch (err: unknown) {
         if (err instanceof DomainError) {
           setError(err.message);
@@ -493,7 +624,14 @@ export function useCidadeDormeViewModel(
         }
       }
     },
-    [activePlayerId, room, selectedNightTargetId, syncPhaseTimerAndSelection, useCase]
+    [
+      acceptRoomSnapshot,
+      activePlayerId,
+      clearNightHideTimeout,
+      room,
+      selectedNightTargetId,
+      useCase,
+    ]
   );
 
   const handleConfirmDetectiveInvestigation = useCallback(
@@ -509,7 +647,20 @@ export function useCidadeDormeViewModel(
           chosen
         );
         setHasSubmittedNightAction(true);
-        setRoom(updated);
+        acceptRoomSnapshot(updated);
+        setIsNightCardRevealed(true);
+        clearNightHideTimeout();
+        const timeoutId = setTimeout(() => {
+          activeTimeoutsRef.current.delete(timeoutId);
+          if (nightHideTimeoutRef.current === timeoutId) {
+            nightHideTimeoutRef.current = null;
+          }
+          if (isMountedRef.current) {
+            setIsNightCardRevealed(false);
+          }
+        }, NIGHT_VERDICT_AUTO_HIDE_MS);
+        nightHideTimeoutRef.current = timeoutId;
+        activeTimeoutsRef.current.add(timeoutId);
       } catch (err: unknown) {
         if (err instanceof DomainError) {
           setError(err.message);
@@ -518,7 +669,14 @@ export function useCidadeDormeViewModel(
         }
       }
     },
-    [activePlayerId, room, selectedNightTargetId, useCase]
+    [
+      acceptRoomSnapshot,
+      activePlayerId,
+      clearNightHideTimeout,
+      room,
+      selectedNightTargetId,
+      useCase,
+    ]
   );
 
   const handleAdvanceToDawn = useCallback(async (): Promise<void> => {
@@ -526,8 +684,7 @@ export function useCidadeDormeViewModel(
     try {
       setError(null);
       const updated = await useCase.advanceToDawn(room.id);
-      syncPhaseTimerAndSelection(updated);
-      setRoom(updated);
+      acceptRoomSnapshot(updated);
     } catch (err: unknown) {
       if (err instanceof DomainError) {
         setError(err.message);
@@ -535,7 +692,7 @@ export function useCidadeDormeViewModel(
         setError('Não foi possível avançar para o amanhecer.');
       }
     }
-  }, [room, syncPhaseTimerAndSelection, useCase]);
+  }, [acceptRoomSnapshot, room, useCase]);
 
   const handleAutoAdvanceNightTurn = useCallback(
     async (
@@ -550,8 +707,7 @@ export function useCidadeDormeViewModel(
           expectedPhase,
           expectedRound
         );
-        syncPhaseTimerAndSelection(updated);
-        setRoom(updated);
+        acceptRoomSnapshot(updated);
       } catch (err: unknown) {
         if (err instanceof DomainError) {
           setError(err.message);
@@ -560,7 +716,7 @@ export function useCidadeDormeViewModel(
         }
       }
     },
-    [room, syncPhaseTimerAndSelection, useCase]
+    [acceptRoomSnapshot, room, useCase]
   );
 
   const handleStartVotingPhase = useCallback(async (): Promise<void> => {
@@ -568,8 +724,7 @@ export function useCidadeDormeViewModel(
     try {
       setError(null);
       const updated = await useCase.startVotingPhase(room.id);
-      syncPhaseTimerAndSelection(updated);
-      setRoom(updated);
+      acceptRoomSnapshot(updated);
     } catch (err: unknown) {
       if (err instanceof DomainError) {
         setError(err.message);
@@ -577,7 +732,7 @@ export function useCidadeDormeViewModel(
         setError('Não foi possível iniciar a fase de votação.');
       }
     }
-  }, [room, syncPhaseTimerAndSelection, useCase]);
+  }, [acceptRoomSnapshot, room, useCase]);
 
   const handleSelectVoteTarget = useCallback((targetIdOrSkip: string): void => {
     setError(null);
@@ -595,7 +750,7 @@ export function useCidadeDormeViewModel(
           activePlayerId,
           chosen
         );
-        setRoom(updated);
+        acceptRoomSnapshot(updated);
       } catch (err: unknown) {
         if (err instanceof DomainError) {
           setError(err.message);
@@ -604,7 +759,7 @@ export function useCidadeDormeViewModel(
         }
       }
     },
-    [activePlayerId, room, selectedVoteTargetId, useCase]
+    [acceptRoomSnapshot, activePlayerId, room, selectedVoteTargetId, useCase]
   );
 
   const handleTallyVotes = useCallback(async (): Promise<void> => {
@@ -618,8 +773,7 @@ export function useCidadeDormeViewModel(
         await useCase.castVote(room.id, activePlayerId, selectedVoteTargetId);
       }
       const updated = await useCase.tallyVotes(room.id);
-      syncPhaseTimerAndSelection(updated);
-      setRoom(updated);
+      acceptRoomSnapshot(updated);
     } catch (err: unknown) {
       if (err instanceof DomainError) {
         setError(err.message);
@@ -628,10 +782,10 @@ export function useCidadeDormeViewModel(
       }
     }
   }, [
+    acceptRoomSnapshot,
     activePlayerId,
     room,
     selectedVoteTargetId,
-    syncPhaseTimerAndSelection,
     useCase,
   ]);
 
@@ -640,8 +794,7 @@ export function useCidadeDormeViewModel(
     try {
       setError(null);
       const updated = await useCase.startNextNight(room.id);
-      syncPhaseTimerAndSelection(updated);
-      setRoom(updated);
+      acceptRoomSnapshot(updated);
     } catch (err: unknown) {
       if (err instanceof DomainError) {
         setError(err.message);
@@ -649,7 +802,7 @@ export function useCidadeDormeViewModel(
         setError('Não foi possível iniciar a próxima noite.');
       }
     }
-  }, [room, syncPhaseTimerAndSelection, useCase]);
+  }, [acceptRoomSnapshot, room, useCase]);
 
   const handleRestartMatch = useCallback(async (): Promise<void> => {
     if (!room) return;
@@ -657,8 +810,7 @@ export function useCidadeDormeViewModel(
       setError(null);
       const restarted = await useCase.restartMatch(room.id);
       setIsRoleVisible(false);
-      syncPhaseTimerAndSelection(restarted);
-      setRoom(restarted);
+      acceptRoomSnapshot(restarted);
     } catch (err: unknown) {
       if (err instanceof DomainError) {
         setError(err.message);
@@ -666,7 +818,7 @@ export function useCidadeDormeViewModel(
         setError('Não foi possível iniciar a revanche.');
       }
     }
-  }, [room, syncPhaseTimerAndSelection, useCase]);
+  }, [acceptRoomSnapshot, room, useCase]);
 
   // Cronômetro regressivo sincronizado com phaseEndsAt para turnos da Noite e Debate do Dia (RF10)
   useEffect(() => {
@@ -715,6 +867,52 @@ export function useCidadeDormeViewModel(
     secondsRemaining,
   ]);
 
+  // Watchdog de segurança pós-phaseEndsAt para recuperar eventos Realtime perdidos (Issue #65)
+  const isTimedPhaseExpired = Boolean(
+    room?.id &&
+      room.phaseEndsAt &&
+      (isPhaseNight(room.phase) || room.phase === 'day_debate') &&
+      secondsRemaining <= 0
+  );
+
+  useEffect(() => {
+    if (!isTimedPhaseExpired || !room?.id) {
+      return;
+    }
+
+    const watchedRoomId = room.id;
+    let attempts = 0;
+    const intervalId = setInterval(() => {
+      if (!isMountedRef.current) {
+        clearInterval(intervalId);
+        return;
+      }
+      attempts += 1;
+      void useCase
+        .getRoom(watchedRoomId)
+        .then((refreshed) => {
+          if (isMountedRef.current) {
+            acceptRoomSnapshot(refreshed);
+          }
+        })
+        .catch(() => {
+          // Falha transitória na releitura não bloqueia a sessão.
+        });
+      if (attempts >= NIGHT_SYNC_WATCHDOG_MAX_ATTEMPTS) {
+        clearInterval(intervalId);
+      }
+    }, NIGHT_SYNC_WATCHDOG_INTERVAL_MS);
+
+    return () => clearInterval(intervalId);
+  }, [
+    acceptRoomSnapshot,
+    isTimedPhaseExpired,
+    room?.currentRound,
+    room?.id,
+    room?.phase,
+    useCase,
+  ]);
+
   const handleSetReduceMotion = useCallback((enabled: boolean): void => {
     setReduceMotion(enabled);
   }, []);
@@ -729,9 +927,14 @@ export function useCidadeDormeViewModel(
 
   const handleExitArena = useCallback((): void => {
     setConfirmingExit(false);
+    clearNightHideTimeout();
+    clearDawnHighlightTimeout();
     lastSpokenKeyRef.current = null;
     lastPhaseKeyRef.current = null;
     autoAdvancedPhaseKeyRef.current = null;
+    lastRoomIdRef.current = null;
+    lastVersionRef.current = -1;
+    currentPlayerIdRef.current = null;
     void useCase.stopNarratorAudio().catch(() => {
       // Falha transitória ao parar o áudio não impede retorno ao Hub.
     });
@@ -744,11 +947,20 @@ export function useCidadeDormeViewModel(
     setCurrentPlayerId(null);
     setError(null);
     setIsRoleVisible(false);
+    setIsNightCardRevealed(false);
+    setIsDawnHighlightActive(false);
     setHasSubmittedNightAction(false);
     setSelectedNightTargetId(null);
     setSelectedVoteTargetId(null);
     router.replace('/');
-  }, [activePlayerId, room?.id, router, useCase]);
+  }, [
+    activePlayerId,
+    clearDawnHighlightTimeout,
+    clearNightHideTimeout,
+    room?.id,
+    router,
+    useCase,
+  ]);
 
   const handleRetry = useCallback(async (): Promise<void> => {
     if (!room) {
@@ -780,7 +992,7 @@ export function useCidadeDormeViewModel(
     : null;
 
   const isNightPhase = isPhaseNight(room?.phase);
-  const phaseTimeline = buildPhaseTimeline(room?.phase);
+  const phaseTimeline = buildPhaseTimeline(room?.phase, isDawnHighlightActive);
   const aliveCount = room ? room.players.filter((p) => p.isAlive).length : 0;
   const eliminatedCount = room
     ? room.players.filter((p) => !p.isAlive).length
@@ -795,6 +1007,7 @@ export function useCidadeDormeViewModel(
     isRealtimeEnabled: isSupabaseMultiplayerEnabled,
     isNightPhase,
     isRoleVisible,
+    isNightCardRevealed,
     hasSubmittedNightAction,
     selectedNightTargetId,
     selectedVoteTargetId,
@@ -816,6 +1029,8 @@ export function useCidadeDormeViewModel(
     handleStartMatch,
     handleToggleRoleVisibility,
     handleConfirmRoleReady,
+    handleToggleNightCardVisibility,
+    handleHideNightCard,
     handleSelectNightTarget,
     handleConfirmAssassinTarget,
     handleConfirmAngelProtection,

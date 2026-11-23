@@ -1,4 +1,5 @@
 import { AsyncStorageTeamDataSource } from '@/infra/datasources/asyncStorageTeamDataSource';
+import { AsyncStorageThemePreferenceDataSource } from '@/infra/datasources/asyncStorageThemePreferenceDataSource';
 import { HelloAoVerseDataSource } from '@/infra/datasources/helloAoVerseDataSource';
 import { MemoryGameCatalogDataSource } from '@/infra/datasources/memoryGameCatalogDataSource';
 import { MemoryQuemSouEuDataSource } from '@/infra/datasources/memoryQuemSouEuDataSource';
@@ -20,13 +21,16 @@ import type { IAdedonhaUseCases } from '@/usecase/iAdedonhaUseCases';
 import type { ICidadeDormeUseCases } from '@/usecase/iCidadeDormeUseCases';
 import type { IPgPlayUseCases } from '@/usecase/iPgPlayUseCases';
 import type { IQuemSouEuUseCases } from '@/usecase/iQuemSouEuUseCases';
+import type { IThemePreferenceUseCases } from '@/usecase/iThemePreferenceUseCases';
 import type { IVersiculoUseCases } from '@/usecase/iVersiculoUseCases';
 import { PgPlayUseCases } from '@/usecase/pgPlayUseCases';
 import { QuemSouEuUseCases } from '@/usecase/quemSouEuUseCases';
+import { ThemePreferenceUseCases } from '@/usecase/themePreferenceUseCases';
 import { VersiculoUseCases } from '@/usecase/versiculoUseCases';
 
 // Equipes e placar persistem no aparelho (RF04–RF06); MemoryTeamDataSource segue para testes.
 const teamDataSource = new AsyncStorageTeamDataSource();
+const themePreferenceDataSource = new AsyncStorageThemePreferenceDataSource();
 const gameCatalogDataSource = new MemoryGameCatalogDataSource();
 const verseDataSource = new HelloAoVerseDataSource(new MemoryVerseDataSource());
 const quemSouEuDataSource = new MemoryQuemSouEuDataSource();
@@ -79,3 +83,6 @@ export const quemSouEuUseCases: IQuemSouEuUseCases = new QuemSouEuUseCases(
   screenOrientationService,
   hapticService
 );
+
+export const themePreferenceUseCases: IThemePreferenceUseCases =
+  new ThemePreferenceUseCases(themePreferenceDataSource);
