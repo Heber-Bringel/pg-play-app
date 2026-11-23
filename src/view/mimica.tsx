@@ -1,15 +1,18 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ConfirmModal } from '@/view/components/confirmModal';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
 import { ExpressiveChip } from '@/view/components/expressiveChip';
+import { ExpressiveTag } from '@/view/components/expressiveTag';
 import { ExpressiveTimer } from '@/view/components/expressiveTimer';
 import { GameCard } from '@/view/components/gameCard';
-import { border, card, color, elevation, font, radius, space, typography } from '@/view/theme';
+import { useTheme, type AppTokens } from '@/view/theme';
 import { ALL_MIMICA_CATEGORIES, useMimicaViewModel } from '@/viewmodel/useMimicaViewModel';
 
 export const MimicaScreen = () => {
   const [state, actions] = useMimicaViewModel();
+  const activeTokens = useTheme();
+  const styles = useMemo(() => createStyles(activeTokens), [activeTokens]);
 
   if (state.loading) {
     return (
@@ -32,6 +35,7 @@ export const MimicaScreen = () => {
           title="Atenção na Arena"
           description={state.error}
           playersTag="Erro"
+          playersTagTone="error"
           icon="alert-circle"
         />
         <ExpressiveButton
@@ -80,11 +84,10 @@ export const MimicaScreen = () => {
           icon="arrow-left"
           onPress={actions.handleRequestExit}
         />
-        <View style={styles.roundBadge}>
-          <Text allowFontScaling style={styles.roundText}>
-            {`Rodada ${state.currentRound}/${state.totalRounds}`}
-          </Text>
-        </View>
+        <ExpressiveTag
+          label={`Rodada ${state.currentRound}/${state.totalRounds}`}
+          tone="neutral"
+        />
       </View>
 
       <ConfirmModal
@@ -178,12 +181,13 @@ export const MimicaScreen = () => {
                 : 'Palavra secreta escondida do grupo'
             }
           >
-            <Text allowFontScaling style={styles.categoryTag}>
-              {state.currentCard?.category ?? 'Misto'}
-            </Text>
+            <ExpressiveTag
+              label={state.currentCard?.category ?? 'Misto'}
+              tone="secondary"
+            />
             <Text
               allowFontScaling
-              maxFontSizeMultiplier={typography.maxScale}
+              maxFontSizeMultiplier={activeTokens.semantic.typography.maxScale}
               style={styles.secretWord}
             >
               {state.wordVisible && state.currentCard
@@ -245,6 +249,7 @@ export const MimicaScreen = () => {
             title="Partida de Mímica Concluída!"
             description="Todas as rodadas ou palavras do pacote atual foram finalizadas. Confira a classificação geral do PG!"
             playersTag="Concluído"
+            playersTagTone="success"
             icon="party-popper"
           />
           <ExpressiveButton
@@ -259,152 +264,136 @@ export const MimicaScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  scroll: {
-    flex: 1,
-    backgroundColor: color.surface,
-  },
-  screen: {
-    flexGrow: 1,
-    backgroundColor: color.surface,
-    padding: space.md,
-    gap: space.md,
-  },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: space.sm,
-  },
-  roundBadge: {
-    paddingHorizontal: space.md,
-    paddingVertical: space.xs,
-    borderRadius: radius.full,
-    backgroundColor: color.surfaceVariant,
-  },
-  roundText: {
-    fontFamily: font.caption.family,
-    fontSize: font.caption.size,
-    fontWeight: font.caption.weight,
-    lineHeight: font.caption.lineHeight,
-    color: color.onSurface,
-  },
-  teamHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: space.md,
-    backgroundColor: color.actionContainer,
-    paddingHorizontal: space.md,
-    paddingVertical: space.sm,
-    borderRadius: radius.lg,
-  },
-  teamInfo: {
-    flex: 1,
-  },
-  teamCaption: {
-    fontFamily: font.caption.family,
-    fontSize: font.caption.size,
-    fontWeight: font.caption.weight,
-    lineHeight: font.caption.lineHeight,
-    color: color.onActionContainer,
-  },
-  teamLabel: {
-    fontFamily: font.subtitle.family,
-    fontSize: font.subtitle.size,
-    fontWeight: font.subtitle.weight,
-    lineHeight: font.subtitle.lineHeight,
-    color: color.onActionContainer,
-  },
-  scoreLabel: {
-    fontFamily: font.title.family,
-    fontSize: font.title.size,
-    fontWeight: font.title.weight,
-    lineHeight: font.title.lineHeight,
-    color: color.onActionContainer,
-    flexShrink: 0,
-  },
-  phaseContainer: {
-    flex: 1,
-    gap: space.md,
-    justifyContent: 'center',
-  },
-  packsCard: {
-    backgroundColor: color.surfaceContainer,
-    borderColor: color.outline,
-    borderWidth: border.thin,
-    borderRadius: radius.lg,
-    padding: space.md,
-    gap: space.sm,
-  },
-  packsTitle: {
-    fontFamily: font.subtitle.family,
-    fontSize: font.subtitle.size,
-    fontWeight: font.subtitle.weight,
-    lineHeight: font.subtitle.lineHeight,
-    color: color.onSurface,
-  },
-  packsCaption: {
-    fontFamily: font.caption.family,
-    fontSize: font.caption.size,
-    fontWeight: font.caption.weight,
-    lineHeight: font.caption.lineHeight,
-    color: color.onSurfaceMuted,
-  },
-  chipsWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: space.sm,
-  },
-  warningBanner: {
-    backgroundColor: color.errorContainer,
-    borderRadius: radius.md,
-    paddingHorizontal: space.md,
-    paddingVertical: space.sm,
-  },
-  warningText: {
-    fontFamily: font.caption.family,
-    fontSize: font.caption.size,
-    fontWeight: font.caption.weight,
-    lineHeight: font.caption.lineHeight,
-    color: color.onErrorContainer,
-  },
-  wordCard: {
-    backgroundColor: card.bg,
-    borderColor: card.border,
-    borderWidth: border.thin,
-    borderRadius: card.radius,
-    padding: card.padding,
-    elevation: elevation.card,
-    alignItems: 'center',
-    gap: space.sm,
-  },
-  categoryTag: {
-    fontFamily: font.caption.family,
-    fontSize: font.caption.size,
-    fontWeight: font.caption.weight,
-    lineHeight: font.caption.lineHeight,
-    color: color.onSurfaceMuted,
-  },
-  secretWord: {
-    fontFamily: font.display.family,
-    fontSize: font.display.size,
-    fontWeight: font.display.weight,
-    lineHeight: font.display.lineHeight,
-    color: color.onSurface,
-    textAlign: 'center',
-  },
-  actionGroup: {
-    gap: space.sm,
-  },
-  titleText: {
-    fontFamily: font.title.family,
-    fontSize: font.title.size,
-    fontWeight: font.title.weight,
-    lineHeight: font.title.lineHeight,
-    color: color.onSurface,
-    textAlign: 'center',
-  },
-});
+const createStyles = (activeTokens: AppTokens) => {
+  const { color, font, radius, space, border, elevation } = activeTokens.semantic;
+  const { card } = activeTokens.component;
+  return StyleSheet.create({
+    scroll: {
+      flex: 1,
+      backgroundColor: color.surface,
+    },
+    screen: {
+      flexGrow: 1,
+      backgroundColor: color.surface,
+      padding: space.md,
+      gap: space.md,
+    },
+    topBar: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: space.sm,
+    },
+    teamHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: space.md,
+      backgroundColor: color.actionContainer,
+      paddingHorizontal: space.md,
+      paddingVertical: space.sm,
+      borderRadius: radius.lg,
+    },
+    teamInfo: {
+      flex: 1,
+    },
+    teamCaption: {
+      fontFamily: font.caption.family,
+      fontSize: font.caption.size,
+      fontWeight: font.caption.weight,
+      lineHeight: font.caption.lineHeight,
+      color: color.onActionContainer,
+    },
+    teamLabel: {
+      fontFamily: font.subtitle.family,
+      fontSize: font.subtitle.size,
+      fontWeight: font.subtitle.weight,
+      lineHeight: font.subtitle.lineHeight,
+      color: color.onActionContainer,
+    },
+    scoreLabel: {
+      fontFamily: font.title.family,
+      fontSize: font.title.size,
+      fontWeight: font.title.weight,
+      lineHeight: font.title.lineHeight,
+      color: color.onActionContainer,
+      flexShrink: 0,
+    },
+    phaseContainer: {
+      flex: 1,
+      gap: space.md,
+      justifyContent: 'center',
+    },
+    packsCard: {
+      backgroundColor: card.bg,
+      borderColor: card.border,
+      borderWidth: border.thin,
+      borderRadius: radius.lg,
+      padding: space.md,
+      gap: space.sm,
+    },
+    packsTitle: {
+      fontFamily: font.subtitle.family,
+      fontSize: font.subtitle.size,
+      fontWeight: font.subtitle.weight,
+      lineHeight: font.subtitle.lineHeight,
+      color: color.onSurface,
+    },
+    packsCaption: {
+      fontFamily: font.caption.family,
+      fontSize: font.caption.size,
+      fontWeight: font.caption.weight,
+      lineHeight: font.caption.lineHeight,
+      color: color.onSurfaceMuted,
+    },
+    chipsWrap: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: space.sm,
+    },
+    warningBanner: {
+      backgroundColor: color.errorContainer,
+      borderRadius: radius.md,
+      paddingHorizontal: space.md,
+      paddingVertical: space.sm,
+    },
+    warningText: {
+      fontFamily: font.caption.family,
+      fontSize: font.caption.size,
+      fontWeight: font.caption.weight,
+      lineHeight: font.caption.lineHeight,
+      color: color.onErrorContainer,
+    },
+    wordCard: {
+      backgroundColor: card.bg,
+      borderColor: card.border,
+      borderWidth: border.thin,
+      borderRadius: card.radius,
+      padding: card.padding,
+      elevation: elevation.card,
+      alignItems: 'center',
+      gap: space.sm,
+    },
+    secretWord: {
+      fontFamily: font.display.family,
+      fontSize: font.display.size,
+      fontWeight: font.display.weight,
+      lineHeight: font.display.lineHeight,
+      color: color.onSurface,
+      textAlign: 'center',
+    },
+    actionGroup: {
+      gap: space.sm,
+    },
+    titleText: {
+      fontFamily: font.title.family,
+      fontSize: font.title.size,
+      fontWeight: font.title.weight,
+      lineHeight: font.title.lineHeight,
+      color: color.onSurface,
+      textAlign: 'center',
+    },
+  });
+};
 
 export default MimicaScreen;

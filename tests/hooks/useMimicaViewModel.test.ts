@@ -290,7 +290,6 @@ describe('useMimicaViewModel — Hook da Arena de Mímica Expressiva (UC03)', ()
       listQuizQuestions: async () => [],
       scoreQuizAnswer: async () => [],
       getScoreboard: async () => [],
-      awardBonusPoints: async () => [],
       resetScoreboard: async () => [],
     };
     const errorHarness = createHookHarness(failingUseCases);

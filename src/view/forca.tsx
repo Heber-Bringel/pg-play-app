@@ -1,12 +1,18 @@
 import React, { useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { ConfirmModal } from '@/view/components/confirmModal';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
 import { ExpressiveChip } from '@/view/components/expressiveChip';
+import { ExpressiveTag } from '@/view/components/expressiveTag';
 import { GameCard } from '@/view/components/gameCard';
 import { LetterKey } from '@/view/components/letterKey';
-import { border, color, font, icon, key, radius, space } from '@/view/theme';
+import { useTheme, type AppTokens } from '@/view/theme';
 import {
   ALL_FORCA_CATEGORIES,
   normalizeChar,
@@ -22,11 +28,17 @@ const ALL_LETTERS = [
 
 export const ForcaScreen = () => {
   const [state, actions] = useForcaViewModel();
+  const activeTokens = useTheme();
+  const styles = useMemo(() => createStyles(activeTokens), [activeTokens]);
   const { width } = useWindowDimensions();
 
-  const availableWidth = width - space.md * 2;
-  const keyUnitWidth = key.size + space.sm;
-  const keysPerRow = Math.max(1, Math.floor((availableWidth + space.sm) / keyUnitWidth));
+  const availableWidth = width - activeTokens.semantic.space.md * 2;
+  const keyUnitWidth =
+    activeTokens.component.key.size + activeTokens.semantic.space.sm;
+  const keysPerRow = Math.max(
+    1,
+    Math.floor((availableWidth + activeTokens.semantic.space.sm) / keyUnitWidth)
+  );
 
   const keyboardRows = useMemo(() => {
     const rows: string[][] = [];
@@ -57,6 +69,7 @@ export const ForcaScreen = () => {
           title="Atenção na Arena"
           description={state.error}
           playersTag="Erro"
+          playersTagTone="error"
           icon="alert-circle"
         />
         <ExpressiveButton
@@ -106,25 +119,13 @@ export const ForcaScreen = () => {
           onPress={actions.handleRequestExit}
         />
         <View style={styles.headerInfo}>
-          <View style={styles.teamBadge}>
-            <Text allowFontScaling style={styles.teamBadgeText}>
-              {teamName}
-            </Text>
-          </View>
-          <View
-            style={styles.attemptsBadge}
-            accessible
+          <ExpressiveTag label={teamName} tone="action" />
+          <ExpressiveTag
+            label={`${state.remainingAttempts} tentativas`}
+            icon="heart"
+            tone={state.remainingAttempts <= 2 ? 'error' : 'secondary'}
             accessibilityLabel={`${state.remainingAttempts} tentativas restantes`}
-          >
-            <MaterialCommunityIcons
-              name="heart"
-              size={icon.sm}
-              color={color.onSecondaryContainer}
-            />
-            <Text allowFontScaling style={styles.attemptsText}>
-              {`${state.remainingAttempts} tentativas`}
-            </Text>
-          </View>
+          />
         </View>
       </View>
 
@@ -263,6 +264,7 @@ export const ForcaScreen = () => {
               title="Palavra Descoberta!"
               description={`A equipe ${teamName} acertou "${state.currentPuzzle?.word}" e somou +${state.earnedPoints} pts (+30 pts + bônus de ${state.bonusPoints} pts por tentativas restantes)!`}
               playersTag={`+${state.earnedPoints} pts`}
+              playersTagTone="success"
               icon="trophy"
             />
           ) : (
@@ -270,6 +272,7 @@ export const ForcaScreen = () => {
               title="Tentativas Esgotadas!"
               description={`A palavra secreta era "${state.currentPuzzle?.word}". A equipe não pontuou nesta rodada.`}
               playersTag="0 pts"
+              playersTagTone="error"
               icon="close-circle"
             />
           )}
@@ -291,6 +294,7 @@ export const ForcaScreen = () => {
             title="Fim da Partida da Forca!"
             description="Todas as rodadas do Jogo da Forca foram concluídas pelas equipes participantes."
             playersTag="Partida Concluída"
+            playersTagTone="success"
             icon="trophy"
           />
           <View style={styles.actionBlock}>
@@ -307,179 +311,153 @@ export const ForcaScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: color.surface,
-  },
-  scrollContent: {
-    padding: space.md,
-    gap: space.md,
-    paddingBottom: space.xxl,
-  },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: space.sm,
-  },
-  headerInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    justifyContent: 'flex-end',
-    gap: space.xs,
-    flexShrink: 1,
-  },
-  teamBadge: {
-    backgroundColor: color.actionContainer,
-    paddingHorizontal: space.md,
-    paddingVertical: space.sm,
-    borderRadius: radius.full,
-  },
-  teamBadgeText: {
-    color: color.onActionContainer,
-    fontFamily: font.label.family,
-    fontSize: font.label.size,
-    fontWeight: font.label.weight,
-    lineHeight: font.label.lineHeight,
-  },
-  attemptsBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.xs,
-    backgroundColor: color.secondaryContainer,
-    paddingHorizontal: space.md,
-    paddingVertical: space.sm,
-    borderRadius: radius.full,
-  },
-  attemptsText: {
-    color: color.onSecondaryContainer,
-    fontFamily: font.label.family,
-    fontSize: font.label.size,
-    fontWeight: font.label.weight,
-    lineHeight: font.label.lineHeight,
-  },
-  contentSection: {
-    gap: space.md,
-  },
-  packsCard: {
-    backgroundColor: color.surfaceContainer,
-    borderColor: color.outline,
-    borderWidth: border.thin,
-    borderRadius: radius.lg,
-    padding: space.md,
-    gap: space.sm,
-  },
-  packsTitle: {
-    fontFamily: font.subtitle.family,
-    fontSize: font.subtitle.size,
-    fontWeight: font.subtitle.weight,
-    lineHeight: font.subtitle.lineHeight,
-    color: color.onSurface,
-  },
-  packsCaption: {
-    fontFamily: font.caption.family,
-    fontSize: font.caption.size,
-    fontWeight: font.caption.weight,
-    lineHeight: font.caption.lineHeight,
-    color: color.onSurfaceMuted,
-  },
-  chipsWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: space.sm,
-  },
-  warningBanner: {
-    backgroundColor: color.errorContainer,
-    borderRadius: radius.md,
-    paddingHorizontal: space.md,
-    paddingVertical: space.sm,
-  },
-  warningText: {
-    fontFamily: font.caption.family,
-    fontSize: font.caption.size,
-    fontWeight: font.caption.weight,
-    lineHeight: font.caption.lineHeight,
-    color: color.onErrorContainer,
-  },
-  cardContainer: {
-    backgroundColor: color.surfaceContainer,
-    borderRadius: radius.lg,
-    padding: space.md,
-    borderWidth: border.thin,
-    borderColor: color.outline,
-    gap: space.md,
-    alignItems: 'center',
-  },
-  hintLabel: {
-    fontFamily: font.subtitle.family,
-    fontSize: font.subtitle.size,
-    fontWeight: font.subtitle.weight,
-    lineHeight: font.subtitle.lineHeight,
-    color: color.onSurface,
-    textAlign: 'center',
-  },
-  slotsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: space.xs,
-  },
-  slotWrapper: {
-    alignItems: 'center',
-    gap: space.xs,
-  },
-  letterSlot: {
-    minWidth: space.xl,
-    minHeight: space['2xl'],
-    backgroundColor: color.surfaceVariant,
-    borderRadius: radius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: space.xs,
-  },
-  slotText: {
-    fontFamily: font.title.family,
-    fontSize: font.title.size,
-    fontWeight: font.title.weight,
-    lineHeight: font.title.lineHeight,
-    color: color.onSurface,
-  },
-  slotUnderline: {
-    height: space.xs,
-    width: '100%',
-    backgroundColor: color.action,
-    borderRadius: radius.sm,
-  },
-  spaceSlot: {
-    width: space.md,
-  },
-  keyboardContainer: {
-    gap: space.sm,
-    alignItems: 'center',
-  },
-  keyboardRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: space.sm,
-  },
-  resetButtonContainer: {
-    alignItems: 'center',
-    marginTop: space.sm,
-  },
-  actionBlock: {
-    gap: space.sm,
-  },
-  titleText: {
-    fontFamily: font.title.family,
-    fontSize: font.title.size,
-    fontWeight: font.title.weight,
-    lineHeight: font.title.lineHeight,
-    color: color.onSurface,
-    textAlign: 'center',
-  },
-});
+const createStyles = (activeTokens: AppTokens) => {
+  const { color, font, radius, space, border } = activeTokens.semantic;
+  return StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: color.surface,
+    },
+    scrollContent: {
+      padding: space.md,
+      gap: space.md,
+      paddingBottom: space['2xl'],
+    },
+    topBar: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: space.sm,
+    },
+    headerInfo: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flexWrap: 'wrap',
+      justifyContent: 'flex-end',
+      gap: space.xs,
+      flexShrink: 1,
+    },
+    contentSection: {
+      gap: space.md,
+    },
+    packsCard: {
+      backgroundColor: activeTokens.component.card.bg,
+      borderColor: activeTokens.component.card.border,
+      borderWidth: border.thin,
+      borderRadius: radius.lg,
+      padding: space.md,
+      gap: space.sm,
+    },
+    packsTitle: {
+      fontFamily: font.subtitle.family,
+      fontSize: font.subtitle.size,
+      fontWeight: font.subtitle.weight,
+      lineHeight: font.subtitle.lineHeight,
+      color: color.onSurface,
+    },
+    packsCaption: {
+      fontFamily: font.caption.family,
+      fontSize: font.caption.size,
+      fontWeight: font.caption.weight,
+      lineHeight: font.caption.lineHeight,
+      color: color.onSurfaceMuted,
+    },
+    chipsWrap: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: space.sm,
+    },
+    warningBanner: {
+      backgroundColor: color.errorContainer,
+      borderRadius: radius.md,
+      paddingHorizontal: space.md,
+      paddingVertical: space.sm,
+    },
+    warningText: {
+      fontFamily: font.caption.family,
+      fontSize: font.caption.size,
+      fontWeight: font.caption.weight,
+      lineHeight: font.caption.lineHeight,
+      color: color.onErrorContainer,
+    },
+    cardContainer: {
+      backgroundColor: activeTokens.component.card.bg,
+      borderRadius: activeTokens.component.card.radius,
+      padding: space.md,
+      borderWidth: border.thin,
+      borderColor: activeTokens.component.card.border,
+      gap: space.md,
+      alignItems: 'center',
+    },
+    hintLabel: {
+      fontFamily: font.subtitle.family,
+      fontSize: font.subtitle.size,
+      fontWeight: font.subtitle.weight,
+      lineHeight: font.subtitle.lineHeight,
+      color: color.onSurface,
+      textAlign: 'center',
+    },
+    slotsRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'center',
+      gap: space.xs,
+    },
+    slotWrapper: {
+      alignItems: 'center',
+      gap: space.xs,
+    },
+    letterSlot: {
+      minWidth: space.xl,
+      minHeight: space['2xl'],
+      backgroundColor: color.surfaceVariant,
+      borderRadius: radius.sm,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: space.xs,
+    },
+    slotText: {
+      fontFamily: font.title.family,
+      fontSize: font.title.size,
+      fontWeight: font.title.weight,
+      lineHeight: font.title.lineHeight,
+      color: color.onSurface,
+    },
+    slotUnderline: {
+      height: space.xs,
+      width: '100%',
+      backgroundColor: color.action,
+      borderRadius: radius.sm,
+    },
+    spaceSlot: {
+      width: space.md,
+    },
+    keyboardContainer: {
+      gap: space.sm,
+      alignItems: 'center',
+    },
+    keyboardRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'center',
+      gap: space.sm,
+    },
+    resetButtonContainer: {
+      alignItems: 'center',
+      marginTop: space.sm,
+    },
+    actionBlock: {
+      gap: space.sm,
+    },
+    titleText: {
+      fontFamily: font.title.family,
+      fontSize: font.title.size,
+      fontWeight: font.title.weight,
+      lineHeight: font.title.lineHeight,
+      color: color.onSurface,
+      textAlign: 'center',
+    },
+  });
+};
 
 export default ForcaScreen;

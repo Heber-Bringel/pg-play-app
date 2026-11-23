@@ -4,6 +4,25 @@ Versões no formato `MAIOR.MENOR.CORREÇÃO` (Semantic Versioning). Mudanças qu
 
 ---
 
+## 1.1.0 · 21/11/2026
+
+- Revisão abrangente de acessibilidade, foco, contraste de componentes, consistência de tags/bordas, tema escuro automático e tipografia (Issue `#55`, relacionadas `#50`, `#51`, `#53`, `#54`).
+- **Mudanças incluídas nesta versão:**
+  - **Foco exclusivo para teclado/switch (`:focus-visible`):** introdução do hook `useKeyboardFocus` em todos os controles interativos, eliminando a exibição de borda de foco em cliques do mouse e toques na tela.
+  - **Anel duplo M3 de foco:** substituição de `color.focus` coral (`#C2410C`, confundido com erro) por anel duplo `onSurface` (`#1D1B20` claro / `#E6E0E9` escuro) + `color.focus-offset` (`surface`), atingindo **16,30:1** (claro) e **14,35:1** (escuro) sobre qualquer botão.
+  - **Contraste WCAG 1.4.11 (≥ 3,0:1) em componentes:**
+    - `color.outline` ajustado para `neutral-500` (`#79747E`, **4,35:1** sobre `surface`) no claro e `neutral-400` (`#938F99`, **5,87:1**) no escuro.
+    - Criação de `color.highlight-border` (`gold-700` `#A16207`, **4,70:1** no claro; `gold-400` `#FACC15`, **12,14:1** no escuro) e `card.borderLeader` para o card líder.
+    - `color.disabled-text` no escuro ajustado para `neutral-400` (`#938F99`, **4,53:1** sobre `disabled-bg`).
+    - Novo token `timer.bg.calm` (`color.action`, **7,81:1** claro / **8,12:1** escuro sobre `surface-variant`) para a variante termômetro (#50).
+    - Adicionada tabela completa de **Contraste de Componentes Não Textuais (WCAG 1.4.11)** em [06-acessibilidade.md](06-acessibilidade.md).
+  - **Novo componente `ExpressiveTag` (`tag.md`):** 6 tons (`neutral`, `action`, `secondary`, `success`, `error`, `highlight`), tipografia legível `font.tag` (`14 dp`, peso `700`, `RNF04`) e borda `>= 4,55:1`, substituindo mais de 20 estilos locais de badges e a tag interna do `GameCard`.
+  - **Tokens de borda por estado:** adicionados `component.chip`, `component.option`, `component.tag`, `component.banner` e `component.card.borderLeader/borderPressed/borderFocus`, eliminando `borderColor` semânticos diretos nas telas.
+  - **Novas variantes e documentação de componentes:** adicionadas variantes `text` e `icon` ao `ExpressiveButton` (`botao.md`, #51), suporte a 1 botão no `ConfirmModal` (`modal-confirmacao.md`, #54), e documentação oficial de `ExpressiveChip` (`chip.md`), `ExpressiveTag` (`tag.md`) e `SelectableOptionItem` (`item-selecionavel.md`).
+  - **Tema escuro real e limpeza de `theme.ts`:** remoção de todos os 17 aliases duplicados (`xxl`/`xxxl`, `jumboHeight`, `timer.*Normal/Critical`, `quiz.optionBg*`, `key.hitBg/missBg`), inclusão de `ThemeProvider` + `useTheme()` conectados ao `useColorScheme()` (com override local na fase Noite do Cidade Dorme) e mapeamento explícito dos pesos de **Plus Jakarta Sans** em todas as escalas tipográficas.
+
+---
+
 ## 1.0.0 · 20/10/2026
 
 - Primeira versão estável do sistema de design **PG Play Expressive**, marcada com a tag `ds-v1.0.0` e preparada para apresentação na aula de 21/10/2026.

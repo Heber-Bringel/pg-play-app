@@ -56,8 +56,8 @@ describe('useHubViewModel — Hook do Hub de Jogos (UC01)', () => {
     const state = harness.getState();
     expect(state.loading).toBe(false);
     expect(state.error).toBeNull();
-    expect(state.games).toHaveLength(5);
-    expect(state.allGamesCount).toBe(5);
+    expect(state.games).toHaveLength(6);
+    expect(state.allGamesCount).toBe(6);
     expect(state.totalTeams).toBe(2);
     expect(state.leaderTeam?.id).toBe('team-2');
     expect(state.leaderTeam?.score).toBe(40);
@@ -79,7 +79,7 @@ describe('useHubViewModel — Hook do Hub de Jogos (UC01)', () => {
       await harness.getActions().setSelectedModality('1 Celular');
     });
     expect(harness.getState().selectedModality).toBe('1 Celular');
-    expect(harness.getState().games).toHaveLength(3);
+    expect(harness.getState().games).toHaveLength(4);
 
     await act(async () => {
       await harness.getActions().setSearchQuery('quiz');
@@ -92,7 +92,7 @@ describe('useHubViewModel — Hook do Hub de Jogos (UC01)', () => {
     });
     expect(harness.getState().searchQuery).toBe('');
     expect(harness.getState().selectedModality).toBe('Todos');
-    expect(harness.getState().games).toHaveLength(5);
+    expect(harness.getState().games).toHaveLength(6);
 
     harness.unmount();
   });
@@ -163,7 +163,6 @@ describe('useHubViewModel — Hook do Hub de Jogos (UC01)', () => {
       listQuizQuestions: (c) => baseUseCases.listQuizQuestions(c),
       scoreQuizAnswer: (id, ok, pts) => baseUseCases.scoreQuizAnswer(id, ok, pts),
       getScoreboard: () => baseUseCases.getScoreboard(),
-      awardBonusPoints: (id, pts) => baseUseCases.awardBonusPoints(id, pts),
       resetScoreboard: () => baseUseCases.resetScoreboard(),
     };
 
@@ -179,7 +178,7 @@ describe('useHubViewModel — Hook do Hub de Jogos (UC01)', () => {
     });
 
     expect(harness.getState().error).toBeNull();
-    expect(harness.getState().games).toHaveLength(5);
+    expect(harness.getState().games).toHaveLength(6);
 
     harness.unmount();
   });

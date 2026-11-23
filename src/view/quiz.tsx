@@ -1,22 +1,20 @@
-import React from 'react';
-import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import React, { useMemo } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ConfirmModal } from '@/view/components/confirmModal';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
 import { ExpressiveChip } from '@/view/components/expressiveChip';
+import { ExpressiveTag } from '@/view/components/expressiveTag';
 import { ExpressiveTimer } from '@/view/components/expressiveTimer';
 import { GameCard } from '@/view/components/gameCard';
 import { QuizOption } from '@/view/components/quizOption';
-import { border, color, font, icon, radius, space } from '@/view/theme';
+import { useTheme, type AppTokens } from '@/view/theme';
 import { ALL_QUIZ_CATEGORIES, useQuizViewModel } from '@/viewmodel/useQuizViewModel';
 
 export const QuizScreen = () => {
   const [state, actions] = useQuizViewModel();
+  const activeTokens = useTheme();
+  const styles = useMemo(() => createStyles(activeTokens), [activeTokens]);
 
   if (state.loading) {
     return (
@@ -43,6 +41,7 @@ export const QuizScreen = () => {
           title="Atenção"
           description={state.error}
           playersTag="Aviso"
+          playersTagTone="error"
           icon="alert-circle"
         />
         {state.teams.length < 2 ? (
@@ -74,8 +73,8 @@ export const QuizScreen = () => {
             <View style={styles.trophyCircle}>
               <MaterialCommunityIcons
                 name="party-popper"
-                size={icon.lg}
-                color={color.onHighlight}
+                size={activeTokens.semantic.icon.lg}
+                color={activeTokens.semantic.color.onHighlight}
               />
             </View>
             <Text allowFontScaling style={styles.title}>
@@ -117,11 +116,10 @@ export const QuizScreen = () => {
               icon="arrow-left"
               onPress={actions.handleRequestExit}
             />
-            <View style={styles.badgePill}>
-              <Text allowFontScaling style={styles.badgeText}>
-                {`Pergunta ${state.currentQuestionIndex + 1} de ${state.totalQuestions}`}
-              </Text>
-            </View>
+            <ExpressiveTag
+              label={`Pergunta ${state.currentQuestionIndex + 1} de ${state.totalQuestions}`}
+              tone="neutral"
+            />
           </View>
 
           <ConfirmModal
@@ -172,8 +170,8 @@ export const QuizScreen = () => {
               <View style={styles.avatarTeam}>
                 <MaterialCommunityIcons
                   name="account-group"
-                  size={icon.lg}
-                  color={color.onActionContainer}
+                  size={activeTokens.semantic.icon.lg}
+                  color={activeTokens.semantic.color.onActionContainer}
                 />
               </View>
               <Text allowFontScaling style={styles.passTurnSubtitle}>
@@ -205,9 +203,11 @@ export const QuizScreen = () => {
     );
   }
 
-  // Fases: 'playing' ou 'answered'
   const isAnswered = state.phase === 'answered';
   const currentQuestion = state.currentQuestion;
+  const feedbackBanner = state.isCorrect
+    ? activeTokens.component.banner.success
+    : activeTokens.component.banner.error;
 
   return (
     <View style={styles.screen}>
@@ -223,16 +223,16 @@ export const QuizScreen = () => {
             onPress={actions.handleRequestExit}
           />
           <View style={styles.headerInfo}>
-            <View style={styles.badgePill}>
-              <Text allowFontScaling style={styles.badgeText}>
-                {`Pergunta ${state.currentQuestionIndex + 1}/${state.totalQuestions}`}
-              </Text>
-            </View>
-            <View style={styles.teamBadgePill}>
-              <Text allowFontScaling style={styles.teamBadgeText}>
-                {state.currentTeam?.name ?? ''}
-              </Text>
-            </View>
+            <ExpressiveTag
+              label={`Pergunta ${state.currentQuestionIndex + 1}/${state.totalQuestions}`}
+              tone="neutral"
+            />
+            {Boolean(state.currentTeam?.name) && (
+              <ExpressiveTag
+                label={state.currentTeam?.name ?? ''}
+                tone="action"
+              />
+            )}
           </View>
         </View>
 
@@ -288,29 +288,21 @@ export const QuizScreen = () => {
             style={[
               styles.feedbackCard,
               {
-                backgroundColor: state.isCorrect
-                  ? color.success
-                  : color.errorContainer,
+                backgroundColor: feedbackBanner.bg,
+                borderColor: feedbackBanner.border,
               },
             ]}
             accessibilityLiveRegion="polite"
           >
             <MaterialCommunityIcons
               name={state.isCorrect ? 'check-circle' : 'close-circle'}
-              size={icon.md}
-              color={state.isCorrect ? color.onSuccess : color.onErrorContainer}
+              size={activeTokens.semantic.icon.md}
+              color={feedbackBanner.text}
             />
             <View style={styles.feedbackTextWrapper}>
               <Text
                 allowFontScaling
-                style={[
-                  styles.feedbackTitle,
-                  {
-                    color: state.isCorrect
-                      ? color.onSuccess
-                      : color.onErrorContainer,
-                  },
-                ]}
+                style={[styles.feedbackTitle, { color: feedbackBanner.text }]}
               >
                 {state.isCorrect
                   ? 'Resposta Correta! (+10 pts)'
@@ -321,11 +313,7 @@ export const QuizScreen = () => {
                   allowFontScaling
                   style={[
                     styles.feedbackExplanation,
-                    {
-                      color: state.isCorrect
-                        ? color.onSuccess
-                        : color.onErrorContainer,
-                    },
+                    { color: feedbackBanner.text },
                   ]}
                 >
                   {currentQuestion.explanation}
@@ -350,233 +338,209 @@ export const QuizScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: color.surface,
-  },
-  padded: {
-    padding: space.md,
-  },
-  stackContent: {
-    flexGrow: 1,
-    padding: space.md,
-    gap: space.md,
-  },
-  scrollContent: {
-    padding: space.md,
-    gap: space.md,
-  },
-  fixedFooter: {
-    paddingHorizontal: space.md,
-    paddingTop: space.sm,
-    paddingBottom: space.md,
-    backgroundColor: color.surface,
-  },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: space.sm,
-    marginBottom: space.sm,
-  },
-  headerInfo: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    gap: space.xs,
-    flexShrink: 1,
-  },
-  badgePill: {
-    backgroundColor: color.surfaceContainer,
-    paddingHorizontal: space.sm,
-    paddingVertical: space.xs,
-    borderRadius: radius.full,
-    borderWidth: border.thin,
-    borderColor: color.outline,
-  },
-  badgeText: {
-    fontSize: font.caption.size,
-    fontFamily: font.caption.family,
-    color: color.onSurfaceMuted,
-    fontWeight: font.caption.weight,
-    lineHeight: font.caption.lineHeight,
-  },
-  teamBadgePill: {
-    backgroundColor: color.actionContainer,
-    paddingHorizontal: space.sm,
-    paddingVertical: space.xs,
-    borderRadius: radius.full,
-  },
-  teamBadgeText: {
-    fontSize: font.caption.size,
-    fontFamily: font.caption.family,
-    color: color.onActionContainer,
-    fontWeight: font.caption.weight,
-    lineHeight: font.caption.lineHeight,
-  },
-  title: {
-    fontSize: font.title.size,
-    fontFamily: font.title.family,
-    color: color.onSurface,
-    fontWeight: font.title.weight,
-    lineHeight: font.title.lineHeight,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: font.body.size,
-    fontFamily: font.body.family,
-    fontWeight: font.body.weight,
-    color: color.onSurfaceMuted,
-    lineHeight: font.body.lineHeight,
-    textAlign: 'center',
-  },
-  timerWrapper: {
-    alignItems: 'center',
-    marginVertical: space.xs,
-  },
-  optionsList: {
-    gap: space.sm,
-  },
-  feedbackCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: space.sm,
-    padding: space.md,
-    borderRadius: radius.md,
-    marginTop: space.xs,
-  },
-  feedbackTextWrapper: {
-    flex: 1,
-    gap: space.xs,
-  },
-  feedbackTitle: {
-    fontSize: font.subtitle.size,
-    fontFamily: font.subtitle.family,
-    fontWeight: font.subtitle.weight,
-    lineHeight: font.subtitle.lineHeight,
-  },
-  feedbackExplanation: {
-    fontSize: font.body.size,
-    fontFamily: font.body.family,
-    fontWeight: font.body.weight,
-    lineHeight: font.body.lineHeight,
-  },
-  passTurnScroll: {
-    flexGrow: 1,
-    padding: space.md,
-    gap: space.md,
-  },
-  passTurnContent: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: space.md,
-  },
-  packsCard: {
-    backgroundColor: color.surfaceContainer,
-    borderColor: color.outline,
-    borderWidth: border.thin,
-    borderRadius: radius.lg,
-    padding: space.md,
-    gap: space.sm,
-    width: '100%',
-  },
-  packsTitle: {
-    fontFamily: font.subtitle.family,
-    fontSize: font.subtitle.size,
-    fontWeight: font.subtitle.weight,
-    lineHeight: font.subtitle.lineHeight,
-    color: color.onSurface,
-  },
-  packsCaption: {
-    fontFamily: font.caption.family,
-    fontSize: font.caption.size,
-    fontWeight: font.caption.weight,
-    lineHeight: font.caption.lineHeight,
-    color: color.onSurfaceMuted,
-  },
-  chipsWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: space.sm,
-  },
-  warningBanner: {
-    backgroundColor: color.errorContainer,
-    borderRadius: radius.md,
-    paddingHorizontal: space.md,
-    paddingVertical: space.sm,
-  },
-  warningText: {
-    fontFamily: font.caption.family,
-    fontSize: font.caption.size,
-    fontWeight: font.caption.weight,
-    lineHeight: font.caption.lineHeight,
-    color: color.onErrorContainer,
-  },
-  passTurnCard: {
-    backgroundColor: color.surfaceContainer,
-    padding: space.xl,
-    borderRadius: radius.xl,
-    alignItems: 'center',
-    borderWidth: border.thin,
-    borderColor: color.outline,
-    gap: space.sm,
-    width: '100%',
-  },
-  avatarTeam: {
-    width: space['3xl'],
-    height: space['3xl'],
-    borderRadius: radius.full,
-    backgroundColor: color.actionContainer,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  passTurnSubtitle: {
-    fontSize: font.subtitle.size,
-    fontFamily: font.subtitle.family,
-    fontWeight: font.subtitle.weight,
-    lineHeight: font.subtitle.lineHeight,
-    color: color.onSurfaceMuted,
-  },
-  passTurnTeamName: {
-    fontSize: font.display.size,
-    fontFamily: font.display.family,
-    color: color.onSurface,
-    fontWeight: font.display.weight,
-    lineHeight: font.display.lineHeight,
-    textAlign: 'center',
-  },
-  passTurnScore: {
-    fontSize: font.body.size,
-    fontFamily: font.body.family,
-    fontWeight: font.body.weight,
-    lineHeight: font.body.lineHeight,
-    color: color.onSurfaceMuted,
-  },
-  instructionNotice: {
-    fontSize: font.body.size,
-    fontFamily: font.body.family,
-    fontWeight: font.body.weight,
-    lineHeight: font.body.lineHeight,
-    color: color.onSurface,
-    textAlign: 'center',
-    paddingHorizontal: space.md,
-  },
-  finishedHeader: {
-    alignItems: 'center',
-    gap: space.sm,
-    marginVertical: space.md,
-  },
-  trophyCircle: {
-    width: space['3xl'],
-    height: space['3xl'],
-    borderRadius: radius.full,
-    backgroundColor: color.highlight,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-});
+const createStyles = (activeTokens: AppTokens) => {
+  const { color, font, radius, space, border } = activeTokens.semantic;
+  return StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: color.surface,
+    },
+    padded: {
+      padding: space.md,
+    },
+    stackContent: {
+      flexGrow: 1,
+      padding: space.md,
+      gap: space.md,
+    },
+    scrollContent: {
+      padding: space.md,
+      gap: space.md,
+    },
+    fixedFooter: {
+      paddingHorizontal: space.md,
+      paddingTop: space.sm,
+      paddingBottom: space.md,
+      backgroundColor: color.surface,
+    },
+    topBar: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: space.sm,
+      marginBottom: space.sm,
+    },
+    headerInfo: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'flex-end',
+      alignItems: 'center',
+      gap: space.xs,
+      flexShrink: 1,
+    },
+    title: {
+      fontSize: font.title.size,
+      fontFamily: font.title.family,
+      color: color.onSurface,
+      fontWeight: font.title.weight,
+      lineHeight: font.title.lineHeight,
+      textAlign: 'center',
+    },
+    subtitle: {
+      fontSize: font.body.size,
+      fontFamily: font.body.family,
+      fontWeight: font.body.weight,
+      color: color.onSurfaceMuted,
+      lineHeight: font.body.lineHeight,
+      textAlign: 'center',
+    },
+    timerWrapper: {
+      alignItems: 'center',
+      marginVertical: space.xs,
+    },
+    optionsList: {
+      gap: space.sm,
+    },
+    feedbackCard: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: space.sm,
+      padding: space.md,
+      borderRadius: radius.md,
+      borderWidth: border.thin,
+      marginTop: space.xs,
+    },
+    feedbackTextWrapper: {
+      flex: 1,
+      gap: space.xs,
+    },
+    feedbackTitle: {
+      fontSize: font.subtitle.size,
+      fontFamily: font.subtitle.family,
+      fontWeight: font.subtitle.weight,
+      lineHeight: font.subtitle.lineHeight,
+    },
+    feedbackExplanation: {
+      fontSize: font.body.size,
+      fontFamily: font.body.family,
+      fontWeight: font.body.weight,
+      lineHeight: font.body.lineHeight,
+    },
+    passTurnScroll: {
+      flexGrow: 1,
+      padding: space.md,
+      gap: space.md,
+    },
+    passTurnContent: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: space.md,
+    },
+    packsCard: {
+      backgroundColor: activeTokens.component.card.bg,
+      borderColor: activeTokens.component.card.border,
+      borderWidth: border.thin,
+      borderRadius: radius.lg,
+      padding: space.md,
+      gap: space.sm,
+      width: '100%',
+    },
+    packsTitle: {
+      fontFamily: font.subtitle.family,
+      fontSize: font.subtitle.size,
+      fontWeight: font.subtitle.weight,
+      lineHeight: font.subtitle.lineHeight,
+      color: color.onSurface,
+    },
+    packsCaption: {
+      fontFamily: font.caption.family,
+      fontSize: font.caption.size,
+      fontWeight: font.caption.weight,
+      lineHeight: font.caption.lineHeight,
+      color: color.onSurfaceMuted,
+    },
+    chipsWrap: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: space.sm,
+    },
+    warningBanner: {
+      backgroundColor: color.errorContainer,
+      borderRadius: radius.md,
+      paddingHorizontal: space.md,
+      paddingVertical: space.sm,
+    },
+    warningText: {
+      fontFamily: font.caption.family,
+      fontSize: font.caption.size,
+      fontWeight: font.caption.weight,
+      lineHeight: font.caption.lineHeight,
+      color: color.onErrorContainer,
+    },
+    passTurnCard: {
+      backgroundColor: activeTokens.component.card.bg,
+      padding: space.xl,
+      borderRadius: activeTokens.component.card.radius,
+      alignItems: 'center',
+      borderWidth: border.thin,
+      borderColor: activeTokens.component.card.border,
+      gap: space.sm,
+      width: '100%',
+    },
+    avatarTeam: {
+      width: space['3xl'],
+      height: space['3xl'],
+      borderRadius: radius.full,
+      backgroundColor: color.actionContainer,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    passTurnSubtitle: {
+      fontSize: font.subtitle.size,
+      fontFamily: font.subtitle.family,
+      fontWeight: font.subtitle.weight,
+      lineHeight: font.subtitle.lineHeight,
+      color: color.onSurfaceMuted,
+    },
+    passTurnTeamName: {
+      fontSize: font.display.size,
+      fontFamily: font.display.family,
+      color: color.onSurface,
+      fontWeight: font.display.weight,
+      lineHeight: font.display.lineHeight,
+      textAlign: 'center',
+    },
+    passTurnScore: {
+      fontSize: font.body.size,
+      fontFamily: font.body.family,
+      fontWeight: font.body.weight,
+      lineHeight: font.body.lineHeight,
+      color: color.onSurfaceMuted,
+    },
+    instructionNotice: {
+      fontSize: font.body.size,
+      fontFamily: font.body.family,
+      fontWeight: font.body.weight,
+      lineHeight: font.body.lineHeight,
+      color: color.onSurface,
+      textAlign: 'center',
+      paddingHorizontal: space.md,
+    },
+    finishedHeader: {
+      alignItems: 'center',
+      gap: space.sm,
+      marginVertical: space.md,
+    },
+    trophyCircle: {
+      width: space['3xl'],
+      height: space['3xl'],
+      borderRadius: radius.full,
+      backgroundColor: color.highlight,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+  });
+};
 
 export default QuizScreen;

@@ -7,14 +7,16 @@ export type MinigameRoute =
   | '/quiz'
   | '/forca'
   | '/adedonha'
-  | '/cidade-dorme';
+  | '/cidade-dorme'
+  | '/versiculo';
 
 export type MinigameIconName =
   | 'drama-masks'
   | 'lightning-bolt'
   | 'alphabetical-variant'
   | 'format-list-checks'
-  | 'weather-night';
+  | 'weather-night'
+  | 'book-open-variant';
 
 export type Minigame = {
   id: string;

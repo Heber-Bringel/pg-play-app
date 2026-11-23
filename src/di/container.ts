@@ -1,5 +1,7 @@
 import { AsyncStorageTeamDataSource } from '@/infra/datasources/asyncStorageTeamDataSource';
+import { HelloAoVerseDataSource } from '@/infra/datasources/helloAoVerseDataSource';
 import { MemoryGameCatalogDataSource } from '@/infra/datasources/memoryGameCatalogDataSource';
+import { MemoryVerseDataSource } from '@/infra/datasources/memoryVerseDataSource';
 import { ExpoSpeechNarratorAudioService } from '@/infra/services/expoSpeechNarratorAudioService';
 import { MemoryMultiplayerRoomService } from '@/infra/services/memoryMultiplayerRoomService';
 import { SupabaseMultiplayerRoomService } from '@/infra/services/supabaseMultiplayerRoomService';
@@ -10,11 +12,14 @@ import { CidadeDormeUseCases } from '@/usecase/cidadeDormeUseCases';
 import type { IAdedonhaUseCases } from '@/usecase/iAdedonhaUseCases';
 import type { ICidadeDormeUseCases } from '@/usecase/iCidadeDormeUseCases';
 import type { IPgPlayUseCases } from '@/usecase/iPgPlayUseCases';
+import type { IVersiculoUseCases } from '@/usecase/iVersiculoUseCases';
 import { PgPlayUseCases } from '@/usecase/pgPlayUseCases';
+import { VersiculoUseCases } from '@/usecase/versiculoUseCases';
 
 // Equipes e placar persistem no aparelho (RF04–RF06); MemoryTeamDataSource segue para testes.
 const teamDataSource = new AsyncStorageTeamDataSource();
 const gameCatalogDataSource = new MemoryGameCatalogDataSource();
+const verseDataSource = new HelloAoVerseDataSource(new MemoryVerseDataSource());
 const narratorAudioService: INarratorAudioService =
   new ExpoSpeechNarratorAudioService();
 
@@ -46,3 +51,8 @@ export const adedonhaUseCases: IAdedonhaUseCases = new AdedonhaUseCases(
 
 export const cidadeDormeUseCases: ICidadeDormeUseCases =
   new CidadeDormeUseCases(multiplayerRoomService, narratorAudioService);
+
+export const versiculoUseCases: IVersiculoUseCases = new VersiculoUseCases(
+  verseDataSource,
+  teamDataSource
+);

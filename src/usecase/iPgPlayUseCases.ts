@@ -24,6 +24,5 @@ export interface IPgPlayUseCases {
   listQuizQuestions(categories?: QuizCategory[]): Promise<QuizQuestion[]>;
   scoreQuizAnswer(teamId: string, isCorrect: boolean, points?: number): Promise<Team[]>;
   getScoreboard(): Promise<Team[]>;
-  awardBonusPoints(teamId: string, bonusPoints?: number): Promise<Team[]>;
   resetScoreboard(): Promise<Team[]>;
 }

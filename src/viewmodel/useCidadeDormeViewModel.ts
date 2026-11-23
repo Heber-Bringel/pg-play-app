@@ -124,6 +124,7 @@ export function useCidadeDormeViewModel(
   const lastPhaseKeyRef = useRef<string | null>(null);
   const lastSpokenKeyRef = useRef<string | null>(null);
   const autoAdvancedPhaseKeyRef = useRef<string | null>(null);
+  const lastVersionRef = useRef<number>(-1);
   const activeTimeoutsRef = useRef<Set<ReturnType<typeof setTimeout>>>(
     new Set()
   );
@@ -202,6 +203,10 @@ export function useCidadeDormeViewModel(
   useEffect(() => {
     if (!room?.id) return;
     const unsubscribe = useCase.subscribeToRoom(room.id, (updatedRoom) => {
+      if (updatedRoom.version < lastVersionRef.current) {
+        return;
+      }
+      lastVersionRef.current = updatedRoom.version;
       syncPhaseTimerAndSelection(updatedRoom);
       setRoom(updatedRoom);
     });
