@@ -20,6 +20,7 @@ import type {
 const CONNECTION_TIMEOUT_MS = 10_000;
 const NIGHT_SYNC_WATCHDOG_INTERVAL_MS = 1_500;
 const NIGHT_SYNC_WATCHDOG_MAX_ATTEMPTS = 4;
+const NIGHT_VERDICT_AUTO_HIDE_MS = 4_000;
 
 export type CidadeDormeTimelineStepId = 'night' | 'dawn' | 'debate' | 'voting';
 
@@ -39,6 +40,7 @@ export type CidadeDormeState = {
   isRealtimeEnabled: boolean;
   isNightPhase: boolean;
   isRoleVisible: boolean;
+  isNightCardRevealed: boolean;
   hasSubmittedNightAction: boolean;
   selectedNightTargetId: string | null;
   selectedVoteTargetId: string | null;
@@ -62,6 +64,8 @@ export type CidadeDormeActions = {
   handleStartMatch: (preferredRoles?: CidadeDormeRole[]) => Promise<void>;
   handleToggleRoleVisibility: () => void;
   handleConfirmRoleReady: (markAllReady?: boolean) => Promise<void>;
+  handleToggleNightCardVisibility: () => void;
+  handleHideNightCard: () => void;
   handleSelectNightTarget: (targetPlayerId: string) => void;
   handleConfirmAssassinTarget: (targetPlayerId?: string) => Promise<void>;
   handleConfirmAngelProtection: (
@@ -157,6 +161,7 @@ export function useCidadeDormeViewModel(
   const [room, setRoom] = useState<CidadeDormeRoom | null>(null);
   const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
   const [isRoleVisible, setIsRoleVisible] = useState<boolean>(false);
+  const [isNightCardRevealed, setIsNightCardRevealed] = useState<boolean>(false);
   const [hasSubmittedNightAction, setHasSubmittedNightAction] =
     useState<boolean>(false);
   const [selectedNightTargetId, setSelectedNightTargetId] = useState<
@@ -177,16 +182,26 @@ export function useCidadeDormeViewModel(
   const currentPlayerIdRef = useRef<string | null>(null);
   const lastRoomIdRef = useRef<string | null>(null);
   const lastVersionRef = useRef<number>(-1);
+  const nightHideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeTimeoutsRef = useRef<Set<ReturnType<typeof setTimeout>>>(
     new Set()
   );
   const isMountedRef = useRef<boolean>(true);
+
+  const clearNightHideTimeout = useCallback(() => {
+    if (nightHideTimeoutRef.current !== null) {
+      clearTimeout(nightHideTimeoutRef.current);
+      activeTimeoutsRef.current.delete(nightHideTimeoutRef.current);
+      nightHideTimeoutRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
     isMountedRef.current = true;
     const timeouts = activeTimeoutsRef.current;
     return () => {
       isMountedRef.current = false;
+      nightHideTimeoutRef.current = null;
       timeouts.forEach((id) => clearTimeout(id));
       timeouts.clear();
     };
