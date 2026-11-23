@@ -327,8 +327,11 @@ export const CidadeDormeScreen = () => {
               currentPlayer={state.currentPlayer}
               selectedNightTargetId={state.selectedNightTargetId}
               hasSubmittedNightAction={state.hasSubmittedNightAction}
+              isNightCardRevealed={state.isNightCardRevealed}
               secondsRemaining={state.secondsRemaining}
               reduceMotion={state.reduceMotion}
+              onToggleNightCardVisibility={actions.handleToggleNightCardVisibility}
+              onHideNightCard={actions.handleHideNightCard}
               onSelectNightTarget={actions.handleSelectNightTarget}
               onConfirmAssassinTarget={actions.handleConfirmAssassinTarget}
               onConfirmAngelProtection={actions.handleConfirmAngelProtection}
