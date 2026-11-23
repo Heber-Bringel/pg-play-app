@@ -66,7 +66,7 @@ describe('useScoreboardViewModel — Hook do Placar e Ranking Geral do PG (UC06)
     harness.unmount();
   });
 
-  it('deve conceder bônus, zerar placar e navegar para escolher outro jogo (RF16, RF17)', async () => {
+  it('deve zerar placar, recarregar e navegar para escolher outro jogo (RF16, RF17)', async () => {
     const useCases = new PgPlayUseCases(
       new MemoryTeamDataSource([
         { id: 'team-1', name: 'Tribo de Judá', score: 20 },
@@ -76,12 +76,6 @@ describe('useScoreboardViewModel — Hook do Placar e Ranking Geral do PG (UC06)
     );
     const harness = createHookHarness(useCases);
     await harness.mount();
-
-    await act(async () => {
-      await harness.getActions().handleAwardBonus('team-1', 10);
-    });
-    expect(harness.getState().leaderTeam?.name).toBe('Tribo de Judá');
-    expect(harness.getState().leaderTeam?.score).toBe(30);
 
     await act(async () => {
       await harness.getActions().handleResetScoreboard();
@@ -122,9 +116,6 @@ describe('useScoreboardViewModel — Hook do Placar e Ranking Geral do PG (UC06)
       getScoreboard: async () => {
         throw new ValidationError('Falha ao consultar o placar.');
       },
-      awardBonusPoints: async () => {
-        throw new ValidationError('Equipe inválida para bônus.');
-      },
       resetScoreboard: async () => {
         throw new ValidationError('Falha ao zerar placar.');
       },
@@ -133,11 +124,6 @@ describe('useScoreboardViewModel — Hook do Placar e Ranking Geral do PG (UC06)
     const harness = createHookHarness(failingUseCases);
     await harness.mount();
     expect(harness.getState().error).toBe('Falha ao consultar o placar.');
-
-    await act(async () => {
-      await harness.getActions().handleAwardBonus('invalida');
-    });
-    expect(harness.getState().error).toBe('Equipe inválida para bônus.');
 
     await act(async () => {
       await harness.getActions().handleResetScoreboard();

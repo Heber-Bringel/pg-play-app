@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type {
@@ -7,8 +7,9 @@ import type {
   CidadeDormeRoom,
 } from '@/model/entities/multiplayerSession';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
+import { ExpressiveTag } from '@/view/components/expressiveTag';
 import { GameCard } from '@/view/components/gameCard';
-import { tokens } from '@/view/theme';
+import { useTheme, type AppTokens } from '@/view/theme';
 
 const ROLE_ICONS: Record<
   CidadeDormeRole,
@@ -47,6 +48,9 @@ export const CidadeDormeRoleSection = ({
   onToggleRoleVisibility,
   onConfirmRoleReady,
 }: CidadeDormeRoleSectionProps) => {
+  const activeTokens = useTheme();
+  const styles = useMemo(() => createStyles(activeTokens), [activeTokens]);
+
   const isPlayerAlreadyReady = Boolean(currentPlayer?.isReady);
   const isAssassin = roleInfo?.role === 'assassino';
   const roleIcon = roleInfo ? ROLE_ICONS[roleInfo.role] : 'home-account';
@@ -62,11 +66,17 @@ export const CidadeDormeRoleSection = ({
     flipScaleAnim.setValue(0.88);
     Animated.spring(flipScaleAnim, {
       toValue: 1,
-      damping: tokens.semantic.motion.spring.spatial.damping,
-      stiffness: tokens.semantic.motion.spring.spatial.stiffness,
+      damping: activeTokens.semantic.motion.spring.spatial.damping,
+      stiffness: activeTokens.semantic.motion.spring.spatial.stiffness,
       useNativeDriver: true,
     }).start();
-  }, [flipScaleAnim, isRoleVisible, reduceMotion]);
+  }, [
+    activeTokens.semantic.motion.spring.spatial.damping,
+    activeTokens.semantic.motion.spring.spatial.stiffness,
+    flipScaleAnim,
+    isRoleVisible,
+    reduceMotion,
+  ]);
 
   useEffect(() => {
     if (reduceMotion) {
@@ -76,10 +86,15 @@ export const CidadeDormeRoleSection = ({
     narratorFadeAnim.setValue(0.6);
     Animated.timing(narratorFadeAnim, {
       toValue: 1,
-      duration: tokens.semantic.motion.duration.short,
+      duration: activeTokens.semantic.motion.duration.short,
       useNativeDriver: true,
     }).start();
-  }, [narratorFadeAnim, reduceMotion, room.narratorCaption]);
+  }, [
+    activeTokens.semantic.motion.duration.short,
+    narratorFadeAnim,
+    reduceMotion,
+    room.narratorCaption,
+  ]);
 
   return (
     <View style={styles.container}>
@@ -90,8 +105,8 @@ export const CidadeDormeRoleSection = ({
       >
         <MaterialCommunityIcons
           name="volume-high"
-          size={tokens.semantic.icon.md}
-          color={tokens.semantic.color.onActionContainer}
+          size={activeTokens.semantic.icon.md}
+          color={activeTokens.component.banner.info.text}
         />
         <Text allowFontScaling style={styles.narratorText}>
           {room.narratorCaption}
@@ -112,13 +127,13 @@ export const CidadeDormeRoleSection = ({
           <View style={styles.lockBadge}>
             <MaterialCommunityIcons
               name="shield-lock-outline"
-              size={tokens.semantic.icon.lg}
-              color={tokens.semantic.color.onActionContainer}
+              size={activeTokens.semantic.icon.lg}
+              color={activeTokens.semantic.color.onActionContainer}
             />
           </View>
           <Text
             allowFontScaling
-            maxFontSizeMultiplier={tokens.semantic.typography.maxScale}
+            maxFontSizeMultiplier={activeTokens.semantic.typography.maxScale}
             style={styles.secretTitle}
           >
             {`Carta Secreta de ${currentPlayer?.nickname ?? 'Jogador'}`}
@@ -142,41 +157,25 @@ export const CidadeDormeRoleSection = ({
             { transform: [{ scaleX: flipScaleAnim }] },
           ]}
         >
-          <View
-            style={[
-              styles.alignmentBadge,
-              isAssassin
-                ? styles.alignmentBadgeAssassin
-                : styles.alignmentBadgeCity,
-            ]}
-          >
-            <MaterialCommunityIcons
-              name={isAssassin ? 'alert-octagon' : 'shield-check'}
-              size={tokens.semantic.icon.sm}
-              color={
-                isAssassin
-                  ? tokens.semantic.color.onErrorContainer
-                  : tokens.semantic.color.onSuccess
-              }
-            />
-            <Text allowFontScaling style={styles.alignmentBadgeText}>
-              {roleInfo?.alignmentLabel ?? 'Cidade (Bem)'}
-            </Text>
-          </View>
+          <ExpressiveTag
+            label={roleInfo?.alignmentLabel ?? 'Cidade (Bem)'}
+            icon={isAssassin ? 'alert-octagon' : 'shield-check'}
+            tone={isAssassin ? 'error' : 'success'}
+          />
 
           <View style={styles.roleTitleRow}>
             <MaterialCommunityIcons
               name={roleIcon}
-              size={tokens.semantic.icon.lg}
+              size={activeTokens.semantic.icon.lg}
               color={
                 isAssassin
-                  ? tokens.semantic.color.error
-                  : tokens.semantic.color.action
+                  ? activeTokens.semantic.color.error
+                  : activeTokens.semantic.color.action
               }
             />
             <Text
               allowFontScaling
-              maxFontSizeMultiplier={tokens.semantic.typography.maxScale}
+              maxFontSizeMultiplier={activeTokens.semantic.typography.maxScale}
               style={styles.roleTitle}
             >
               {roleInfo?.title ?? 'Cidadão'}
@@ -202,8 +201,8 @@ export const CidadeDormeRoleSection = ({
         <View style={styles.readyNotice}>
           <MaterialCommunityIcons
             name="check-circle"
-            size={tokens.semantic.icon.md}
-            color={tokens.semantic.color.success}
+            size={activeTokens.semantic.icon.md}
+            color={activeTokens.component.banner.success.text}
           />
           <Text allowFontScaling style={styles.readyNoticeText}>
             Papel ocultado e confirmado! Aguardando todos os jogadores confirmarem para iniciar a primeira noite.
@@ -214,129 +213,110 @@ export const CidadeDormeRoleSection = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    gap: tokens.semantic.space.lg,
-  },
-  narratorBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.semantic.space.sm,
-    padding: tokens.semantic.space.md,
-    borderRadius: tokens.semantic.radius.lg,
-    backgroundColor: tokens.semantic.color.actionContainer,
-    borderWidth: tokens.semantic.border.thin,
-    borderColor: tokens.semantic.color.action,
-  },
-  narratorText: {
-    flex: 1,
-    fontFamily: tokens.semantic.font.body.family,
-    fontSize: tokens.semantic.font.body.size,
-    lineHeight: tokens.semantic.font.body.lineHeight,
-    fontWeight: tokens.semantic.font.label.weight,
-    color: tokens.semantic.color.onActionContainer,
-  },
-  secretCard: {
-    backgroundColor: tokens.component.card.bg,
-    borderColor: tokens.component.card.border,
-    borderWidth: tokens.semantic.border.thin,
-    borderRadius: tokens.component.card.radius,
-    padding: tokens.component.card.padding,
-    alignItems: 'center',
-    gap: tokens.semantic.space.md,
-    elevation: tokens.semantic.elevation.card,
-  },
-  lockBadge: {
-    width: tokens.component.card.badgeSize,
-    height: tokens.component.card.badgeSize,
-    borderRadius: tokens.semantic.radius.full,
-    backgroundColor: tokens.semantic.color.actionContainer,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  secretTitle: {
-    fontFamily: tokens.semantic.font.title.family,
-    fontSize: tokens.semantic.font.title.size,
-    lineHeight: tokens.semantic.font.title.lineHeight,
-    fontWeight: tokens.semantic.font.title.weight,
-    color: tokens.semantic.color.onSurface,
-    textAlign: 'center',
-  },
-  secretSubtitle: {
-    fontFamily: tokens.semantic.font.body.family,
-    fontSize: tokens.semantic.font.body.size,
-    lineHeight: tokens.semantic.font.body.lineHeight,
-    color: tokens.semantic.color.onSurfaceMuted,
-    textAlign: 'center',
-  },
-  revealedCard: {
-    backgroundColor: tokens.component.card.bg,
-    borderWidth: tokens.semantic.border.focus,
-    padding: tokens.component.card.padding,
-    gap: tokens.semantic.space.md,
-    elevation: tokens.semantic.elevation.card,
-  },
-  revealedCardCity: {
-    borderColor: tokens.semantic.color.success,
-    borderRadius: tokens.semantic.radius.xl,
-  },
-  revealedCardAssassin: {
-    borderColor: tokens.semantic.color.error,
-    borderRadius: tokens.semantic.radius.md,
-  },
-  alignmentBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: tokens.semantic.space.xs,
-    paddingHorizontal: tokens.semantic.space.md,
-    paddingVertical: tokens.semantic.space.xs,
-  },
-  alignmentBadgeCity: {
-    backgroundColor: tokens.semantic.color.success,
-    borderRadius: tokens.semantic.radius.full,
-  },
-  alignmentBadgeAssassin: {
-    backgroundColor: tokens.semantic.color.errorContainer,
-    borderRadius: tokens.semantic.radius.sm,
-  },
-  alignmentBadgeText: {
-    fontFamily: tokens.semantic.font.caption.family,
-    fontSize: tokens.semantic.font.caption.size,
-    lineHeight: tokens.semantic.font.caption.lineHeight,
-    fontWeight: tokens.semantic.font.caption.weight,
-    color: tokens.semantic.color.onSurface,
-  },
-  roleTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.semantic.space.sm,
-  },
-  roleTitle: {
-    fontFamily: tokens.semantic.font.display.family,
-    fontSize: tokens.semantic.font.display.size,
-    lineHeight: tokens.semantic.font.display.lineHeight,
-    fontWeight: tokens.semantic.font.display.weight,
-    color: tokens.semantic.color.onSurface,
-  },
-  roleDescription: {
-    fontFamily: tokens.semantic.font.body.family,
-    fontSize: tokens.semantic.font.body.size,
-    lineHeight: tokens.semantic.font.body.lineHeight,
-    color: tokens.semantic.color.onSurface,
-  },
-  readyNotice: {
-    backgroundColor: tokens.component.card.bg,
-    borderColor: tokens.semantic.color.success,
-    borderWidth: tokens.semantic.border.thin,
-    borderRadius: tokens.semantic.radius.lg,
-    padding: tokens.semantic.space.md,
-    gap: tokens.semantic.space.sm,
-  },
-  readyNoticeText: {
-    fontFamily: tokens.semantic.font.body.family,
-    fontSize: tokens.semantic.font.body.size,
-    lineHeight: tokens.semantic.font.body.lineHeight,
-    color: tokens.semantic.color.onSurface,
-  },
-});
+const createStyles = (activeTokens: AppTokens) => {
+  const { color, font, radius, space, border, elevation } = activeTokens.semantic;
+  const { card, banner } = activeTokens.component;
+  return StyleSheet.create({
+    container: {
+      gap: space.lg,
+    },
+    narratorBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.sm,
+      padding: space.md,
+      borderRadius: banner.radius,
+      backgroundColor: banner.info.bg,
+      borderWidth: border.thin,
+      borderColor: banner.info.border,
+    },
+    narratorText: {
+      flex: 1,
+      fontFamily: font.body.family,
+      fontSize: font.body.size,
+      lineHeight: font.body.lineHeight,
+      fontWeight: font.label.weight,
+      color: banner.info.text,
+    },
+    secretCard: {
+      backgroundColor: card.bg,
+      borderColor: card.border,
+      borderWidth: border.thin,
+      borderRadius: card.radius,
+      padding: card.padding,
+      alignItems: 'center',
+      gap: space.md,
+      elevation: elevation.card,
+    },
+    lockBadge: {
+      width: card.badgeSize,
+      height: card.badgeSize,
+      borderRadius: radius.full,
+      backgroundColor: color.actionContainer,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    secretTitle: {
+      fontFamily: font.title.family,
+      fontSize: font.title.size,
+      lineHeight: font.title.lineHeight,
+      fontWeight: font.title.weight,
+      color: color.onSurface,
+      textAlign: 'center',
+    },
+    secretSubtitle: {
+      fontFamily: font.body.family,
+      fontSize: font.body.size,
+      lineHeight: font.body.lineHeight,
+      color: color.onSurfaceMuted,
+      textAlign: 'center',
+    },
+    revealedCard: {
+      backgroundColor: card.bg,
+      borderWidth: border.focus,
+      padding: card.padding,
+      gap: space.md,
+      elevation: elevation.card,
+    },
+    revealedCardCity: {
+      borderColor: banner.success.border,
+      borderRadius: radius.xl,
+    },
+    revealedCardAssassin: {
+      borderColor: banner.error.border,
+      borderRadius: radius.md,
+    },
+    roleTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.sm,
+    },
+    roleTitle: {
+      fontFamily: font.display.family,
+      fontSize: font.display.size,
+      lineHeight: font.display.lineHeight,
+      fontWeight: font.display.weight,
+      color: color.onSurface,
+    },
+    roleDescription: {
+      fontFamily: font.body.family,
+      fontSize: font.body.size,
+      lineHeight: font.body.lineHeight,
+      color: color.onSurface,
+    },
+    readyNotice: {
+      backgroundColor: banner.success.bg,
+      borderColor: banner.success.border,
+      borderWidth: border.thin,
+      borderRadius: banner.radius,
+      padding: space.md,
+      gap: space.sm,
+    },
+    readyNoticeText: {
+      fontFamily: font.body.family,
+      fontSize: font.body.size,
+      lineHeight: font.body.lineHeight,
+      color: banner.success.text,
+    },
+  });
+};

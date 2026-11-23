@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type {
@@ -9,8 +9,9 @@ import type {
 } from '@/model/entities/multiplayerSession';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
 import { ExpressiveChip, type ChipTone } from '@/view/components/expressiveChip';
+import { ExpressiveTag, type TagTone } from '@/view/components/expressiveTag';
 import { GameCard } from '@/view/components/gameCard';
-import { tokens } from '@/view/theme';
+import { useTheme, type AppTokens } from '@/view/theme';
 
 type VerdictOption = {
   verdict: AdedonhaTallyVerdict;
@@ -44,34 +45,29 @@ const VERDICT_OPTIONS: VerdictOption[] = [
   },
 ];
 
-function getStatusBadgeMeta(status: AdedonhaSubmissionStatus, points: number) {
+function getStatusTagMeta(status: AdedonhaSubmissionStatus, points: number): {
+  label: string;
+  icon: keyof typeof MaterialCommunityIcons.glyphMap;
+  tone: TagTone;
+} {
   if (status === 'unique') {
     return {
       label: `Única (+${points} pts)`,
-      icon: 'star-circle' as const,
-      bgColor: tokens.semantic.color.success,
-      textColor: tokens.semantic.color.onSuccess,
-      borderColor: tokens.semantic.color.success,
-      badgeRadius: tokens.semantic.radius.full,
+      icon: 'star-circle',
+      tone: 'success',
     };
   }
   if (status === 'repeated') {
     return {
       label: `Repetida (+${points} pts)`,
-      icon: 'handshake' as const,
-      bgColor: tokens.semantic.color.secondaryContainer,
-      textColor: tokens.semantic.color.onSecondaryContainer,
-      borderColor: tokens.semantic.color.secondary,
-      badgeRadius: tokens.semantic.radius.md,
+      icon: 'handshake',
+      tone: 'secondary',
     };
   }
   return {
     label: `Inválida (${points} pts)`,
-    icon: 'close-circle' as const,
-    bgColor: tokens.semantic.color.errorContainer,
-    textColor: tokens.semantic.color.onErrorContainer,
-    borderColor: tokens.semantic.color.error,
-    badgeRadius: tokens.semantic.radius.sm,
+    icon: 'close-circle',
+    tone: 'error',
   };
 }
 
@@ -97,6 +93,9 @@ export const AdedonhaTallySection = ({
   onJudgeSubmission,
   onAdvanceTallyColumn,
 }: AdedonhaTallySectionProps) => {
+  const activeTokens = useTheme();
+  const styles = useMemo(() => createStyles(activeTokens), [activeTokens]);
+
   return (
     <View style={styles.container}>
       <GameCard
@@ -112,7 +111,7 @@ export const AdedonhaTallySection = ({
 
       <View style={styles.submissionList}>
         {submissions.map((sub) => {
-          const badge = getStatusBadgeMeta(sub.status, sub.points);
+          const badge = getStatusTagMeta(sub.status, sub.points);
 
           return (
             <View key={sub.id} style={styles.submissionCard}>
@@ -120,38 +119,20 @@ export const AdedonhaTallySection = ({
                 <View style={styles.submissionPlayerInfo}>
                   <MaterialCommunityIcons
                     name="account-circle-outline"
-                    size={tokens.semantic.icon.md}
-                    color={tokens.semantic.color.action}
+                    size={activeTokens.semantic.icon.md}
+                    color={activeTokens.semantic.color.action}
                   />
                   <Text allowFontScaling style={styles.submissionPlayerName}>
                     {sub.playerNickname}
                   </Text>
                 </View>
 
-                <View
-                  style={[
-                    styles.statusBadge,
-                    {
-                      backgroundColor: badge.bgColor,
-                      borderColor: badge.borderColor,
-                      borderRadius: badge.badgeRadius,
-                    },
-                  ]}
+                <ExpressiveTag
+                  label={badge.label}
+                  icon={badge.icon}
+                  tone={badge.tone}
                   accessibilityLabel={`Status: ${badge.label}`}
-                >
-                  <MaterialCommunityIcons
-                    name={badge.icon}
-                    size={tokens.semantic.icon.sm}
-                    color={badge.textColor}
-                  />
-                  <Text
-                    allowFontScaling
-                    maxFontSizeMultiplier={tokens.semantic.typography.maxScale}
-                    style={[styles.statusBadgeText, { color: badge.textColor }]}
-                  >
-                    {badge.label}
-                  </Text>
-                </View>
+                />
               </View>
 
               <View style={styles.answerBox}>
@@ -170,8 +151,8 @@ export const AdedonhaTallySection = ({
                 >
                   <MaterialCommunityIcons
                     name="hand-pointing-up"
-                    size={tokens.semantic.icon.sm}
-                    color={tokens.semantic.color.onErrorContainer}
+                    size={activeTokens.semantic.icon.sm}
+                    color={activeTokens.component.banner.error.text}
                   />
                   <Text allowFontScaling style={styles.doubtBannerText}>
                     {`${sub.doubtCount} jogador(es) levantaram dúvida sobre esta resposta`}
@@ -235,8 +216,8 @@ export const AdedonhaTallySection = ({
         <View style={styles.waitingBanner}>
           <MaterialCommunityIcons
             name="clock-outline"
-            size={tokens.semantic.icon.md}
-            color={tokens.semantic.color.onActionContainer}
+            size={activeTokens.semantic.icon.md}
+            color={activeTokens.component.banner.info.text}
           />
           <Text allowFontScaling style={styles.waitingBannerText}>
             Aguardando o Moderador confirmar os vereditos e avançar a coluna.
@@ -247,129 +228,119 @@ export const AdedonhaTallySection = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    gap: tokens.semantic.space.lg,
-  },
-  submissionList: {
-    gap: tokens.semantic.space.lg,
-  },
-  submissionCard: {
-    backgroundColor: tokens.component.card.bg,
-    borderColor: tokens.component.card.border,
-    borderWidth: tokens.semantic.border.thin,
-    borderRadius: tokens.component.card.radius,
-    padding: tokens.component.card.padding,
-    gap: tokens.semantic.space.md,
-    elevation: tokens.semantic.elevation.card,
-  },
-  submissionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: tokens.semantic.space.sm,
-  },
-  submissionPlayerInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.semantic.space.sm,
-    flexShrink: 1,
-  },
-  submissionPlayerName: {
-    fontFamily: tokens.semantic.font.subtitle.family,
-    fontSize: tokens.semantic.font.subtitle.size,
-    lineHeight: tokens.semantic.font.subtitle.lineHeight,
-    fontWeight: tokens.semantic.font.subtitle.weight,
-    color: tokens.semantic.color.onSurface,
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.semantic.space.xs,
-    paddingHorizontal: tokens.semantic.space.sm,
-    paddingVertical: tokens.semantic.space.xs,
-    borderWidth: tokens.semantic.border.thin,
-  },
-  statusBadgeText: {
-    fontFamily: tokens.semantic.font.caption.family,
-    fontSize: tokens.semantic.font.caption.size,
-    lineHeight: tokens.semantic.font.caption.lineHeight,
-    fontWeight: tokens.semantic.font.caption.weight,
-  },
-  answerBox: {
-    backgroundColor: tokens.semantic.color.surfaceVariant,
-    borderRadius: tokens.semantic.radius.md,
-    padding: tokens.semantic.space.md,
-    gap: tokens.semantic.space.xs,
-  },
-  answerLabel: {
-    fontFamily: tokens.semantic.font.caption.family,
-    fontSize: tokens.semantic.font.caption.size,
-    lineHeight: tokens.semantic.font.caption.lineHeight,
-    fontWeight: tokens.semantic.font.caption.weight,
-    color: tokens.semantic.color.onSurfaceMuted,
-  },
-  answerText: {
-    fontFamily: tokens.semantic.font.subtitle.family,
-    fontSize: tokens.semantic.font.subtitle.size,
-    lineHeight: tokens.semantic.font.subtitle.lineHeight,
-    fontWeight: tokens.semantic.font.subtitle.weight,
-    color: tokens.semantic.color.onSurface,
-  },
-  doubtBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.semantic.space.sm,
-    padding: tokens.semantic.space.sm,
-    borderRadius: tokens.semantic.radius.md,
-    backgroundColor: tokens.semantic.color.errorContainer,
-    borderWidth: tokens.semantic.border.thin,
-    borderColor: tokens.semantic.color.error,
-  },
-  doubtBannerText: {
-    flex: 1,
-    fontFamily: tokens.semantic.font.caption.family,
-    fontSize: tokens.semantic.font.caption.size,
-    lineHeight: tokens.semantic.font.caption.lineHeight,
-    fontWeight: tokens.semantic.font.caption.weight,
-    color: tokens.semantic.color.onErrorContainer,
-  },
-  submissionDivider: {
-    height: tokens.semantic.border.thin,
-    backgroundColor: tokens.semantic.color.surfaceVariant,
-  },
-  verdictSection: {
-    gap: tokens.semantic.space.sm,
-  },
-  verdictSectionLabel: {
-    fontFamily: tokens.semantic.font.caption.family,
-    fontSize: tokens.semantic.font.caption.size,
-    lineHeight: tokens.semantic.font.caption.lineHeight,
-    fontWeight: tokens.semantic.font.caption.weight,
-    color: tokens.semantic.color.onSurfaceMuted,
-  },
-  verdictRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: tokens.semantic.space.sm,
-  },
-  tallyFooter: {
-    paddingTop: tokens.semantic.space.sm,
-  },
-  waitingBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.semantic.space.sm,
-    padding: tokens.semantic.space.md,
-    borderRadius: tokens.semantic.radius.lg,
-    backgroundColor: tokens.semantic.color.actionContainer,
-  },
-  waitingBannerText: {
-    flex: 1,
-    fontFamily: tokens.semantic.font.body.family,
-    fontSize: tokens.semantic.font.body.size,
-    lineHeight: tokens.semantic.font.body.lineHeight,
-    color: tokens.semantic.color.onActionContainer,
-  },
-});
+const createStyles = (activeTokens: AppTokens) => {
+  const { color, font, radius, space, border, elevation } = activeTokens.semantic;
+  const { card, banner } = activeTokens.component;
+  return StyleSheet.create({
+    container: {
+      gap: space.lg,
+    },
+    submissionList: {
+      gap: space.lg,
+    },
+    submissionCard: {
+      backgroundColor: card.bg,
+      borderColor: card.border,
+      borderWidth: border.thin,
+      borderRadius: card.radius,
+      padding: card.padding,
+      gap: space.md,
+      elevation: elevation.card,
+    },
+    submissionHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      flexWrap: 'wrap',
+      gap: space.sm,
+    },
+    submissionPlayerInfo: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.sm,
+      flexShrink: 1,
+    },
+    submissionPlayerName: {
+      fontFamily: font.subtitle.family,
+      fontSize: font.subtitle.size,
+      lineHeight: font.subtitle.lineHeight,
+      fontWeight: font.subtitle.weight,
+      color: color.onSurface,
+    },
+    answerBox: {
+      backgroundColor: color.surfaceVariant,
+      borderRadius: radius.md,
+      padding: space.md,
+      gap: space.xs,
+    },
+    answerLabel: {
+      fontFamily: font.caption.family,
+      fontSize: font.caption.size,
+      lineHeight: font.caption.lineHeight,
+      fontWeight: font.caption.weight,
+      color: color.onSurfaceMuted,
+    },
+    answerText: {
+      fontFamily: font.subtitle.family,
+      fontSize: font.subtitle.size,
+      lineHeight: font.subtitle.lineHeight,
+      fontWeight: font.subtitle.weight,
+      color: color.onSurface,
+    },
+    doubtBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.sm,
+      padding: space.sm,
+      borderRadius: radius.md,
+      backgroundColor: banner.error.bg,
+      borderWidth: border.thin,
+      borderColor: banner.error.border,
+    },
+    doubtBannerText: {
+      flex: 1,
+      fontFamily: font.caption.family,
+      fontSize: font.caption.size,
+      lineHeight: font.caption.lineHeight,
+      fontWeight: font.caption.weight,
+      color: banner.error.text,
+    },
+    submissionDivider: {
+      height: border.thin,
+      backgroundColor: color.surfaceVariant,
+    },
+    verdictSection: {
+      gap: space.sm,
+    },
+    verdictSectionLabel: {
+      fontFamily: font.caption.family,
+      fontSize: font.caption.size,
+      lineHeight: font.caption.lineHeight,
+      fontWeight: font.caption.weight,
+      color: color.onSurfaceMuted,
+    },
+    verdictRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: space.sm,
+    },
+    tallyFooter: {
+      paddingTop: space.sm,
+    },
+    waitingBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.sm,
+      padding: space.md,
+      borderRadius: banner.radius,
+      backgroundColor: banner.info.bg,
+    },
+    waitingBannerText: {
+      flex: 1,
+      fontFamily: font.body.family,
+      fontSize: font.body.size,
+      lineHeight: font.body.lineHeight,
+      color: banner.info.text,
+    },
+  });
+};
