@@ -24,10 +24,13 @@ export type TermometroState = {
   secondsRemaining: number;
   sharedCount: number;
   skippedCount: number;
+  summaryTitle: string;
   confirmingExit: boolean;
+  confirmingEndWithoutPrayer: boolean;
   loading: boolean;
   error: string | null;
-  inputError: string | null;
+  fieldError: string | null;
+  setupError: string | null;
 };
 
 export type TermometroActions = {
@@ -36,6 +39,7 @@ export type TermometroActions = {
   handleSelectOrderMode: (order: TermometroOrderMode) => Promise<void>;
   handleAddCustomParticipant: (name: string) => Promise<boolean>;
   handleRemoveCustomParticipant: (name: string) => Promise<void>;
+  handleClearFieldErrors: () => void;
   handleStartMoment: () => Promise<void>;
   handleStartSpeaking: () => Promise<void>;
   handleTick: () => Promise<void>;
@@ -44,7 +48,10 @@ export type TermometroActions = {
   handleSkipSpeaker: () => Promise<void>;
   handleFinishFreeMode: () => Promise<void>;
   handleOpenPrayerMoment: () => Promise<void>;
+  handleRequestEndFromSummary: () => void;
+  handleCancelEndWithoutPrayer: () => void;
   handleEndEncounter: () => Promise<void>;
+  handleBackToHub: () => Promise<void>;
   handleRequestExit: () => void;
   handleCancelExit: () => void;
   handleConfirmExit: () => Promise<void>;
@@ -58,7 +65,7 @@ export function useTermometroViewModel(
 
   const [stage, setStage] = useState<TermometroStage>('setup');
   const [participantMode, setParticipantMode] =
-    useState<TermometroParticipantMode>('teams');
+    useState<TermometroParticipantMode>('custom');
   const [durationMinutes, setDurationMinutes] =
     useState<TermometroDurationMinutes>(1);
   const [durationSeconds, setDurationSeconds] = useState<number>(60);
@@ -71,10 +78,16 @@ export function useTermometroViewModel(
   const [secondsRemaining, setSecondsRemaining] = useState<number>(60);
   const [sharedCount, setSharedCount] = useState<number>(0);
   const [skippedCount, setSkippedCount] = useState<number>(0);
+  const [summaryTitle, setSummaryTitle] = useState<string>(
+    'Roda de pedidos concluída'
+  );
   const [confirmingExit, setConfirmingExit] = useState<boolean>(false);
+  const [confirmingEndWithoutPrayer, setConfirmingEndWithoutPrayer] =
+    useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [inputError, setInputError] = useState<string | null>(null);
+  const [fieldError, setFieldError] = useState<string | null>(null);
+  const [setupError, setSetupError] = useState<string | null>(null);
 
   const syncSessionState = useCallback(
     (session: Awaited<ReturnType<ITermometroUseCases['getSession']>>) => {
@@ -91,6 +104,7 @@ export function useTermometroViewModel(
       setSecondsRemaining(session.secondsRemaining);
       setSharedCount(session.sharedCount);
       setSkippedCount(session.skippedCount);
+      setSummaryTitle(session.summaryTitle);
     },
     []
   );
@@ -98,7 +112,8 @@ export function useTermometroViewModel(
   const loadSession = useCallback(async () => {
     setLoading(true);
     setError(null);
-    setInputError(null);
+    setFieldError(null);
+    setSetupError(null);
     try {
       const session = await useCases.getSession();
       syncSessionState(session);
@@ -115,7 +130,11 @@ export function useTermometroViewModel(
 
   useEffect(() => {
     void loadSession();
-  }, [loadSession]);
+    // Issue #52 / RNF12: ao desmontar a tela por qualquer caminho (ex.: voltar do sistema), descarta a sessão em memória
+    return () => {
+      void useCases.endSession().catch(() => {});
+    };
+  }, [loadSession, useCases]);
 
   const handleTick = useCallback(async () => {
     try {
@@ -123,7 +142,7 @@ export function useTermometroViewModel(
       syncSessionState(updated);
     } catch (err: unknown) {
       if (err instanceof DomainError) {
-        setInputError(err.message);
+        setSetupError(err.message);
       }
     }
   }, [useCases, syncSessionState]);
@@ -153,15 +172,21 @@ export function useTermometroViewModel(
     handleTick,
   ]);
 
+  const handleClearFieldErrors = useCallback(() => {
+    setFieldError(null);
+    setSetupError(null);
+  }, []);
+
   const handleSelectParticipantMode = useCallback(
     async (mode: TermometroParticipantMode) => {
       try {
-        setInputError(null);
+        setFieldError(null);
+        setSetupError(null);
         const updated = await useCases.setParticipantMode(mode);
         syncSessionState(updated);
       } catch (err: unknown) {
         if (err instanceof DomainError) {
-          setInputError(err.message);
+          setSetupError(err.message);
         }
       }
     },
@@ -171,12 +196,12 @@ export function useTermometroViewModel(
   const handleSelectDuration = useCallback(
     async (minutes: TermometroDurationMinutes) => {
       try {
-        setInputError(null);
+        setSetupError(null);
         const updated = await useCases.setDurationMinutes(minutes);
         syncSessionState(updated);
       } catch (err: unknown) {
         if (err instanceof DomainError) {
-          setInputError(err.message);
+          setSetupError(err.message);
         }
       }
     },
@@ -186,12 +211,12 @@ export function useTermometroViewModel(
   const handleSelectOrderMode = useCallback(
     async (order: TermometroOrderMode) => {
       try {
-        setInputError(null);
+        setSetupError(null);
         const updated = await useCases.setOrderMode(order);
         syncSessionState(updated);
       } catch (err: unknown) {
         if (err instanceof DomainError) {
-          setInputError(err.message);
+          setSetupError(err.message);
         }
       }
     },
@@ -201,15 +226,16 @@ export function useTermometroViewModel(
   const handleAddCustomParticipant = useCallback(
     async (name: string): Promise<boolean> => {
       try {
-        setInputError(null);
+        setFieldError(null);
+        setSetupError(null);
         const updated = await useCases.addCustomParticipant(name);
         syncSessionState(updated);
         return true;
       } catch (err: unknown) {
         if (err instanceof DomainError) {
-          setInputError(err.message);
+          setFieldError(err.message);
         } else {
-          setInputError('Não foi possível adicionar o participante.');
+          setFieldError('Não foi possível adicionar o participante.');
         }
         return false;
       }
@@ -220,12 +246,13 @@ export function useTermometroViewModel(
   const handleRemoveCustomParticipant = useCallback(
     async (name: string) => {
       try {
-        setInputError(null);
+        setFieldError(null);
+        setSetupError(null);
         const updated = await useCases.removeCustomParticipant(name);
         syncSessionState(updated);
       } catch (err: unknown) {
         if (err instanceof DomainError) {
-          setInputError(err.message);
+          setSetupError(err.message);
         }
       }
     },
@@ -234,92 +261,117 @@ export function useTermometroViewModel(
 
   const handleStartMoment = useCallback(async () => {
     try {
-      setInputError(null);
+      setFieldError(null);
+      setSetupError(null);
       const updated = await useCases.startMoment();
       syncSessionState(updated);
     } catch (err: unknown) {
       if (err instanceof DomainError) {
-        setInputError(err.message);
+        setSetupError(err.message);
       } else {
-        setInputError('Não foi possível iniciar o momento de pedidos.');
+        setSetupError('Não foi possível iniciar o momento de pedidos.');
       }
     }
   }, [useCases, syncSessionState]);
 
   const handleStartSpeaking = useCallback(async () => {
     try {
-      setInputError(null);
+      setSetupError(null);
       const updated = await useCases.startSpeaking();
       syncSessionState(updated);
     } catch (err: unknown) {
       if (err instanceof DomainError) {
-        setInputError(err.message);
+        setSetupError(err.message);
       }
     }
   }, [useCases, syncSessionState]);
 
   const handleTogglePause = useCallback(async () => {
     try {
-      setInputError(null);
+      setSetupError(null);
       const updated = await useCases.togglePause();
       syncSessionState(updated);
     } catch (err: unknown) {
       if (err instanceof DomainError) {
-        setInputError(err.message);
+        setSetupError(err.message);
       }
     }
   }, [useCases, syncSessionState]);
 
   const handleNextSpeaker = useCallback(async () => {
     try {
-      setInputError(null);
+      setSetupError(null);
       const updated = await useCases.nextSpeaker();
       syncSessionState(updated);
     } catch (err: unknown) {
       if (err instanceof DomainError) {
-        setInputError(err.message);
+        setSetupError(err.message);
       }
     }
   }, [useCases, syncSessionState]);
 
   const handleSkipSpeaker = useCallback(async () => {
     try {
-      setInputError(null);
+      setSetupError(null);
       const updated = await useCases.skipSpeaker();
       syncSessionState(updated);
     } catch (err: unknown) {
       if (err instanceof DomainError) {
-        setInputError(err.message);
+        setSetupError(err.message);
       }
     }
   }, [useCases, syncSessionState]);
 
   const handleFinishFreeMode = useCallback(async () => {
     try {
-      setInputError(null);
+      setSetupError(null);
       const updated = await useCases.finishFreeMode();
       syncSessionState(updated);
     } catch (err: unknown) {
       if (err instanceof DomainError) {
-        setInputError(err.message);
+        setSetupError(err.message);
       }
     }
   }, [useCases, syncSessionState]);
 
   const handleOpenPrayerMoment = useCallback(async () => {
     try {
-      setInputError(null);
+      setSetupError(null);
+      setConfirmingEndWithoutPrayer(false);
       const updated = await useCases.openPrayerMoment();
       syncSessionState(updated);
     } catch (err: unknown) {
-        if (err instanceof DomainError) {
-          setInputError(err.message);
-        }
+      if (err instanceof DomainError) {
+        setSetupError(err.message);
+      }
     }
   }, [useCases, syncSessionState]);
 
+  const handleRequestEndFromSummary = useCallback(() => {
+    setConfirmingEndWithoutPrayer(true);
+  }, []);
+
+  const handleCancelEndWithoutPrayer = useCallback(() => {
+    setConfirmingEndWithoutPrayer(false);
+  }, []);
+
+  // Issue #54: descarta os nomes (closeEncounter) e exibe o fechamento acolhedor (stage = 'closed') antes de voltar ao Hub
   const handleEndEncounter = useCallback(async () => {
     setConfirmingExit(false);
+    setConfirmingEndWithoutPrayer(false);
+    try {
+      const updated = await useCases.closeEncounter();
+      syncSessionState(updated);
+    } catch (err: unknown) {
+      if (err instanceof DomainError) {
+        setSetupError(err.message);
+      }
+    }
+  }, [useCases, syncSessionState]);
+
+  const handleBackToHub = useCallback(async () => {
+    setConfirmingExit(false);
+    setConfirmingEndWithoutPrayer(false);
     await useCases.endSession();
     router.replace('/');
   }, [useCases, router]);
@@ -334,6 +386,7 @@ export function useTermometroViewModel(
 
   const handleConfirmExit = useCallback(async () => {
     setConfirmingExit(false);
+    setConfirmingEndWithoutPrayer(false);
     await useCases.endSession();
     router.replace('/');
   }, [useCases, router]);
@@ -352,10 +405,13 @@ export function useTermometroViewModel(
     secondsRemaining,
     sharedCount,
     skippedCount,
+    summaryTitle,
     confirmingExit,
+    confirmingEndWithoutPrayer,
     loading,
     error,
-    inputError,
+    fieldError,
+    setupError,
   };
 
   const actions: TermometroActions = {
@@ -364,6 +420,7 @@ export function useTermometroViewModel(
     handleSelectOrderMode,
     handleAddCustomParticipant,
     handleRemoveCustomParticipant,
+    handleClearFieldErrors,
     handleStartMoment,
     handleStartSpeaking,
     handleTick,
@@ -372,7 +429,10 @@ export function useTermometroViewModel(
     handleSkipSpeaker,
     handleFinishFreeMode,
     handleOpenPrayerMoment,
+    handleRequestEndFromSummary,
+    handleCancelEndWithoutPrayer,
     handleEndEncounter,
+    handleBackToHub,
     handleRequestExit,
     handleCancelExit,
     handleConfirmExit,

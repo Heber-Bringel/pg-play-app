@@ -63,3 +63,5 @@ export const useWindowDimensions = () => ({
   scale: 1,
   fontScale: 1,
 });
+
+export const useColorScheme = jest.fn((): 'light' | 'dark' | null | undefined => 'light');

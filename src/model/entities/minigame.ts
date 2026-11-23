@@ -8,6 +8,7 @@ export type MinigameRoute =
   | '/forca'
   | '/adedonha'
   | '/cidade-dorme'
+  | '/versiculo'
   | '/termometro';
 
 export type MinigameIconName =
@@ -16,6 +17,7 @@ export type MinigameIconName =
   | 'alphabetical-variant'
   | 'format-list-checks'
   | 'weather-night'
+  | 'book-open-variant'
   | 'thermometer-lines';
 
 export type Minigame = {

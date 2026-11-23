@@ -49,42 +49,48 @@ describe('useTermometroViewModel — Hook do Termômetro de Pedidos (UC11)', () 
     jest.useRealTimers();
   });
 
-  it('deve iniciar na fase setup com equipes sugeridas e configurar tempo, ordem e nomes digitados (RF38)', async () => {
+  it('deve iniciar na fase setup com modo custom (Lista de nomes) e separar fieldError de setupError (RF38, Issues #48 e #53)', async () => {
     const useCases = new TermometroUseCases(new MemoryTeamDataSource());
     const harness = createHookHarness(useCases);
     await harness.mount();
 
     expect(harness.getState().loading).toBe(false);
     expect(harness.getState().stage).toBe('setup');
-    expect(harness.getState().participantMode).toBe('teams');
-    expect(harness.getState().durationMinutes).toBe(1);
-    expect(harness.getState().participants).toEqual([
-      'Tribo de Judá',
-      'Leões da Fé',
-    ]);
-
-    await act(async () => {
-      await harness.getActions().handleSelectDuration(2);
-      await harness.getActions().handleSelectOrderMode('random');
-      await harness.getActions().handleSelectParticipantMode('custom');
-    });
-
-    expect(harness.getState().durationMinutes).toBe(2);
-    expect(harness.getState().durationSeconds).toBe(120);
-    expect(harness.getState().orderMode).toBe('random');
     expect(harness.getState().participantMode).toBe('custom');
+    expect(harness.getState().durationMinutes).toBe(1);
+    expect(harness.getState().participants).toEqual([]);
 
+    // Tentar começar sem participantes gera setupError (e não fieldError)
+    await act(async () => {
+      await harness.getActions().handleStartMoment();
+    });
+    expect(harness.getState().setupError).toContain('pelo menos 1 participante');
+    expect(harness.getState().fieldError).toBeNull();
+
+    // Tentar adicionar nome curto gera fieldError
     let added = false;
     await act(async () => {
       added = await harness.getActions().handleAddCustomParticipant('A');
     });
     expect(added).toBe(false);
-    expect(harness.getState().inputError).toContain('pelo menos 2 letras');
+    expect(harness.getState().fieldError).toContain('pelo menos 2 letras');
+
+    // Digitar limpa os erros de campo e setup
+    act(() => {
+      harness.getActions().handleClearFieldErrors();
+    });
+    expect(harness.getState().fieldError).toBeNull();
+    expect(harness.getState().setupError).toBeNull();
 
     await act(async () => {
+      await harness.getActions().handleSelectDuration(2);
+      await harness.getActions().handleSelectOrderMode('random');
       added = await harness.getActions().handleAddCustomParticipant('Rebeca');
     });
     expect(added).toBe(true);
+    expect(harness.getState().durationMinutes).toBe(2);
+    expect(harness.getState().durationSeconds).toBe(120);
+    expect(harness.getState().orderMode).toBe('random');
     expect(harness.getState().participants).toEqual(['Rebeca']);
 
     await act(async () => {
@@ -95,17 +101,15 @@ describe('useTermometroViewModel — Hook do Termômetro de Pedidos (UC11)', () 
     harness.unmount();
   });
 
-  it('deve conduzir a roda de fala, contar tempo apenas após Começar a falar, não cortar ao fim, e gerar resumo anônimo (RF39, RF40, RNF12)', async () => {
-    const useCases = new TermometroUseCases(
-      new MemoryTeamDataSource([
-        { id: 't1', name: 'Ana', score: 20 },
-        { id: 't2', name: 'Pedro', score: 40 },
-      ])
-    );
+  it('deve conduzir a roda de fala, exibir fechamento acolhedor (closed) antes de voltar ao Hub e descartar sessão ao desmontar (Issues #49, #52 e #54)', async () => {
+    const useCases = new TermometroUseCases();
+    const endSessionSpy = jest.spyOn(useCases, 'endSession');
     const harness = createHookHarness(useCases);
     await harness.mount();
 
     await act(async () => {
+      await harness.getActions().handleAddCustomParticipant('Ana');
+      await harness.getActions().handleAddCustomParticipant('Pedro');
       await harness.getActions().handleStartMoment();
     });
     expect(harness.getState().stage).toBe('turn');
@@ -147,14 +151,25 @@ describe('useTermometroViewModel — Hook do Termômetro de Pedidos (UC11)', () 
     expect(harness.getState().currentSpeakerLabel).toBe('Pedro');
     expect(harness.getState().sharedCount).toBe(1);
 
-    // Pedro pula sua vez -> vai para summary anônimo sem nomes
+    // Pedro pula sua vez antes de falar -> vai para summary anônimo
     await act(async () => {
       await harness.getActions().handleSkipSpeaker();
     });
     expect(harness.getState().stage).toBe('summary');
     expect(harness.getState().sharedCount).toBe(1);
     expect(harness.getState().skippedCount).toBe(1);
+    expect(harness.getState().summaryTitle).toBe('Roda de pedidos concluída');
     expect(harness.getState().participants).toEqual([]);
+
+    // Issue #54: confirmação ao tentar encerrar direto do resumo sem oração
+    act(() => {
+      harness.getActions().handleRequestEndFromSummary();
+    });
+    expect(harness.getState().confirmingEndWithoutPrayer).toBe(true);
+    act(() => {
+      harness.getActions().handleCancelEndWithoutPrayer();
+    });
+    expect(harness.getState().confirmingEndWithoutPrayer).toBe(false);
 
     // Abrir Momento de Oração
     await act(async () => {
@@ -162,23 +177,34 @@ describe('useTermometroViewModel — Hook do Termômetro de Pedidos (UC11)', () 
     });
     expect(harness.getState().stage).toBe('prayer');
 
-    // Encerrar Encontro descarta sessão e volta ao Hub
+    // Issue #54: Encerrar Encontro mostra tela 'closed' com mensagem acolhedora antes de navegar
     await act(async () => {
       await harness.getActions().handleEndEncounter();
     });
+    expect(harness.getState().stage).toBe('closed');
+    expect(mockReplace).not.toHaveBeenCalled();
+
+    // Tocar em "Voltar ao Hub" navega para '/'
+    await act(async () => {
+      await harness.getActions().handleBackToHub();
+    });
     expect(mockReplace).toHaveBeenCalledWith('/');
 
+    // Issue #52: desmontar o hook chama endSession() garantindo descarte de memória (RNF12)
+    endSessionSpy.mockClear();
     harness.unmount();
+    expect(endSessionSpy).toHaveBeenCalledTimes(1);
   });
 
   it('deve suportar modo livre, confirmação de saída segura e tratamento de erro inicial', async () => {
-    const useCases = new TermometroUseCases(new MemoryTeamDataSource());
+    const useCases = new TermometroUseCases();
     const harness = createHookHarness(useCases);
     await harness.mount();
 
     await act(async () => {
       await harness.getActions().handleSelectParticipantMode('free');
       await harness.getActions().handleStartMoment();
+      await harness.getActions().handleStartSpeaking();
     });
     expect(harness.getState().stage).toBe('turn');
     expect(harness.getState().currentSpeakerLabel).toBe('Próxima pessoa');
@@ -187,6 +213,8 @@ describe('useTermometroViewModel — Hook do Termômetro de Pedidos (UC11)', () 
       await harness.getActions().handleFinishFreeMode();
     });
     expect(harness.getState().stage).toBe('summary');
+    expect(harness.getState().sharedCount).toBe(1);
+    expect(harness.getState().summaryTitle).toBe('Todos compartilharam');
 
     act(() => {
       harness.getActions().handleRequestExit();
@@ -249,10 +277,14 @@ describe('useTermometroViewModel — Hook do Termômetro de Pedidos (UC11)', () 
         throw new ValidationError('Erro');
       },
       getAnonymousSummary: async () => ({
+        title: 'Roda de pedidos concluída',
         sharedCount: 0,
         skippedCount: 0,
         totalParticipants: 0,
       }),
+      closeEncounter: async () => {
+        throw new ValidationError('Erro');
+      },
       endSession: async () => {
         throw new ValidationError('Erro');
       },

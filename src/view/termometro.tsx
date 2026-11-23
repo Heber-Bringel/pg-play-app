@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import type {
   TermometroDurationMinutes,
@@ -8,14 +8,14 @@ import type {
 import { ConfirmModal } from '@/view/components/confirmModal';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
 import { ExpressiveChip } from '@/view/components/expressiveChip';
+import { ExpressiveTag } from '@/view/components/expressiveTag';
 import { ExpressiveTextField } from '@/view/components/expressiveTextField';
 import { ExpressiveTimer } from '@/view/components/expressiveTimer';
 import { GameCard } from '@/view/components/gameCard';
-import { border, color, font, radius, space } from '@/view/theme';
+import { useTheme, type AppTokens } from '@/view/theme';
 import { useTermometroViewModel } from '@/viewmodel/useTermometroViewModel';
 
 const PARTICIPANT_MODES: { value: TermometroParticipantMode; label: string }[] = [
-  { value: 'teams', label: 'Equipes cadastradas' },
   { value: 'custom', label: 'Lista de nomes' },
   { value: 'free', label: 'Modo livre (sem nomes)' },
 ];
@@ -33,6 +33,8 @@ const ORDER_OPTIONS: { value: TermometroOrderMode; label: string }[] = [
 
 export const TermometroScreen = () => {
   const [state, actions] = useTermometroViewModel();
+  const activeTokens = useTheme();
+  const styles = useMemo(() => createStyles(activeTokens), [activeTokens]);
   const [participantInput, setParticipantInput] = useState<string>('');
 
   if (state.loading) {
@@ -56,6 +58,7 @@ export const TermometroScreen = () => {
           title="Atenção"
           description={state.error}
           playersTag="Aviso"
+          playersTagTone="error"
           icon="alert-circle"
         />
         <ExpressiveButton
@@ -77,25 +80,39 @@ export const TermometroScreen = () => {
     }
   };
 
+  const handleChangeNameInput = (text: string) => {
+    setParticipantInput(text);
+    if (state.fieldError || state.setupError) {
+      actions.handleClearFieldErrors();
+    }
+  };
+
+  const summaryDescription =
+    state.participantMode === 'free'
+      ? `Pessoas que compartilharam: ${state.sharedCount}. Nenhum pedido ou nome fica registrado.`
+      : `Pessoas que compartilharam: ${state.sharedCount} · Preferiram não falar: ${state.skippedCount}. Nenhum pedido ou nome fica registrado.`;
+
+  const summaryTag = `${state.sharedCount + state.skippedCount} participante${
+    state.sharedCount + state.skippedCount === 1 ? '' : 's'
+  }`;
+
   return (
     <ScrollView
       style={styles.scroll}
       contentContainerStyle={styles.screen}
       keyboardShouldPersistTaps="handled"
     >
-      <View style={styles.topBar}>
-        <ExpressiveButton
-          label="Sair"
-          variant="outlined"
-          icon="arrow-left"
-          onPress={actions.handleRequestExit}
-        />
-        <View style={styles.badgePill}>
-          <Text allowFontScaling style={styles.badgeText}>
-            1 Celular · Encerramento
-          </Text>
+      {state.stage !== 'closed' && (
+        <View style={styles.topBar}>
+          <ExpressiveButton
+            label="Sair"
+            variant="outlined"
+            icon="arrow-left"
+            onPress={actions.handleRequestExit}
+          />
+          <ExpressiveTag label="1 Celular · Encerramento" tone="neutral" />
         </View>
-      </View>
+      )}
 
       <ConfirmModal
         visible={state.confirmingExit}
@@ -107,6 +124,20 @@ export const TermometroScreen = () => {
         }}
       />
 
+      <ConfirmModal
+        visible={state.confirmingEndWithoutPrayer}
+        title="Encerrar sem o Momento de Oração?"
+        description="Você pode abrir o Momento de Oração antes de concluir o encontro."
+        cancelLabel="Voltar ao Resumo"
+        confirmLabel="Encerrar Mesmo Assim"
+        confirmIcon="check-circle"
+        icon="hands-pray"
+        onCancel={actions.handleCancelEndWithoutPrayer}
+        onConfirm={() => {
+          void actions.handleEndEncounter();
+        }}
+      />
+
       {state.stage === 'setup' && (
         <View style={styles.sectionStack}>
           <GameCard
@@ -114,7 +145,7 @@ export const TermometroScreen = () => {
             description={`Cada um tem até ${state.durationMinutes} minuto${
               state.durationMinutes > 1 ? 's' : ''
             } para compartilhar. Sem pontuação, sem registro e sem pressa.`}
-            playersTag="1 Celular · Encerramento"
+            playersTag={`Até ${state.durationMinutes} min por pessoa`}
             icon="hand-heart"
           />
 
@@ -131,7 +162,7 @@ export const TermometroScreen = () => {
                     label={opt.label}
                     selected={selected}
                     icon={selected ? 'check' : undefined}
-                    accessibilityLabel={`Modo ${opt.label}`}
+                    accessibilityLabel={opt.label}
                     onPress={() => {
                       void actions.handleSelectParticipantMode(opt.value);
                     }}
@@ -147,8 +178,11 @@ export const TermometroScreen = () => {
                   placeholder="Ex.: Ana, Lucas..."
                   value={participantInput}
                   maxLength={24}
-                  errorText={state.inputError ?? undefined}
-                  onChangeText={setParticipantInput}
+                  errorText={state.fieldError ?? undefined}
+                  onChangeText={handleChangeNameInput}
+                  onSubmitEditing={() => {
+                    void handleAddName();
+                  }}
                 />
                 <ExpressiveButton
                   label="Adicionar Participante"
@@ -158,41 +192,31 @@ export const TermometroScreen = () => {
                     void handleAddName();
                   }}
                 />
-              </View>
-            )}
 
-            {state.participantMode !== 'free' && (
-              <View style={styles.participantsPreview}>
-                <Text allowFontScaling style={styles.captionText}>
-                  {`Participantes na roda (${state.participants.length}):`}
-                </Text>
-                {state.participants.length === 0 ? (
+                <View style={styles.participantsPreview}>
                   <Text allowFontScaling style={styles.captionText}>
-                    Nenhum participante na lista ainda.
+                    {`Participantes na roda (${state.participants.length}):`}
                   </Text>
-                ) : (
-                  <View style={styles.chipsWrap}>
-                    {state.participants.map((name) => (
-                      <ExpressiveChip
-                        key={name}
-                        label={name}
-                        icon={
-                          state.participantMode === 'custom' ? 'close' : 'account'
-                        }
-                        accessibilityLabel={
-                          state.participantMode === 'custom'
-                            ? `Remover ${name}`
-                            : `Participante ${name}`
-                        }
-                        onPress={() => {
-                          if (state.participantMode === 'custom') {
+                  {state.participants.length === 0 ? (
+                    <Text allowFontScaling style={styles.captionText}>
+                      Nenhum participante na lista ainda.
+                    </Text>
+                  ) : (
+                    <View style={styles.chipsWrap}>
+                      {state.participants.map((name) => (
+                        <ExpressiveChip
+                          key={name}
+                          label={name}
+                          icon="close"
+                          accessibilityLabel={`Remover ${name}`}
+                          onPress={() => {
                             void actions.handleRemoveCustomParticipant(name);
-                          }
-                        }}
-                      />
-                    ))}
-                  </View>
-                )}
+                          }}
+                        />
+                      ))}
+                    </View>
+                  )}
+                </View>
               </View>
             )}
 
@@ -241,15 +265,15 @@ export const TermometroScreen = () => {
                 </View>
               </>
             )}
-
-            {state.inputError && state.participantMode !== 'custom' && (
-              <View style={styles.warningBanner} accessibilityLiveRegion="assertive">
-                <Text allowFontScaling style={styles.warningText}>
-                  {state.inputError}
-                </Text>
-              </View>
-            )}
           </View>
+
+          {state.setupError && (
+            <View style={styles.warningBanner} accessibilityLiveRegion="assertive">
+              <Text allowFontScaling style={styles.warningText}>
+                {state.setupError}
+              </Text>
+            </View>
+          )}
 
           <ExpressiveButton
             label="Começar"
@@ -290,52 +314,52 @@ export const TermometroScreen = () => {
             totalSeconds={state.durationSeconds}
             secondsRemaining={state.secondsRemaining}
             paused={state.isPaused}
+            onTogglePause={
+              state.hasStartedSpeaking && state.secondsRemaining > 0
+                ? () => {
+                    void actions.handleTogglePause();
+                  }
+                : undefined
+            }
           />
 
           <View style={styles.actionGroup}>
             {!state.hasStartedSpeaking ? (
-              <ExpressiveButton
-                label="Começar a falar"
-                variant="primaryJumbo"
-                icon="microphone-message"
-                onPress={() => {
-                  void actions.handleStartSpeaking();
-                }}
-              />
-            ) : (
               <>
                 <ExpressiveButton
-                  label="Próximo"
+                  label="Começar a falar"
                   variant="primaryJumbo"
-                  icon="arrow-right"
+                  icon="microphone-message"
                   onPress={() => {
-                    void actions.handleNextSpeaker();
+                    void actions.handleStartSpeaking();
                   }}
                 />
-                <ExpressiveButton
-                  label={state.isPaused ? 'Continuar' : 'Pausar'}
-                  variant="tonal"
-                  icon={state.isPaused ? 'play' : 'pause'}
-                  onPress={() => {
-                    void actions.handleTogglePause();
-                  }}
-                />
+                {state.participantMode !== 'free' && (
+                  <ExpressiveButton
+                    label="Pular minha vez"
+                    variant="outlined"
+                    icon="skip-next"
+                    onPress={() => {
+                      void actions.handleSkipSpeaker();
+                    }}
+                  />
+                )}
               </>
+            ) : (
+              <ExpressiveButton
+                label="Próximo"
+                variant="primaryJumbo"
+                icon="arrow-right"
+                onPress={() => {
+                  void actions.handleNextSpeaker();
+                }}
+              />
             )}
-
-            <ExpressiveButton
-              label="Pular minha vez"
-              variant="secondary"
-              icon="skip-next"
-              onPress={() => {
-                void actions.handleSkipSpeaker();
-              }}
-            />
 
             {state.participantMode === 'free' && (
               <ExpressiveButton
-                label="Concluir Roda de Pedidos"
-                variant="outlined"
+                label="Encerrar roda"
+                variant="text"
                 icon="check-all"
                 onPress={() => {
                   void actions.handleFinishFreeMode();
@@ -349,9 +373,9 @@ export const TermometroScreen = () => {
       {state.stage === 'summary' && (
         <View style={styles.sectionStack} accessibilityLiveRegion="polite">
           <GameCard
-            title="Todos compartilharam"
-            description={`Pessoas que compartilharam: ${state.sharedCount} · Preferiram não falar: ${state.skippedCount}. Nenhum pedido ou nome fica registrado.`}
-            playersTag={`${state.sharedCount + state.skippedCount} participantes`}
+            title={state.summaryTitle}
+            description={summaryDescription}
+            playersTag={summaryTag}
             icon="heart-multiple"
           />
 
@@ -367,10 +391,8 @@ export const TermometroScreen = () => {
             <ExpressiveButton
               label="Encerrar Encontro"
               variant="outlined"
-              icon="home"
-              onPress={() => {
-                void actions.handleEndEncounter();
-              }}
+              icon="check-circle"
+              onPress={actions.handleRequestEndFromSummary}
             />
           </View>
         </View>
@@ -395,102 +417,116 @@ export const TermometroScreen = () => {
           />
         </View>
       )}
+
+      {state.stage === 'closed' && (
+        <View style={styles.sectionStack} accessibilityLiveRegion="polite">
+          <GameCard
+            title="Encontro encerrado"
+            description="Obrigado por compartilhar este momento com o grupo. Até o próximo encontro! Nenhum nome ou pedido foi salvo."
+            playersTag="Privacidade garantida"
+            playersTagTone="success"
+            icon="heart"
+          />
+
+          <ExpressiveButton
+            label="Voltar ao Hub"
+            variant="primaryJumbo"
+            icon="home"
+            onPress={() => {
+              void actions.handleBackToHub();
+            }}
+          />
+        </View>
+      )}
     </ScrollView>
   );
 };
 
-const styles = StyleSheet.create({
-  scroll: {
-    flex: 1,
-    backgroundColor: color.surface,
-  },
-  screen: {
-    flexGrow: 1,
-    backgroundColor: color.surface,
-    padding: space.md,
-    gap: space.md,
-  },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: space.sm,
-  },
-  badgePill: {
-    backgroundColor: color.surfaceVariant,
-    paddingHorizontal: space.md,
-    paddingVertical: space.xs,
-    borderRadius: radius.full,
-  },
-  badgeText: {
-    fontFamily: font.caption.family,
-    fontSize: font.caption.size,
-    fontWeight: font.caption.weight,
-    lineHeight: font.caption.lineHeight,
-    color: color.onSurface,
-  },
-  sectionStack: {
-    flex: 1,
-    gap: space.md,
-  },
-  configCard: {
-    backgroundColor: color.surfaceContainer,
-    borderColor: color.outline,
-    borderWidth: border.thin,
-    borderRadius: radius.lg,
-    padding: space.md,
-    gap: space.sm,
-  },
-  sectionTitle: {
-    fontFamily: font.subtitle.family,
-    fontSize: font.subtitle.size,
-    fontWeight: font.subtitle.weight,
-    lineHeight: font.subtitle.lineHeight,
-    color: color.onSurface,
-  },
-  captionText: {
-    fontFamily: font.caption.family,
-    fontSize: font.caption.size,
-    fontWeight: font.caption.weight,
-    lineHeight: font.caption.lineHeight,
-    color: color.onSurfaceMuted,
-  },
-  chipsWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: space.sm,
-  },
-  customNamesBlock: {
-    gap: space.sm,
-  },
-  participantsPreview: {
-    gap: space.xs,
-    paddingVertical: space.xs,
-  },
-  warningBanner: {
-    backgroundColor: color.errorContainer,
-    borderRadius: radius.md,
-    paddingHorizontal: space.md,
-    paddingVertical: space.sm,
-  },
-  warningText: {
-    fontFamily: font.caption.family,
-    fontSize: font.caption.size,
-    fontWeight: font.caption.weight,
-    lineHeight: font.caption.lineHeight,
-    color: color.onErrorContainer,
-  },
-  actionGroup: {
-    gap: space.sm,
-  },
-  titleText: {
-    fontFamily: font.title.family,
-    fontSize: font.title.size,
-    fontWeight: font.title.weight,
-    lineHeight: font.title.lineHeight,
-    color: color.onSurface,
-    textAlign: 'center',
-  },
-});
+const createStyles = (activeTokens: AppTokens) => {
+  const { color, font, radius, space, border } = activeTokens.semantic;
+  const { card, banner } = activeTokens.component;
+  return StyleSheet.create({
+    scroll: {
+      flex: 1,
+      backgroundColor: color.surface,
+    },
+    screen: {
+      flexGrow: 1,
+      backgroundColor: color.surface,
+      padding: space.md,
+      gap: space.md,
+    },
+    topBar: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: space.sm,
+    },
+    sectionStack: {
+      flex: 1,
+      gap: space.md,
+    },
+    configCard: {
+      backgroundColor: card.bg,
+      borderColor: card.border,
+      borderWidth: border.thin,
+      borderRadius: radius.lg,
+      padding: space.md,
+      gap: space.sm,
+    },
+    sectionTitle: {
+      fontFamily: font.subtitle.family,
+      fontSize: font.subtitle.size,
+      fontWeight: font.subtitle.weight,
+      lineHeight: font.subtitle.lineHeight,
+      color: color.onSurface,
+    },
+    captionText: {
+      fontFamily: font.caption.family,
+      fontSize: font.caption.size,
+      fontWeight: font.caption.weight,
+      lineHeight: font.caption.lineHeight,
+      color: color.onSurfaceMuted,
+    },
+    chipsWrap: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: space.sm,
+    },
+    customNamesBlock: {
+      gap: space.sm,
+    },
+    participantsPreview: {
+      gap: space.xs,
+      paddingVertical: space.xs,
+    },
+    warningBanner: {
+      backgroundColor: banner.error.bg,
+      borderColor: banner.error.border,
+      borderWidth: border.thin,
+      borderRadius: radius.md,
+      paddingHorizontal: space.md,
+      paddingVertical: space.sm,
+    },
+    warningText: {
+      fontFamily: font.caption.family,
+      fontSize: font.caption.size,
+      fontWeight: font.caption.weight,
+      lineHeight: font.caption.lineHeight,
+      color: banner.error.text,
+    },
+    actionGroup: {
+      gap: space.sm,
+    },
+    titleText: {
+      fontFamily: font.title.family,
+      fontSize: font.title.size,
+      fontWeight: font.title.weight,
+      lineHeight: font.title.lineHeight,
+      color: color.onSurface,
+      textAlign: 'center',
+    },
+  });
+};
 
 export default TermometroScreen;

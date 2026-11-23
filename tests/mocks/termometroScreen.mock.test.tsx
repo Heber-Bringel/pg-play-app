@@ -14,6 +14,7 @@ const createMockActions = (): TermometroActions => ({
   handleSelectOrderMode: jest.fn(async () => {}),
   handleAddCustomParticipant: jest.fn(async () => true),
   handleRemoveCustomParticipant: jest.fn(async () => {}),
+  handleClearFieldErrors: jest.fn(),
   handleStartMoment: jest.fn(async () => {}),
   handleStartSpeaking: jest.fn(async () => {}),
   handleTick: jest.fn(async () => {}),
@@ -22,7 +23,10 @@ const createMockActions = (): TermometroActions => ({
   handleSkipSpeaker: jest.fn(async () => {}),
   handleFinishFreeMode: jest.fn(async () => {}),
   handleOpenPrayerMoment: jest.fn(async () => {}),
+  handleRequestEndFromSummary: jest.fn(),
+  handleCancelEndWithoutPrayer: jest.fn(),
   handleEndEncounter: jest.fn(async () => {}),
+  handleBackToHub: jest.fn(async () => {}),
   handleRequestExit: jest.fn(),
   handleCancelExit: jest.fn(),
   handleConfirmExit: jest.fn(async () => {}),
@@ -31,22 +35,25 @@ const createMockActions = (): TermometroActions => ({
 
 const baseState: TermometroState = {
   stage: 'setup',
-  participantMode: 'teams',
+  participantMode: 'custom',
   durationMinutes: 1,
   durationSeconds: 60,
   orderMode: 'list',
-  participants: ['Tribo de Judá', 'Leões da Fé'],
+  participants: ['Ana', 'Lucas'],
   currentIndex: 0,
-  currentSpeakerLabel: 'Tribo de Judá',
+  currentSpeakerLabel: 'Ana',
   hasStartedSpeaking: false,
   isPaused: false,
   secondsRemaining: 60,
   sharedCount: 2,
   skippedCount: 1,
+  summaryTitle: 'Roda de pedidos concluída',
   confirmingExit: false,
+  confirmingEndWithoutPrayer: false,
   loading: false,
   error: null,
-  inputError: null,
+  fieldError: null,
+  setupError: null,
 };
 
 describe('TermometroScreen — Testes de Tela com Mocks de ViewModel (UC11)', () => {
@@ -90,12 +97,19 @@ describe('TermometroScreen — Testes de Tela com Mocks de ViewModel (UC11)', ()
     expect(actions.handleRetry).toHaveBeenCalledTimes(1);
   });
 
-  it('deve renderizar a fase setup com seleção de participantes, tempo, ordem e botão Começar (RF38)', async () => {
+  it('deve renderizar a fase setup, adicionar participante com Enter (onSubmitEditing) e limpar erro ao digitar (RF38, Issues #48 e #53)', async () => {
     const actions = createMockActions();
     const spy = jest.spyOn(termometroVmModule, 'useTermometroViewModel');
 
     spy.mockReturnValue([
-      { ...baseState, stage: 'setup', participantMode: 'custom', participants: ['Ana'] },
+      {
+        ...baseState,
+        stage: 'setup',
+        participantMode: 'custom',
+        participants: ['Ana'],
+        fieldError: 'Digite pelo menos 2 letras.',
+        setupError: 'Adicione pelo menos 1 participante.',
+      },
       actions,
     ]);
 
@@ -104,14 +118,29 @@ describe('TermometroScreen — Testes de Tela com Mocks de ViewModel (UC11)', ()
       tree = renderer.create(<TermometroScreen />);
     });
 
+    // Rótulo sem prefixo duplicado "Modo Modo livre"
+    const freeModeChip = tree.root.findByProps({
+      accessibilityLabel: 'Modo livre (sem nomes)',
+    } as any);
+    expect(freeModeChip).toBeDefined();
+
+    // Digitar no campo chama handleClearFieldErrors e Enter (onSubmitEditing) adiciona participante
+    const input = tree.root.findByType('TextInput' as any);
+    await act(async () => {
+      input.props.onChangeText('Marcos');
+    });
+    expect(actions.handleClearFieldErrors).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      input.props.onSubmitEditing();
+    });
+    expect(actions.handleAddCustomParticipant).toHaveBeenCalledWith('Marcos');
+
     const dur2Chip = tree.root.findByProps({
       accessibilityLabel: 'Tempo 2 min',
     } as any);
     const randomOrderChip = tree.root.findByProps({
       accessibilityLabel: 'Ordem Ordem sorteada',
-    } as any);
-    const addBtn = tree.root.findByProps({
-      accessibilityLabel: 'Adicionar Participante',
     } as any);
     const removeChip = tree.root.findByProps({
       accessibilityLabel: 'Remover Ana',
@@ -123,27 +152,26 @@ describe('TermometroScreen — Testes de Tela com Mocks de ViewModel (UC11)', ()
     await act(async () => {
       dur2Chip.props.onPress();
       randomOrderChip.props.onPress();
-      addBtn.props.onPress();
       removeChip.props.onPress();
       startBtn.props.onPress();
     });
 
     expect(actions.handleSelectDuration).toHaveBeenCalledWith(2);
     expect(actions.handleSelectOrderMode).toHaveBeenCalledWith('random');
-    expect(actions.handleAddCustomParticipant).toHaveBeenCalled();
     expect(actions.handleRemoveCustomParticipant).toHaveBeenCalledWith('Ana');
     expect(actions.handleStartMoment).toHaveBeenCalledTimes(1);
   });
 
-  it('deve renderizar a fase turn (antes e durante a fala), summary anônimo sem nomes e prayer (RF39, RF40, RNF12)', () => {
+  it('deve renderizar a fase turn respeitando limite de ações, ocultar Pular/Pausar quando indevido e exibir fechamento acolhedor (Issues #49, #50, #51 e #54)', () => {
     const actions = createMockActions();
     const spy = jest.spyOn(termometroVmModule, 'useTermometroViewModel');
 
-    // 1. Vez da pessoa antes de começar a falar
+    // 1. Vez da pessoa no modo custom antes de começar a falar (mostra Começar a falar e Pular minha vez)
     spy.mockReturnValue([
       {
         ...baseState,
         stage: 'turn',
+        participantMode: 'custom',
         currentSpeakerLabel: 'Mariana',
         hasStartedSpeaking: false,
       },
@@ -168,20 +196,25 @@ describe('TermometroScreen — Testes de Tela com Mocks de ViewModel (UC11)', ()
     expect(actions.handleStartSpeaking).toHaveBeenCalledTimes(1);
     expect(actions.handleSkipSpeaker).toHaveBeenCalledTimes(1);
 
-    // 2. Vez da pessoa falando (com botões Próximo e Pausar)
+    // 2. Vez da pessoa falando com tempo correndo (> 0s): mostra Próximo e botão de ícone Pausar no timer; NÃO mostra Pular minha vez
     spy.mockReturnValue([
       {
         ...baseState,
         stage: 'turn',
+        participantMode: 'custom',
         currentSpeakerLabel: 'Mariana',
         hasStartedSpeaking: true,
-        secondsRemaining: 0,
+        secondsRemaining: 35,
       },
       actions,
     ]);
     act(() => {
       tree.update(<TermometroScreen />);
     });
+
+    expect(
+      tree.root.findAllByProps({ accessibilityLabel: 'Pular minha vez' } as any)
+    ).toHaveLength(0);
 
     const nextBtn = tree.root.findByProps({
       accessibilityLabel: 'Próximo',
@@ -196,7 +229,34 @@ describe('TermometroScreen — Testes de Tela com Mocks de ViewModel (UC11)', ()
     expect(actions.handleNextSpeaker).toHaveBeenCalledTimes(1);
     expect(actions.handleTogglePause).toHaveBeenCalledTimes(1);
 
-    // 3. Resumo anônimo (summary) — só números, sem nomes
+    // 3. Tempo concluído (00:00): botão Pausar não aparece mais
+    spy.mockReturnValue([
+      {
+        ...baseState,
+        stage: 'turn',
+        participantMode: 'free',
+        currentSpeakerLabel: 'Próxima pessoa',
+        hasStartedSpeaking: true,
+        secondsRemaining: 0,
+      },
+      actions,
+    ]);
+    act(() => {
+      tree.update(<TermometroScreen />);
+    });
+    expect(
+      tree.root.findAllByProps({ accessibilityLabel: 'Pausar' } as any)
+    ).toHaveLength(0);
+
+    const finishFreeBtn = tree.root.findByProps({
+      accessibilityLabel: 'Encerrar roda',
+    } as any);
+    act(() => {
+      finishFreeBtn.props.onPress();
+    });
+    expect(actions.handleFinishFreeMode).toHaveBeenCalledTimes(1);
+
+    // 4. Resumo anônimo (summary) — só números, sem nomes, e confirmação antes de pular oração
     spy.mockReturnValue([
       {
         ...baseState,
@@ -205,6 +265,7 @@ describe('TermometroScreen — Testes de Tela com Mocks de ViewModel (UC11)', ()
         currentSpeakerLabel: '',
         sharedCount: 4,
         skippedCount: 1,
+        summaryTitle: 'Roda de pedidos concluída',
       },
       actions,
     ]);
@@ -215,18 +276,20 @@ describe('TermometroScreen — Testes de Tela com Mocks de ViewModel (UC11)', ()
     const allTexts = tree.root
       .findAllByType('Text' as any)
       .map((t) => String(t.props.children));
-    expect(allTexts.some((t) => t.includes('Todos compartilharam'))).toBe(true);
+    expect(allTexts.some((t) => t.includes('Roda de pedidos concluída'))).toBe(
+      true
+    );
     expect(allTexts.some((t) => t.includes('Mariana'))).toBe(false);
 
-    const prayerBtn = tree.root.findByProps({
-      accessibilityLabel: 'Momento de Oração',
+    const endFromSummaryBtn = tree.root.findByProps({
+      accessibilityLabel: 'Encerrar Encontro',
     } as any);
     act(() => {
-      prayerBtn.props.onPress();
+      endFromSummaryBtn.props.onPress();
     });
-    expect(actions.handleOpenPrayerMoment).toHaveBeenCalledTimes(1);
+    expect(actions.handleRequestEndFromSummary).toHaveBeenCalledTimes(1);
 
-    // 4. Momento de Oração (prayer) sem cronômetro
+    // 5. Momento de Oração (prayer) -> Encerrar Encontro
     spy.mockReturnValue([
       {
         ...baseState,
@@ -247,5 +310,27 @@ describe('TermometroScreen — Testes de Tela com Mocks de ViewModel (UC11)', ()
       endBtn.props.onPress();
     });
     expect(actions.handleEndEncounter).toHaveBeenCalledTimes(1);
+
+    // 6. Fechamento acolhedor (closed) -> Voltar ao Hub
+    spy.mockReturnValue([
+      {
+        ...baseState,
+        stage: 'closed',
+        participants: [],
+        currentSpeakerLabel: '',
+      },
+      actions,
+    ]);
+    act(() => {
+      tree.update(<TermometroScreen />);
+    });
+
+    const backHubBtn = tree.root.findByProps({
+      accessibilityLabel: 'Voltar ao Hub',
+    } as any);
+    act(() => {
+      backHubBtn.props.onPress();
+    });
+    expect(actions.handleBackToHub).toHaveBeenCalledTimes(1);
   });
 });

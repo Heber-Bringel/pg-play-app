@@ -22,5 +22,6 @@ export interface ITermometroUseCases {
   finishFreeMode(): Promise<TermometroSession>;
   openPrayerMoment(): Promise<TermometroSession>;
   getAnonymousSummary(): Promise<TermometroSummary>;
+  closeEncounter(): Promise<TermometroSession>;
   endSession(): Promise<TermometroSession>;
 }

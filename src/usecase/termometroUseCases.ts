@@ -10,7 +10,6 @@ import { ValidationError } from '@/model/errors';
 import type { ITermometroUseCases } from '@/usecase/iTermometroUseCases';
 
 const VALID_MODES: ReadonlySet<TermometroParticipantMode> = new Set([
-  'teams',
   'custom',
   'free',
 ]);
@@ -30,10 +29,17 @@ function shuffleNames(names: string[], randomFn: () => number): string[] {
   return copy;
 }
 
+function buildSummaryTitle(sharedCount: number, skippedCount: number): string {
+  if (sharedCount > 0 && skippedCount === 0) {
+    return 'Todos compartilharam';
+  }
+  return 'Roda de pedidos concluída';
+}
+
 function createInitialSession(): TermometroSession {
   return {
     stage: 'setup',
-    participantMode: 'teams',
+    participantMode: 'custom',
     durationMinutes: 1,
     durationSeconds: 60,
     orderMode: 'list',
@@ -45,6 +51,7 @@ function createInitialSession(): TermometroSession {
     secondsRemaining: 60,
     sharedCount: 0,
     skippedCount: 0,
+    summaryTitle: 'Roda de pedidos concluída',
   };
 }
 
@@ -53,7 +60,7 @@ export class TermometroUseCases implements ITermometroUseCases {
   private customParticipants: string[] = [];
 
   constructor(
-    private readonly teamDataSource: ITeamDataSource,
+    private readonly _teamDataSource?: ITeamDataSource,
     private readonly randomFn: () => number = Math.random
   ) {}
 
@@ -64,13 +71,7 @@ export class TermometroUseCases implements ITermometroUseCases {
     };
   }
 
-  private async resolveSetupParticipants(
-    mode: TermometroParticipantMode
-  ): Promise<string[]> {
-    if (mode === 'teams') {
-      const teams = await this.teamDataSource.listTeams();
-      return teams.map((team) => team.name);
-    }
+  private resolveSetupParticipants(mode: TermometroParticipantMode): string[] {
     if (mode === 'custom') {
       return [...this.customParticipants];
     }
@@ -79,10 +80,9 @@ export class TermometroUseCases implements ITermometroUseCases {
 
   async getSession(): Promise<TermometroSession> {
     if (this.session.stage === 'setup') {
-      const preview = await this.resolveSetupParticipants(
+      this.session.participants = this.resolveSetupParticipants(
         this.session.participantMode
       );
-      this.session.participants = preview;
     }
     return this.cloneSession();
   }
@@ -96,7 +96,7 @@ export class TermometroUseCases implements ITermometroUseCases {
       );
     }
     this.session.participantMode = mode;
-    this.session.participants = await this.resolveSetupParticipants(mode);
+    this.session.participants = this.resolveSetupParticipants(mode);
     return this.cloneSession();
   }
 
@@ -166,7 +166,7 @@ export class TermometroUseCases implements ITermometroUseCases {
   }
 
   async startMoment(): Promise<TermometroSession> {
-    const baseParticipants = await this.resolveSetupParticipants(
+    const baseParticipants = this.resolveSetupParticipants(
       this.session.participantMode
     );
 
@@ -183,8 +183,8 @@ export class TermometroUseCases implements ITermometroUseCases {
       this.session.participantMode === 'free'
         ? []
         : this.session.orderMode === 'random'
-        ? shuffleNames(baseParticipants, this.randomFn)
-        : [...baseParticipants];
+          ? shuffleNames(baseParticipants, this.randomFn)
+          : [...baseParticipants];
 
     const firstSpeaker =
       this.session.participantMode === 'free'
@@ -202,6 +202,7 @@ export class TermometroUseCases implements ITermometroUseCases {
       secondsRemaining: this.session.durationSeconds,
       sharedCount: 0,
       skippedCount: 0,
+      summaryTitle: 'Roda de pedidos concluída',
     };
 
     return this.cloneSession();
@@ -246,7 +247,26 @@ export class TermometroUseCases implements ITermometroUseCases {
         'Inicie a fala antes de pausar o termômetro.'
       );
     }
+    if (this.session.secondsRemaining <= 0) {
+      throw new ValidationError(
+        'O tempo desta fala já foi concluído.'
+      );
+    }
     this.session.isPaused = !this.session.isPaused;
+    return this.cloneSession();
+  }
+
+  private transitionToSummary(): TermometroSession {
+    this.session.stage = 'summary';
+    this.session.participants = [];
+    this.session.currentSpeakerLabel = '';
+    this.session.hasStartedSpeaking = false;
+    this.session.isPaused = false;
+    this.session.secondsRemaining = this.session.durationSeconds;
+    this.session.summaryTitle = buildSummaryTitle(
+      this.session.sharedCount,
+      this.session.skippedCount
+    );
     return this.cloneSession();
   }
 
@@ -272,14 +292,7 @@ export class TermometroUseCases implements ITermometroUseCases {
 
     const nextIndex = this.session.currentIndex + 1;
     if (nextIndex >= this.session.participants.length) {
-      // RNF12 e RF40: descarta os nomes ao concluir a roda para que o resumo seja 100% anônimo
-      this.session.stage = 'summary';
-      this.session.participants = [];
-      this.session.currentSpeakerLabel = '';
-      this.session.hasStartedSpeaking = false;
-      this.session.isPaused = false;
-      this.session.secondsRemaining = this.session.durationSeconds;
-      return this.cloneSession();
+      return this.transitionToSummary();
     }
 
     this.session.currentIndex = nextIndex;
@@ -295,6 +308,19 @@ export class TermometroUseCases implements ITermometroUseCases {
   }
 
   async skipSpeaker(): Promise<TermometroSession> {
+    if (this.session.stage !== 'turn') {
+      throw new ValidationError('A roda de fala não está em andamento.');
+    }
+    if (this.session.participantMode === 'free') {
+      throw new ValidationError(
+        'No modo livre não há fila de nomes para pular a vez.'
+      );
+    }
+    if (this.session.hasStartedSpeaking) {
+      throw new ValidationError(
+        'Quem já começou a falar deve avançar pelo botão Próximo.'
+      );
+    }
     return this.advanceTurn(false);
   }
 
@@ -302,12 +328,10 @@ export class TermometroUseCases implements ITermometroUseCases {
     if (this.session.stage !== 'turn') {
       throw new ValidationError('A roda de fala não está em andamento.');
     }
-    this.session.stage = 'summary';
-    this.session.participants = [];
-    this.session.currentSpeakerLabel = '';
-    this.session.hasStartedSpeaking = false;
-    this.session.isPaused = false;
-    return this.cloneSession();
+    if (this.session.hasStartedSpeaking) {
+      this.session.sharedCount += 1;
+    }
+    return this.transitionToSummary();
   }
 
   async openPrayerMoment(): Promise<TermometroSession> {
@@ -323,11 +347,31 @@ export class TermometroUseCases implements ITermometroUseCases {
   }
 
   async getAnonymousSummary(): Promise<TermometroSummary> {
+    const title = buildSummaryTitle(
+      this.session.sharedCount,
+      this.session.skippedCount
+    );
     return {
+      title,
       sharedCount: this.session.sharedCount,
       skippedCount: this.session.skippedCount,
       totalParticipants: this.session.sharedCount + this.session.skippedCount,
     };
+  }
+
+  async closeEncounter(): Promise<TermometroSession> {
+    // RNF12: descarta todos os nomes digitados imediatamente antes da mensagem final
+    const finalShared = this.session.sharedCount;
+    const finalSkipped = this.session.skippedCount;
+    this.customParticipants = [];
+    this.session = {
+      ...createInitialSession(),
+      stage: 'closed',
+      sharedCount: finalShared,
+      skippedCount: finalSkipped,
+      summaryTitle: buildSummaryTitle(finalShared, finalSkipped),
+    };
+    return this.cloneSession();
   }
 
   async endSession(): Promise<TermometroSession> {

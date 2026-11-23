@@ -1,14 +1,15 @@
-export type TermometroParticipantMode = 'teams' | 'custom' | 'free';
+export type TermometroParticipantMode = 'custom' | 'free';
 
 export type TermometroDurationMinutes = 1 | 2 | 3;
 
 export type TermometroOrderMode = 'list' | 'random';
 
-export type TermometroStage = 'setup' | 'turn' | 'summary' | 'prayer';
+export type TermometroStage = 'setup' | 'turn' | 'summary' | 'prayer' | 'closed';
 
 export type TermometroThermalZone = 'cool' | 'warm' | 'completed';
 
 export type TermometroSummary = {
+  title: string;
   sharedCount: number;
   skippedCount: number;
   totalParticipants: number;
@@ -28,4 +29,5 @@ export type TermometroSession = {
   secondsRemaining: number;
   sharedCount: number;
   skippedCount: number;
+  summaryTitle: string;
 };

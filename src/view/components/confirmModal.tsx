@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { ExpressiveButton } from '@/view/components/expressiveButton';
-import { tokens } from '@/view/theme';
+import {
+  ExpressiveButton,
+  type ButtonVariant,
+} from '@/view/components/expressiveButton';
+import { useTheme, type AppTokens, type ThemeMode } from '@/view/theme';
 
 export type ConfirmModalProps = {
   visible: boolean;
@@ -11,9 +14,12 @@ export type ConfirmModalProps = {
   confirmLabel?: string;
   cancelLabel?: string;
   confirmIcon?: keyof typeof MaterialCommunityIcons.glyphMap;
+  confirmVariant?: ButtonVariant;
   icon?: keyof typeof MaterialCommunityIcons.glyphMap;
+  dismissable?: boolean;
+  themeMode?: ThemeMode;
   onConfirm: () => void;
-  onCancel: () => void;
+  onCancel?: () => void;
 };
 
 export const ConfirmModal = ({
@@ -21,39 +27,56 @@ export const ConfirmModal = ({
   title,
   description,
   confirmLabel = 'Confirmar Saída',
-  cancelLabel = 'Continuar Jogando',
+  cancelLabel,
   confirmIcon,
+  confirmVariant,
   icon = 'exit-to-app',
+  dismissable,
+  themeMode,
   onConfirm,
   onCancel,
 }: ConfirmModalProps) => {
+  const activeTokens = useTheme(themeMode);
+  const styles = useMemo(() => createStyles(activeTokens), [activeTokens]);
+
+  const hasCancelAction = Boolean(onCancel);
+  const canDismiss = dismissable ?? hasCancelAction;
+  const resolvedCancelLabel = cancelLabel ?? 'Continuar Jogando';
+  const resolvedConfirmVariant: ButtonVariant =
+    confirmVariant ?? (hasCancelAction ? 'secondary' : 'primary');
+
   return (
     <Modal
       visible={visible}
       transparent
       animationType="fade"
-      onRequestClose={onCancel}
+      onRequestClose={canDismiss ? onCancel : onConfirm}
     >
       <View style={styles.backdrop} accessibilityViewIsModal>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Fechar janela de confirmação"
-          onPress={onCancel}
-          style={styles.backdropDismiss}
-        />
+        {canDismiss && onCancel && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Fechar janela de confirmação"
+            onPress={onCancel}
+            style={styles.backdropDismiss}
+          />
+        )}
 
-        <View style={styles.dialogCard}>
+        <View
+          style={styles.dialogCard}
+          accessibilityLiveRegion="polite"
+        >
           <View style={styles.headerRow}>
             <View style={styles.iconBadge}>
               <MaterialCommunityIcons
                 name={icon}
-                size={tokens.semantic.icon.lg}
-                color={tokens.semantic.color.onSecondaryContainer}
+                size={activeTokens.semantic.icon.lg}
+                color={activeTokens.semantic.color.onSecondaryContainer}
               />
             </View>
             <Text
               allowFontScaling
-              maxFontSizeMultiplier={tokens.semantic.typography.maxScale}
+              maxFontSizeMultiplier={activeTokens.semantic.typography.maxScale}
               style={styles.title}
             >
               {title}
@@ -63,7 +86,7 @@ export const ConfirmModal = ({
           {description && (
             <Text
               allowFontScaling
-              maxFontSizeMultiplier={tokens.semantic.typography.maxScale}
+              maxFontSizeMultiplier={activeTokens.semantic.typography.maxScale}
               style={styles.description}
             >
               {description}
@@ -71,15 +94,19 @@ export const ConfirmModal = ({
           )}
 
           <View style={styles.actions}>
-            <ExpressiveButton
-              label={cancelLabel}
-              variant="tonal"
-              onPress={onCancel}
-            />
+            {hasCancelAction && onCancel && (
+              <ExpressiveButton
+                label={resolvedCancelLabel}
+                variant="tonal"
+                themeMode={themeMode}
+                onPress={onCancel}
+              />
+            )}
             <ExpressiveButton
               label={confirmLabel}
               icon={confirmIcon}
-              variant="secondary"
+              variant={resolvedConfirmVariant}
+              themeMode={themeMode}
               onPress={onConfirm}
             />
           </View>
@@ -89,62 +116,63 @@ export const ConfirmModal = ({
   );
 };
 
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: tokens.semantic.space.lg,
-    backgroundColor: tokens.semantic.color.scrim,
-  },
-  backdropDismiss: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-  },
-  dialogCard: {
-    width: '100%',
-    maxWidth: 420,
-    backgroundColor: tokens.component.card.bg,
-    borderRadius: tokens.component.card.radius,
-    borderWidth: tokens.semantic.border.thin,
-    borderColor: tokens.component.card.border,
-    padding: tokens.component.card.padding,
-    gap: tokens.semantic.space.md,
-    elevation: tokens.semantic.elevation.floating,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.semantic.space.md,
-  },
-  iconBadge: {
-    width: tokens.component.card.badgeSize,
-    height: tokens.component.card.badgeSize,
-    borderRadius: tokens.semantic.radius.lg,
-    backgroundColor: tokens.semantic.color.secondaryContainer,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  title: {
-    flex: 1,
-    fontFamily: tokens.semantic.font.subtitle.family,
-    fontSize: tokens.semantic.font.subtitle.size,
-    fontWeight: tokens.semantic.font.subtitle.weight,
-    lineHeight: tokens.semantic.font.subtitle.lineHeight,
-    color: tokens.semantic.color.onSurface,
-  },
-  description: {
-    fontFamily: tokens.semantic.font.body.family,
-    fontSize: tokens.semantic.font.body.size,
-    fontWeight: tokens.semantic.font.body.weight,
-    lineHeight: tokens.semantic.font.body.lineHeight,
-    color: tokens.semantic.color.onSurfaceMuted,
-  },
-  actions: {
-    gap: tokens.semantic.space.sm,
-    paddingTop: tokens.semantic.space.xs,
-  },
-});
+const createStyles = (activeTokens: AppTokens) =>
+  StyleSheet.create({
+    backdrop: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: activeTokens.semantic.space.lg,
+      backgroundColor: activeTokens.semantic.color.scrim,
+    },
+    backdropDismiss: {
+      position: 'absolute',
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
+    },
+    dialogCard: {
+      width: '100%',
+      maxWidth: 420,
+      backgroundColor: activeTokens.component.card.bg,
+      borderRadius: activeTokens.component.card.radius,
+      borderWidth: activeTokens.semantic.border.thin,
+      borderColor: activeTokens.component.card.border,
+      padding: activeTokens.component.card.padding,
+      gap: activeTokens.semantic.space.md,
+      elevation: activeTokens.semantic.elevation.floating,
+    },
+    headerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: activeTokens.semantic.space.md,
+    },
+    iconBadge: {
+      width: activeTokens.component.card.badgeSize,
+      height: activeTokens.component.card.badgeSize,
+      borderRadius: activeTokens.semantic.radius.lg,
+      backgroundColor: activeTokens.semantic.color.secondaryContainer,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    title: {
+      flex: 1,
+      fontFamily: activeTokens.semantic.font.subtitle.family,
+      fontSize: activeTokens.semantic.font.subtitle.size,
+      fontWeight: activeTokens.semantic.font.subtitle.weight,
+      lineHeight: activeTokens.semantic.font.subtitle.lineHeight,
+      color: activeTokens.semantic.color.onSurface,
+    },
+    description: {
+      fontFamily: activeTokens.semantic.font.body.family,
+      fontSize: activeTokens.semantic.font.body.size,
+      fontWeight: activeTokens.semantic.font.body.weight,
+      lineHeight: activeTokens.semantic.font.body.lineHeight,
+      color: activeTokens.semantic.color.onSurfaceMuted,
+    },
+    actions: {
+      gap: activeTokens.semantic.space.sm,
+      paddingTop: activeTokens.semantic.space.xs,
+    },
+  });

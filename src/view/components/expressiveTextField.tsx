@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { tokens } from '@/view/theme';
+import { useTheme, type AppTokens, type ThemeMode } from '@/view/theme';
 
 export type ExpressiveTextFieldProps = {
   label: string;
@@ -12,7 +12,9 @@ export type ExpressiveTextFieldProps = {
   icon?: keyof typeof MaterialCommunityIcons.glyphMap;
   maxLength?: number;
   disabled?: boolean;
+  themeMode?: ThemeMode;
   onChangeText: (text: string) => void;
+  onSubmitEditing?: () => void;
 };
 
 export const ExpressiveTextField = ({
@@ -24,8 +26,12 @@ export const ExpressiveTextField = ({
   icon = 'account-multiple-plus',
   maxLength = 20,
   disabled = false,
+  themeMode,
   onChangeText,
+  onSubmitEditing,
 }: ExpressiveTextFieldProps) => {
+  const activeTokens = useTheme(themeMode);
+  const styles = useMemo(() => createStyles(activeTokens), [activeTokens]);
   const [focused, setFocused] = useState(false);
   const hasError = Boolean(errorText);
 
@@ -45,32 +51,33 @@ export const ExpressiveTextField = ({
           styles.inputWrapper,
           {
             backgroundColor: disabled
-              ? tokens.semantic.color.disabledBg
+              ? activeTokens.semantic.color.disabledBg
               : hasError
-              ? tokens.component.input.bgError
-              : tokens.component.input.bg,
+                ? activeTokens.component.input.bgError
+                : activeTokens.component.input.bg,
             borderColor: hasError
-              ? tokens.component.input.borderError
+              ? activeTokens.component.input.borderError
               : focused
-              ? tokens.component.input.borderFocus
-              : tokens.component.input.border,
+                ? activeTokens.component.input.borderFocus
+                : activeTokens.component.input.border,
           },
         ]}
       >
         <MaterialCommunityIcons
           name={icon}
-          size={tokens.semantic.icon.md}
+          size={activeTokens.semantic.icon.md}
           color={
             hasError
-              ? tokens.semantic.color.error
-              : tokens.semantic.color.onSurfaceMuted
+              ? activeTokens.semantic.color.error
+              : activeTokens.semantic.color.onSurfaceMuted
           }
         />
         <TextInput
           value={value}
           onChangeText={onChangeText}
+          onSubmitEditing={onSubmitEditing}
           placeholder={placeholder}
-          placeholderTextColor={tokens.semantic.color.onSurfaceMuted}
+          placeholderTextColor={activeTokens.semantic.color.onSurfaceMuted}
           maxLength={maxLength}
           editable={!disabled}
           onFocus={() => setFocused(true)}
@@ -82,8 +89,8 @@ export const ExpressiveTextField = ({
             styles.input,
             {
               color: disabled
-                ? tokens.semantic.color.disabledText
-                : tokens.component.input.text,
+                ? activeTokens.semantic.color.disabledText
+                : activeTokens.component.input.text,
             },
           ]}
         />
@@ -94,8 +101,8 @@ export const ExpressiveTextField = ({
           {hasError && (
             <MaterialCommunityIcons
               name="alert-circle"
-              size={tokens.semantic.icon.sm}
-              color={tokens.semantic.color.error}
+              size={activeTokens.semantic.icon.sm}
+              color={activeTokens.semantic.color.error}
             />
           )}
           <Text
@@ -104,8 +111,8 @@ export const ExpressiveTextField = ({
               styles.helperText,
               {
                 color: hasError
-                  ? tokens.semantic.color.error
-                  : tokens.semantic.color.onSurfaceMuted,
+                  ? activeTokens.semantic.color.error
+                  : activeTokens.semantic.color.onSurfaceMuted,
               },
             ]}
           >
@@ -117,53 +124,54 @@ export const ExpressiveTextField = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    gap: tokens.semantic.space.sm,
-  },
-  labelRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  label: {
-    fontFamily: tokens.semantic.font.caption.family,
-    fontSize: tokens.semantic.font.caption.size,
-    fontWeight: tokens.semantic.font.caption.weight,
-    lineHeight: tokens.semantic.font.caption.lineHeight,
-    color: tokens.semantic.color.onSurface,
-  },
-  counter: {
-    fontFamily: tokens.semantic.font.caption.family,
-    fontSize: tokens.semantic.font.caption.size,
-    fontWeight: tokens.semantic.font.caption.weight,
-    lineHeight: tokens.semantic.font.caption.lineHeight,
-    color: tokens.semantic.color.onSurfaceMuted,
-  },
-  inputWrapper: {
-    minHeight: tokens.component.input.minHeight,
-    borderRadius: tokens.component.input.radius,
-    borderWidth: tokens.semantic.border.thin,
-    paddingHorizontal: tokens.semantic.space.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.semantic.space.sm,
-  },
-  input: {
-    flex: 1,
-    fontFamily: tokens.semantic.font.body.family,
-    fontSize: tokens.semantic.font.body.size,
-    fontWeight: tokens.semantic.font.body.weight,
-    lineHeight: tokens.semantic.font.body.lineHeight,
-  },
-  helperRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.semantic.space.xs,
-  },
-  helperText: {
-    fontFamily: tokens.semantic.font.caption.family,
-    fontSize: tokens.semantic.font.caption.size,
-    fontWeight: tokens.semantic.font.caption.weight,
-    lineHeight: tokens.semantic.font.caption.lineHeight,
-  },
-});
+const createStyles = (activeTokens: AppTokens) =>
+  StyleSheet.create({
+    container: {
+      gap: activeTokens.semantic.space.sm,
+    },
+    labelRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+    },
+    label: {
+      fontFamily: activeTokens.semantic.font.caption.family,
+      fontSize: activeTokens.semantic.font.caption.size,
+      fontWeight: activeTokens.semantic.font.caption.weight,
+      lineHeight: activeTokens.semantic.font.caption.lineHeight,
+      color: activeTokens.semantic.color.onSurface,
+    },
+    counter: {
+      fontFamily: activeTokens.semantic.font.caption.family,
+      fontSize: activeTokens.semantic.font.caption.size,
+      fontWeight: activeTokens.semantic.font.caption.weight,
+      lineHeight: activeTokens.semantic.font.caption.lineHeight,
+      color: activeTokens.semantic.color.onSurfaceMuted,
+    },
+    inputWrapper: {
+      minHeight: activeTokens.component.input.minHeight,
+      borderRadius: activeTokens.component.input.radius,
+      borderWidth: activeTokens.semantic.border.thin,
+      paddingHorizontal: activeTokens.semantic.space.md,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: activeTokens.semantic.space.sm,
+    },
+    input: {
+      flex: 1,
+      fontFamily: activeTokens.semantic.font.body.family,
+      fontSize: activeTokens.semantic.font.body.size,
+      fontWeight: activeTokens.semantic.font.body.weight,
+      lineHeight: activeTokens.semantic.font.body.lineHeight,
+    },
+    helperRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: activeTokens.semantic.space.xs,
+    },
+    helperText: {
+      fontFamily: activeTokens.semantic.font.caption.family,
+      fontSize: activeTokens.semantic.font.caption.size,
+      fontWeight: activeTokens.semantic.font.caption.weight,
+      lineHeight: activeTokens.semantic.font.caption.lineHeight,
+    },
+  });

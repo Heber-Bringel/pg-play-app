@@ -41,6 +41,7 @@ const baseRoom: CidadeDormeRoom = {
   gameType: 'cidade-dorme',
   hostId: 'cd-player-1',
   phase: 'lobby',
+  version: 0,
   config: {
     narratorVoice: 'masculina',
     assassinCount: 1,
