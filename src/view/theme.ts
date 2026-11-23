@@ -1,6 +1,15 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import { useColorScheme } from 'react-native';
+import type { ThemePreference } from '@/model/entities/themePreference';
 
+export type { ThemePreference };
 export type ThemeMode = 'light' | 'dark';
 
 const primitive = {
@@ -388,27 +397,68 @@ export const darkTokens = createTokens('dark');
 
 type ThemeOverrideSetter = (mode: ThemeMode | null) => void;
 
+type ThemePreferenceContextValue = {
+  preference: ThemePreference;
+  setPreference: (preference: ThemePreference) => void;
+};
+
 const ThemeModeContext = createContext<ThemeMode | null>(null);
 const ThemeOverrideSetterContext = createContext<ThemeOverrideSetter | null>(
+  null
+);
+const ThemePreferenceContext = createContext<ThemePreferenceContextValue | null>(
   null
 );
 
 export type ThemeProviderProps = {
   mode?: ThemeMode;
+  preference?: ThemePreference;
+  onChangePreference?: (preference: ThemePreference) => void;
   children: React.ReactNode;
 };
 
-export const ThemeProvider = ({ mode, children }: ThemeProviderProps) => {
+export const ThemeProvider = ({
+  mode,
+  preference,
+  onChangePreference,
+  children,
+}: ThemeProviderProps) => {
   const systemScheme = useColorScheme();
   const parentMode = useContext(ThemeModeContext);
   const parentOverrideSetter = useContext(ThemeOverrideSetterContext);
   const [overrideMode, setOverrideMode] = useState<ThemeMode | null>(null);
+  const [internalPreference, setInternalPreference] =
+    useState<ThemePreference>(preference ?? 'auto');
+
+  const activePreference: ThemePreference = preference ?? internalPreference;
+
+  const handleSetPreference = useCallback(
+    (next: ThemePreference) => {
+      setInternalPreference(next);
+      onChangePreference?.(next);
+    },
+    [onChangePreference]
+  );
+
+  const preferenceContextValue = useMemo<ThemePreferenceContextValue>(
+    () => ({
+      preference: activePreference,
+      setPreference: handleSetPreference,
+    }),
+    [activePreference, handleSetPreference]
+  );
 
   const isRootAutoProvider = parentMode === null && mode === undefined;
+  const preferenceMode: ThemeMode | null =
+    isRootAutoProvider && activePreference !== 'auto'
+      ? activePreference
+      : null;
+
   const resolvedMode: ThemeMode =
     mode ??
     parentMode ??
     (isRootAutoProvider ? overrideMode : null) ??
+    preferenceMode ??
     (systemScheme === 'dark' ? 'dark' : 'light');
 
   const modeElement = React.createElement(
@@ -419,9 +469,13 @@ export const ThemeProvider = ({ mode, children }: ThemeProviderProps) => {
 
   if (isRootAutoProvider && parentOverrideSetter === null) {
     return React.createElement(
-      ThemeOverrideSetterContext.Provider,
-      { value: setOverrideMode },
-      modeElement
+      ThemePreferenceContext.Provider,
+      { value: preferenceContextValue },
+      React.createElement(
+        ThemeOverrideSetterContext.Provider,
+        { value: setOverrideMode },
+        modeElement
+      )
     );
   }
 
@@ -437,6 +491,18 @@ export function useTheme(overrideMode?: ThemeMode): AppTokens {
   return useMemo(
     () => (resolvedMode === 'dark' ? darkTokens : tokens),
     [resolvedMode]
+  );
+}
+
+export function useThemePreference(): ThemePreferenceContextValue {
+  const context = useContext(ThemePreferenceContext);
+  return useMemo(
+    () =>
+      context ?? {
+        preference: 'auto',
+        setPreference: () => {},
+      },
+    [context]
   );
 }
 
