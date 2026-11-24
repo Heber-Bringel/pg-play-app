@@ -1,0 +1,2 @@
+# Git Hooks são scripts sh: precisam de quebra de linha LF em qualquer sistema (issue #75).
+.githooks/* text eol=lf
