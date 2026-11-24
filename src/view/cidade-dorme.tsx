@@ -22,8 +22,10 @@ import { ConfirmModal } from '@/view/components/confirmModal';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
 import { ExpressiveTag } from '@/view/components/expressiveTag';
 import {
+  // ds-ignore-next-line DS-USE-THEME: a transição dia/noite interpola a superfície clara e a escura ao mesmo tempo
   darkTokens,
   ThemeProvider,
+  // ds-ignore-next-line DS-USE-THEME: a transição dia/noite interpola a superfície clara e a escura ao mesmo tempo
   tokens,
   useTheme,
   useThemeOverride,
