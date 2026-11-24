@@ -17,4 +17,36 @@ export class ExpoHapticService implements IHapticService {
       // Ambientes como navegador web ou simuladores podem não suportar háptica.
     }
   }
+
+  async triggerTimerPulse(): Promise<void> {
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {
+      // Ambientes como navegador web ou simuladores podem não suportar háptica.
+    }
+  }
+
+  async triggerTimerExpired(): Promise<void> {
+    try {
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } catch {
+      // Ambientes como navegador web ou simuladores podem não suportar háptica.
+    }
+  }
+
+  async triggerAnswerWrong(): Promise<void> {
+    try {
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } catch {
+      // Ambientes como navegador web ou simuladores podem não suportar háptica.
+    }
+  }
+
+  async triggerLetterWrong(): Promise<void> {
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    } catch {
+      // Ambientes como navegador web ou simuladores podem não suportar háptica.
+    }
+  }
 }
