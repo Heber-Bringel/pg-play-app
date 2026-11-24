@@ -44,4 +44,4 @@
 
 - [x] **T016** Teste manual do hook: commit com `padding: 13` bloqueado (nenhum commit criado), commit sem `src/view/` liberado. Tempos registrados no `CS-03` da spec
 - [x] **T017** `npm run check` com **0 violações**
-- [ ] **T018** Commits convencionais e PR para a `develop` com `Closes #75` (`/commit-e-pr`)
+- [x] **T018** Commits convencionais e PR para a `develop` com `Closes #75` (`/commit-e-pr`): PR #79
