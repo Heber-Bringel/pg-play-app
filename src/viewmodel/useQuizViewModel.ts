@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { pgPlayUseCases } from '@/di/container';
+import { pgPlayUseCases, gameFeedbackUseCases } from '@/di/container';
 import type { QuizCategory, QuizOptionKey, QuizQuestion } from '@/model/entities/arenaChallenge';
 import {
   DEFAULT_MATCH_SETTINGS,
@@ -11,6 +11,7 @@ import {
 import type { Team } from '@/model/entities/team';
 import { DomainError } from '@/model/errors';
 import type { IPgPlayUseCases } from '@/usecase/iPgPlayUseCases';
+import type { IGameFeedbackUseCases } from '@/usecase/iGameFeedbackUseCases';
 
 export type QuizPhase = 'pass-turn' | 'playing' | 'answered' | 'finished';
 
@@ -27,6 +28,7 @@ export const ALL_QUIZ_CATEGORIES: QuizCategory[] = [
 ];
 
 export type QuizState = {
+  reduceMotion: boolean;
   phase: QuizPhase;
   teams: Team[];
   currentTeamIndex: number;
@@ -52,6 +54,7 @@ export type QuizState = {
 };
 
 export type QuizActions = {
+  handleSetReduceMotion: (enabled: boolean) => void;
   handleStartTurn: () => void;
   handleSelectOption: (key: QuizOptionKey) => Promise<void>;
   handleTick: () => void;
@@ -68,7 +71,8 @@ export type QuizActions = {
 };
 
 export function useQuizViewModel(
-  useCase: IPgPlayUseCases = pgPlayUseCases
+  useCase: IPgPlayUseCases = pgPlayUseCases,
+  gameFeedback: IGameFeedbackUseCases = gameFeedbackUseCases
 ): [QuizState, QuizActions] {
   const router = useRouter();
 
@@ -88,6 +92,24 @@ export function useQuizViewModel(
   const [secondsRemaining, setSecondsRemaining] = useState<number>(
     DEFAULT_MATCH_SETTINGS.quiz.durationSeconds
   );
+
+  // Feedback tátil do cronômetro (issue #77): a regra de quando vibrar fica
+  // no GameFeedbackUseCases; aqui só informamos o segundo anterior e o atual.
+  const [reduceMotion, setReduceMotionState] = useState<boolean>(false);
+  const previousSecondsRef = useRef<number>(secondsRemaining);
+
+  useEffect(() => {
+    const previousSeconds = previousSecondsRef.current;
+    previousSecondsRef.current = secondsRemaining;
+    // Mudar só o reduceMotion repete o mesmo segundo, e o UseCase ignora.
+    void gameFeedback.notifyTimerTick(previousSeconds, secondsRemaining, {
+      reduceMotion,
+    });
+  }, [secondsRemaining, reduceMotion, gameFeedback]);
+
+  const handleSetReduceMotion = useCallback((enabled: boolean) => {
+    setReduceMotionState(enabled);
+  }, []);
   const [configuredQuestionCount, setConfiguredQuestionCount] =
     useState<QuizQuestionCountOption>(
       DEFAULT_MATCH_SETTINGS.quiz.questionCount
@@ -194,6 +216,8 @@ export function useQuizViewModel(
       setSelectedOptionKey(key);
       setIsCorrect(match);
       setPhase('answered');
+      // Só a escolha da equipe vibra; o tempo esgotado já tem a vibração própria.
+      void gameFeedback.notifyAnswer(match ? 'correct' : 'wrong');
 
       const delta = match ? 10 : 0;
       setTurnScoreDelta(delta);
@@ -207,7 +231,7 @@ export function useQuizViewModel(
         }
       }
     },
-    [phase, currentQuestion, currentTeam, selectedOptionKey, useCase]
+    [phase, currentQuestion, currentTeam, selectedOptionKey, useCase, gameFeedback]
   );
 
   const matchPlan = useCase.planQuizMatch(
@@ -338,6 +362,7 @@ export function useQuizViewModel(
   }, [loadData, selectedCategories]);
 
   const state: QuizState = {
+    reduceMotion,
     phase,
     teams,
     currentTeamIndex,
@@ -363,6 +388,7 @@ export function useQuizViewModel(
   };
 
   const actions: QuizActions = {
+    handleSetReduceMotion,
     handleStartTurn,
     handleSelectOption,
     handleTick,

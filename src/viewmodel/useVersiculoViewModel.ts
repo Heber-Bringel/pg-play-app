@@ -1,6 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { versiculoUseCases as defaultVersiculoUseCases } from '@/di/container';
+import {
+  versiculoUseCases as defaultVersiculoUseCases,
+  gameFeedbackUseCases,
+} from '@/di/container';
 import type { Team } from '@/model/entities/team';
 import type {
   VerseBlankResult,
@@ -11,6 +14,7 @@ import type {
 } from '@/model/entities/versePassage';
 import { DomainError } from '@/model/errors';
 import type { IVersiculoUseCases } from '@/usecase/iVersiculoUseCases';
+import type { IGameFeedbackUseCases } from '@/usecase/iGameFeedbackUseCases';
 
 export const ALL_VERSE_PACKS: VersePack[] = [
   'Salmos e Provérbios',
@@ -31,6 +35,7 @@ export type VersiculoPhase =
   | 'finished';
 
 export type VersiculoState = {
+  reduceMotion: boolean;
   loading: boolean;
   error: string | null;
   phase: VersiculoPhase;
@@ -54,6 +59,7 @@ export type VersiculoState = {
 };
 
 export type VersiculoActions = {
+  setReduceMotion: (enabled: boolean) => void;
   reloadTeams: () => Promise<void>;
   togglePack: (pack: VersePack) => void;
   selectDuration: (seconds: VerseDurationOption) => void;
@@ -78,7 +84,8 @@ function sumResultPoints(results: VerseBlankResult[]): number {
 }
 
 export function useVersiculoViewModel(
-  useCase: IVersiculoUseCases = defaultVersiculoUseCases
+  useCase: IVersiculoUseCases = defaultVersiculoUseCases,
+  gameFeedback: IGameFeedbackUseCases = gameFeedbackUseCases
 ): [VersiculoState, VersiculoActions] {
   const router = useRouter();
 
@@ -94,6 +101,24 @@ export function useVersiculoViewModel(
   const [passages, setPassages] = useState<VersePassage[]>([]);
   const [currentPassageIndex, setCurrentPassageIndex] = useState<number>(0);
   const [secondsRemaining, setSecondsRemaining] = useState<number>(45);
+
+  // Feedback tátil do cronômetro (issue #77): a regra de quando vibrar fica
+  // no GameFeedbackUseCases; aqui só informamos o segundo anterior e o atual.
+  const [reduceMotion, setReduceMotionState] = useState<boolean>(false);
+  const previousSecondsRef = useRef<number>(secondsRemaining);
+
+  useEffect(() => {
+    const previousSeconds = previousSecondsRef.current;
+    previousSecondsRef.current = secondsRemaining;
+    // Mudar só o reduceMotion repete o mesmo segundo, e o UseCase ignora.
+    void gameFeedback.notifyTimerTick(previousSeconds, secondsRemaining, {
+      reduceMotion,
+    });
+  }, [secondsRemaining, reduceMotion, gameFeedback]);
+
+  const setReduceMotionValue = useCallback((enabled: boolean) => {
+    setReduceMotionState(enabled);
+  }, []);
   const [activeBlankIndex, setActiveBlankIndex] = useState<number>(1);
   const [answersByIndex, setAnswersByIndex] = useState<Record<number, string>>(
     {}
@@ -137,6 +162,7 @@ export function useVersiculoViewModel(
       const evaluated = useCase.evaluateAnswers(passage, answers, hintUsed);
       setResults(evaluated);
       setPhase('review');
+      return evaluated;
     },
     [useCase]
   );
@@ -273,8 +299,11 @@ export function useVersiculoViewModel(
     if (!currentPassage || phase !== 'playing') {
       return;
     }
-    evaluateCurrentTurn(currentPassage, answersByIndex, usedHint);
-  }, [answersByIndex, currentPassage, evaluateCurrentTurn, phase, usedHint]);
+    const evaluated = evaluateCurrentTurn(currentPassage, answersByIndex, usedHint);
+    // Só o envio da equipe vibra acerto/erro; o tempo esgotado já tem a vibração própria.
+    const allCorrect = evaluated.every((result) => result.isCorrect);
+    void gameFeedback.notifyAnswer(allCorrect ? 'correct' : 'wrong');
+  }, [answersByIndex, currentPassage, evaluateCurrentTurn, gameFeedback, phase, usedHint]);
 
   const nextTurn = useCallback(async () => {
     if (!currentTeam) {
@@ -365,6 +394,7 @@ export function useVersiculoViewModel(
 
   return [
     {
+      reduceMotion,
       loading,
       error,
       phase,
@@ -387,6 +417,7 @@ export function useVersiculoViewModel(
       exitConfirmVisible,
     },
     {
+      setReduceMotion: setReduceMotionValue,
       reloadTeams,
       togglePack,
       selectDuration,

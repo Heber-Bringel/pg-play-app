@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { pgPlayUseCases } from '@/di/container';
+import { gameFeedbackUseCases, pgPlayUseCases } from '@/di/container';
 import type { ForcaCategory, ForcaPuzzle } from '@/model/entities/arenaChallenge';
 import {
   DEFAULT_MATCH_SETTINGS,
@@ -9,6 +9,7 @@ import {
 } from '@/model/entities/matchSettings';
 import type { Team } from '@/model/entities/team';
 import { DomainError } from '@/model/errors';
+import type { IGameFeedbackUseCases } from '@/usecase/iGameFeedbackUseCases';
 import type { IPgPlayUseCases } from '@/usecase/iPgPlayUseCases';
 
 export type ForcaPhase = 'pass-turn' | 'playing' | 'word-result' | 'finished';
@@ -112,7 +113,8 @@ export function isWordCompleted(word: string, guessedLetters: string[]): boolean
 }
 
 export function useForcaViewModel(
-  useCases: IPgPlayUseCases = pgPlayUseCases
+  useCases: IPgPlayUseCases = pgPlayUseCases,
+  gameFeedback: IGameFeedbackUseCases = gameFeedbackUseCases
 ): [ForcaState, ForcaActions] {
   const router = useRouter();
 
@@ -217,6 +219,10 @@ export function useForcaViewModel(
 
       if (wordHasLetter) {
         const completed = isWordCompleted(currentPuzzle.word, nextGuessed);
+        // Feedback tátil (issue #77): letra certa não vibra; palavra completa vibra sucesso.
+        void (completed
+          ? gameFeedback.notifyAnswer('correct')
+          : gameFeedback.notifyLetterGuess(true));
         if (completed) {
           setWordWon(true);
           const bonus = remainingAttempts * 2;
@@ -239,6 +245,10 @@ export function useForcaViewModel(
       } else {
         const nextAttempts = remainingAttempts - 1;
         setRemainingAttempts(nextAttempts);
+        // Letra errada vibra um toque curto; a última tentativa vibra só o erro.
+        void (nextAttempts <= 0
+          ? gameFeedback.notifyAnswer('wrong')
+          : gameFeedback.notifyLetterGuess(false));
 
         if (nextAttempts <= 0) {
           setWordLost(true);
@@ -251,6 +261,7 @@ export function useForcaViewModel(
     [
       currentPuzzle,
       currentTeam,
+      gameFeedback,
       guessedLetters,
       phase,
       remainingAttempts,
