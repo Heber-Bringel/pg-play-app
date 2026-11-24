@@ -8,11 +8,16 @@ import {
 } from 'react-native';
 import { ConfirmModal } from '@/view/components/confirmModal';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
+import { ExpressiveChip } from '@/view/components/expressiveChip';
 import { ExpressiveTag } from '@/view/components/expressiveTag';
 import { GameCard } from '@/view/components/gameCard';
 import { LetterKey } from '@/view/components/letterKey';
 import { useTheme, type AppTokens } from '@/view/theme';
-import { normalizeChar, useForcaViewModel } from '@/viewmodel/useForcaViewModel';
+import {
+  ALL_FORCA_CATEGORIES,
+  normalizeChar,
+  useForcaViewModel,
+} from '@/viewmodel/useForcaViewModel';
 
 const ALL_LETTERS = [
   'A', 'B', 'C', 'D', 'E', 'F',
@@ -134,6 +139,40 @@ export const ForcaScreen = () => {
 
       {state.phase === 'pass-turn' && (
         <View style={styles.contentSection}>
+          {state.currentRound === 1 && state.currentTeamIndex === 0 && (
+            <View style={styles.packsCard}>
+              <Text allowFontScaling style={styles.packsTitle}>
+                Pacotes de Conteúdo
+              </Text>
+              <Text allowFontScaling style={styles.packsCaption}>
+                Toque nos chips para combinar os temas desta partida (mínimo 1 pacote).
+              </Text>
+              <View style={styles.chipsWrap}>
+                {ALL_FORCA_CATEGORIES.map((category) => {
+                  const isSelected = state.selectedCategories.includes(category);
+                  return (
+                    <ExpressiveChip
+                      key={category}
+                      label={category}
+                      icon={isSelected ? 'check' : undefined}
+                      selected={isSelected}
+                      accessibilityLabel={`Pacote ${category}`}
+                      onPress={() => {
+                        void actions.handleToggleCategory(category);
+                      }}
+                    />
+                  );
+                })}
+              </View>
+              {state.categoryWarning && (
+                <View style={styles.warningBanner} accessibilityLiveRegion="polite">
+                  <Text allowFontScaling style={styles.warningText}>
+                    {state.categoryWarning}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
           <GameCard
             title={`Vez da Equipe ${teamName}`}
             description={`Palavra ${state.currentRound} de ${state.totalRounds}. A equipe possui ${teamScore} pts. Reúnam o grupo e preparem-se para adivinhar!`}
@@ -300,6 +339,46 @@ const createStyles = (activeTokens: AppTokens) => {
     },
     contentSection: {
       gap: space.md,
+    },
+    packsCard: {
+      backgroundColor: activeTokens.component.card.bg,
+      borderColor: activeTokens.component.card.border,
+      borderWidth: border.thin,
+      borderRadius: radius.lg,
+      padding: space.md,
+      gap: space.sm,
+    },
+    packsTitle: {
+      fontFamily: font.subtitle.family,
+      fontSize: font.subtitle.size,
+      fontWeight: font.subtitle.weight,
+      lineHeight: font.subtitle.lineHeight,
+      color: color.onSurface,
+    },
+    packsCaption: {
+      fontFamily: font.caption.family,
+      fontSize: font.caption.size,
+      fontWeight: font.caption.weight,
+      lineHeight: font.caption.lineHeight,
+      color: color.onSurfaceMuted,
+    },
+    chipsWrap: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: space.sm,
+    },
+    warningBanner: {
+      backgroundColor: color.errorContainer,
+      borderRadius: radius.md,
+      paddingHorizontal: space.md,
+      paddingVertical: space.sm,
+    },
+    warningText: {
+      fontFamily: font.caption.family,
+      fontSize: font.caption.size,
+      fontWeight: font.caption.weight,
+      lineHeight: font.caption.lineHeight,
+      color: color.onErrorContainer,
     },
     cardContainer: {
       backgroundColor: activeTokens.component.card.bg,

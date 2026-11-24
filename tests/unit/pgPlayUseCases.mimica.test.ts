@@ -23,10 +23,25 @@ describe('PgPlayUseCases — Regras de Negócio da Arena de Mímica Expressiva (
     const catalogDs = new MemoryGameCatalogDataSource();
     const useCases = new PgPlayUseCases(teamDs, catalogDs);
 
+    const packs = await useCases.listContentPacks('mimica');
+    expect(packs).toHaveLength(7);
+    expect(packs.every((pack) => pack.gameId === 'mimica')).toBe(true);
+
+    const allPacks = await useCases.listContentPacks();
+    expect(allPacks.length).toBeGreaterThanOrEqual(21);
+
     const biblicalCards = await useCases.listMimicaCards(['Bíblico']);
 
     expect(biblicalCards.length).toBeGreaterThan(0);
     expect(biblicalCards.every((card) => card.category === 'Bíblico')).toBe(true);
+
+    const combinedCards = await useCases.listMimicaCards(['Bíblico', 'Animais']);
+    expect(combinedCards.length).toBeGreaterThan(biblicalCards.length);
+    expect(
+      combinedCards.every(
+        (card) => card.category === 'Bíblico' || card.category === 'Animais'
+      )
+    ).toBe(true);
   });
 
   it('deve lançar ValidationError ao solicitar cartas da Mímica com lista de categorias vazia (RF28)', async () => {
@@ -35,6 +50,9 @@ describe('PgPlayUseCases — Regras de Negócio da Arena de Mímica Expressiva (
     const useCases = new PgPlayUseCases(teamDs, catalogDs);
 
     await expect(useCases.listMimicaCards([])).rejects.toThrow(ValidationError);
+    await expect(useCases.listContentPacks('invalido' as never)).rejects.toThrow(
+      ValidationError
+    );
   });
 
   it('deve somar +20 pontos à equipe da vez ao registrar acerto na Mímica (RF13)', async () => {

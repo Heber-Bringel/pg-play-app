@@ -3,12 +3,13 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ConfirmModal } from '@/view/components/confirmModal';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
+import { ExpressiveChip } from '@/view/components/expressiveChip';
 import { ExpressiveTag } from '@/view/components/expressiveTag';
 import { ExpressiveTimer } from '@/view/components/expressiveTimer';
 import { GameCard } from '@/view/components/gameCard';
 import { QuizOption } from '@/view/components/quizOption';
 import { useTheme, type AppTokens } from '@/view/theme';
-import { useQuizViewModel } from '@/viewmodel/useQuizViewModel';
+import { ALL_QUIZ_CATEGORIES, useQuizViewModel } from '@/viewmodel/useQuizViewModel';
 
 export const QuizScreen = () => {
   const [state, actions] = useQuizViewModel();
@@ -130,6 +131,41 @@ export const QuizScreen = () => {
           />
 
           <View style={styles.passTurnContent}>
+            {state.currentQuestionIndex === 0 && (
+              <View style={styles.packsCard}>
+                <Text allowFontScaling style={styles.packsTitle}>
+                  Pacotes de Conteúdo
+                </Text>
+                <Text allowFontScaling style={styles.packsCaption}>
+                  Toque nos chips para combinar os temas desta partida (mínimo 1 pacote).
+                </Text>
+                <View style={styles.chipsWrap}>
+                  {ALL_QUIZ_CATEGORIES.map((category) => {
+                    const isSelected = state.selectedCategories.includes(category);
+                    return (
+                      <ExpressiveChip
+                        key={category}
+                        label={category}
+                        icon={isSelected ? 'check' : undefined}
+                        selected={isSelected}
+                        accessibilityLabel={`Pacote ${category}`}
+                        onPress={() => {
+                          void actions.handleToggleCategory(category);
+                        }}
+                      />
+                    );
+                  })}
+                </View>
+                {state.categoryWarning && (
+                  <View style={styles.warningBanner} accessibilityLiveRegion="polite">
+                    <Text allowFontScaling style={styles.warningText}>
+                      {state.categoryWarning}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+
             <View style={styles.passTurnCard}>
               <View style={styles.avatarTeam}>
                 <MaterialCommunityIcons
@@ -400,6 +436,47 @@ const createStyles = (activeTokens: AppTokens) => {
       justifyContent: 'center',
       alignItems: 'center',
       gap: space.md,
+    },
+    packsCard: {
+      backgroundColor: activeTokens.component.card.bg,
+      borderColor: activeTokens.component.card.border,
+      borderWidth: border.thin,
+      borderRadius: radius.lg,
+      padding: space.md,
+      gap: space.sm,
+      width: '100%',
+    },
+    packsTitle: {
+      fontFamily: font.subtitle.family,
+      fontSize: font.subtitle.size,
+      fontWeight: font.subtitle.weight,
+      lineHeight: font.subtitle.lineHeight,
+      color: color.onSurface,
+    },
+    packsCaption: {
+      fontFamily: font.caption.family,
+      fontSize: font.caption.size,
+      fontWeight: font.caption.weight,
+      lineHeight: font.caption.lineHeight,
+      color: color.onSurfaceMuted,
+    },
+    chipsWrap: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: space.sm,
+    },
+    warningBanner: {
+      backgroundColor: color.errorContainer,
+      borderRadius: radius.md,
+      paddingHorizontal: space.md,
+      paddingVertical: space.sm,
+    },
+    warningText: {
+      fontFamily: font.caption.family,
+      fontSize: font.caption.size,
+      fontWeight: font.caption.weight,
+      lineHeight: font.caption.lineHeight,
+      color: color.onErrorContainer,
     },
     passTurnCard: {
       backgroundColor: activeTokens.component.card.bg,

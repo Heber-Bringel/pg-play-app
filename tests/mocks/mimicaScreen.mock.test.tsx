@@ -44,6 +44,7 @@ const baseState: MimicaState = {
   confirmingExit: false,
   loading: false,
   error: null,
+  categoryWarning: null,
 };
 
 describe('MimicaScreen — Testes de Tela com Mocks de ViewModel (UC03)', () => {
@@ -128,6 +129,12 @@ describe('MimicaScreen — Testes de Tela com Mocks de ViewModel (UC03)', () => 
       readyBtn.props.onPress();
     });
     expect(actions.handleStartTurn).toHaveBeenCalledTimes(1);
+
+    const biblicoChip = tree.root.findByProps({ accessibilityLabel: 'Pacote Bíblico' } as any);
+    act(() => {
+      biblicoChip.props.onPress();
+    });
+    expect(actions.handleToggleCategory).toHaveBeenCalledWith('Bíblico');
 
     spy.mockReturnValue([{ ...baseState, phase: 'playing', wordVisible: true }, actions]);
     act(() => {
