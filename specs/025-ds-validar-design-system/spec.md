@@ -87,6 +87,7 @@ Hoje nenhuma verificação roda antes do push, e a CI só roda em PRs para a `ma
 - **`RF-04`**: Hook `.githooks/pre-commit` chamando o verificador em modo `--staged`, instalado por `npm install` via script `prepare` (`scripts/instalar-hooks.mjs`) que ignora ambientes sem Git ou de CI.
 - **`RF-05`**: `package.json` com `"check:ds"` e o `"check"` incluindo o novo verificador.
 - **`RF-07`** *(adendo de 2026-11-24)*: Hook `.githooks/pre-push` rodando `check-arquitetura.mjs` e `check-design-system.mjs` no projeto inteiro antes de cada `git push`; com qualquer erro, o push é cancelado. `tsc` e `jest` ficam fora do hook para não atrasar o push (continuam no `npm run check`).
+- **`RF-09`** *(adendo)*: A CI (`.github/workflows/ci.yml`) roda também em `push` e `pull_request` para a `develop` e inclui o passo `npm run check:ds`. Os hooks locais podem ser pulados (`--no-verify`, sem `npm install`); a CI verifica no servidor, com `tsc` e testes. Para **bloquear** o merge, o check precisa ser marcado como obrigatório na proteção da branch (configuração do dono do repositório).
 - **`RF-08`** *(adendo)*: `CONTRIBUTING.md` descreve o `npm run check` atual e os dois hooks (`pre-commit` e `pre-push`).
 - **`RF-06`**: Ajustar o código atual para começar com **0 erros**: `GameCard` declara `minHeight` por token; `cidadeDormeCityPanel` e `cidadeDormePhaseTimeline` passam a usar `useTheme()` em vez de `tokens` estático.
 

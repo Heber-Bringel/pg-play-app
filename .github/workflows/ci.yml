@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - main
+      - develop
   pull_request:
     branches:
       - main
+      - develop
 
 jobs:
   check-and-test:
@@ -28,6 +30,9 @@ jobs:
 
       - name: Verificar Arquitetura MVVM Sofisticada (7 camadas)
         run: npm run arquitetura
+
+      - name: Verificar Design System PG Play Expressive (tokens, alvos de toque e acessibilidade)
+        run: npm run check:ds
 
       - name: Verificar tipagem estrita TypeScript
         run: npx tsc --noEmit

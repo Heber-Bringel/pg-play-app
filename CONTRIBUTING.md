@@ -105,7 +105,7 @@ Adotamos o **GitHub Spec Kit** (`.specify/` e `specs/`) aliado ao **Harness MVVM
    | `.githooks/pre-commit` | `git commit` | Design System (`check-design-system.mjs --staged`) só nos arquivos de `src/view/` do commit | Imediato sem telas; menos de 0,5 s com telas |
    | `.githooks/pre-push` | `git push` | Arquitetura MVVM (`check-arquitetura.mjs`) e Design System no projeto inteiro | Cerca de 1 s |
 
-   Os hooks analisam os arquivos da sua pasta de trabalho e **não substituem** o `npm run check`: `tsc` e `jest` só rodam no `check`. Regras e exceções do Design System: [`docs/harness/04-views-e-design-system.md`](docs/harness/04-views-e-design-system.md) (seção 5).
+   Os hooks analisam os arquivos da sua pasta de trabalho e **não substituem** o `npm run check`: `tsc` e `jest` só rodam no `check`. No GitHub, a **CI** (`.github/workflows/ci.yml`) roda a verificação completa (arquitetura, Design System, `tsc` e testes) em todo push e Pull Request para a `develop` e a `main`. Regras e exceções do Design System: [`docs/harness/04-views-e-design-system.md`](docs/harness/04-views-e-design-system.md) (seção 5).
 5. **Abra o Pull Request** preenchendo integralmente o template [`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md) e vinculando a Issue (`Closes #X`) e a pasta `specs/NNN-slug/`.
 
 ---
