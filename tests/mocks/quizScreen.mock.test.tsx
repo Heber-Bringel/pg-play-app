@@ -6,6 +6,7 @@ import * as quizVmModule from '@/viewmodel/useQuizViewModel';
 import type { QuizActions, QuizState } from '@/viewmodel/useQuizViewModel';
 
 const createMockActions = (): QuizActions => ({
+  handleSetReduceMotion: jest.fn(),
   handleStartTurn: jest.fn(),
   handleSelectOption: jest.fn(async () => {}),
   handleTick: jest.fn(),
@@ -22,6 +23,7 @@ const createMockActions = (): QuizActions => ({
 });
 
 const baseState: QuizState = {
+  reduceMotion: false,
   phase: 'pass-turn',
   teams: [
     { id: 't1', name: 'Tribo de Judá', score: 0 },

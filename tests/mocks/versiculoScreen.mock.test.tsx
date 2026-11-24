@@ -17,6 +17,7 @@ jest.mock('@/viewmodel/useVersiculoViewModel', () => {
 });
 
 const createMockActions = (): VersiculoActions => ({
+  setReduceMotion: jest.fn(),
   reloadTeams: jest.fn(async () => {}),
   togglePack: jest.fn(),
   selectDuration: jest.fn(),
@@ -37,6 +38,7 @@ const createMockActions = (): VersiculoActions => ({
 });
 
 const baseState = (): VersiculoState => ({
+  reduceMotion: false,
   loading: false,
   error: null,
   phase: 'setup',

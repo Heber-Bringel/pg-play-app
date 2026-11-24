@@ -6,6 +6,7 @@ import * as mimicaVmModule from '@/viewmodel/useMimicaViewModel';
 import type { MimicaActions, MimicaState } from '@/viewmodel/useMimicaViewModel';
 
 const createMockActions = (): MimicaActions => ({
+  handleSetReduceMotion: jest.fn(),
   handleStartTurn: jest.fn(),
   handleToggleWordVisibility: jest.fn(),
   handleHit: jest.fn(async () => {}),
@@ -23,6 +24,7 @@ const createMockActions = (): MimicaActions => ({
 });
 
 const baseState: MimicaState = {
+  reduceMotion: false,
   phase: 'pass-turn',
   teams: [
     { id: 't1', name: 'Tribo de Judá', score: 40 },
