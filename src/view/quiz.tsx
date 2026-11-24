@@ -8,6 +8,7 @@ import { ExpressiveTag } from '@/view/components/expressiveTag';
 import { ExpressiveTimer } from '@/view/components/expressiveTimer';
 import { GameCard } from '@/view/components/gameCard';
 import { QuizOption } from '@/view/components/quizOption';
+import { useReduceMotion } from '@/view/components/useReduceMotion';
 import { useTheme, type AppTokens } from '@/view/theme';
 import {
   ALL_QUIZ_CATEGORIES,
@@ -21,6 +22,7 @@ const QUIZ_QUESTION_COUNTS: QuizQuestionCountOption[] = [5, 10, 15];
 
 export const QuizScreen = () => {
   const [state, actions] = useQuizViewModel();
+  useReduceMotion(actions.handleSetReduceMotion);
   const activeTokens = useTheme();
   const styles = useMemo(() => createStyles(activeTokens), [activeTokens]);
 
@@ -307,7 +309,10 @@ export const QuizScreen = () => {
         />
 
         <View style={styles.timerWrapper}>
-          <ExpressiveTimer secondsRemaining={state.secondsRemaining} />
+          <ExpressiveTimer
+            secondsRemaining={state.secondsRemaining}
+            reduceMotion={state.reduceMotion}
+          />
         </View>
 
         {currentQuestion && (
