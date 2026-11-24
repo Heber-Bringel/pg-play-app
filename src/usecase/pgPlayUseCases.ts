@@ -9,6 +9,7 @@ import type {
   QuizCategory,
   QuizQuestion,
 } from '@/model/entities/arenaChallenge';
+import type { ContentPack, ContentPackGameId } from '@/model/entities/contentPack';
 import {
   DEFAULT_MATCH_SETTINGS,
   QUIZ_QUESTION_COUNT_OPTIONS,
@@ -31,6 +32,12 @@ const VALID_MODALITIES: ReadonlySet<GameModalityFilter> = new Set([
   'Todos',
   '1 Celular',
   'Multi-Celular',
+]);
+
+const VALID_CONTENT_PACK_GAMES: ReadonlySet<ContentPackGameId> = new Set([
+  'mimica',
+  'quiz',
+  'forca',
 ]);
 
 function normalizeSearchText(value: string): string {
@@ -138,6 +145,13 @@ export class PgPlayUseCases implements IPgPlayUseCases {
         normalizeSearchText(field).includes(normalizedQuery)
       );
     });
+  }
+
+  async listContentPacks(gameId?: ContentPackGameId): Promise<ContentPack[]> {
+    if (gameId !== undefined && !VALID_CONTENT_PACK_GAMES.has(gameId)) {
+      throw new ValidationError('Jogo inválido para listagem de pacotes de conteúdo.');
+    }
+    return this.gameCatalogDataSource.listContentPacks(gameId);
   }
 
   async listTeams(): Promise<Team[]> {

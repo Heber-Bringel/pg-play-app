@@ -303,6 +303,7 @@ describe('useForcaViewModel — Hook da Arena do Jogo da Forca (UC05)', () => {
   it('deve converter DomainError em mensagem de erro legível no estado', async () => {
     const failingUseCases: IPgPlayUseCases = {
       listMinigames: async () => [],
+      listContentPacks: async () => [],
       listTeams: async () => {
         throw new ValidationError('Erro simulado ao carregar equipes.');
       },
@@ -342,5 +343,34 @@ describe('useForcaViewModel — Hook da Arena do Jogo da Forca (UC05)', () => {
     await errorHarness.mount();
     expect(errorHarness.getState().error).toBe('Erro simulado ao carregar equipes.');
     errorHarness.unmount();
+  });
+
+  it('deve filtrar palavras da Forca por pacotes selecionados e exibir categoryWarning ao tentar desmarcar o último (RF28)', async () => {
+    const useCases = new PgPlayUseCases(
+      new MemoryTeamDataSource(),
+      new MemoryGameCatalogDataSource(),
+      new MemoryMatchSettingsDataSource()
+    );
+    const harness = createHookHarness(useCases);
+    await harness.mount();
+
+    const initialCats = [...harness.getState().selectedCategories];
+    for (let i = 1; i < initialCats.length; i += 1) {
+      await act(async () => {
+        await harness.getActions().handleToggleCategory(initialCats[i]);
+      });
+    }
+
+    expect(harness.getState().selectedCategories).toEqual(['Bíblico']);
+    expect(harness.getState().currentPuzzle?.category).toBe('Bíblico');
+
+    await act(async () => {
+      await harness.getActions().handleToggleCategory('Bíblico');
+    });
+
+    expect(harness.getState().selectedCategories).toEqual(['Bíblico']);
+    expect(harness.getState().categoryWarning).toContain('Selecione pelo menos um pacote');
+
+    harness.unmount();
   });
 });

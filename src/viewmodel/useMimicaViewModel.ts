@@ -45,6 +45,7 @@ export type MimicaState = {
   confirmingExit: boolean;
   loading: boolean;
   error: string | null;
+  categoryWarning: string | null;
 };
 
 export type MimicaActions = {
@@ -92,11 +93,13 @@ export function useMimicaViewModel(
   const [confirmingExit, setConfirmingExit] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [categoryWarning, setCategoryWarning] = useState<string | null>(null);
 
   const loadSession = useCallback(
     async (categoriesToLoad: MimicaCategory[]) => {
       setLoading(true);
       setError(null);
+      setCategoryWarning(null);
       try {
         const [loadedTeams, loadedCards, settings] = await Promise.all([
           useCases.listTeams(),
@@ -170,6 +173,7 @@ export function useMimicaViewModel(
       return;
     }
     setError(null);
+    setCategoryWarning(null);
     setWordVisible(true);
     setTurnHits(0);
     setTurnSkips(0);
@@ -334,15 +338,16 @@ export function useMimicaViewModel(
 
       try {
         setError(null);
+        setCategoryWarning(null);
         const cards = await useCases.listMimicaCards(nextCategories);
         setSelectedCategories(nextCategories);
         setFreshDeck(cards);
         setSkippedDeck([]);
       } catch (err: unknown) {
         if (err instanceof DomainError) {
-          setError(err.message);
+          setCategoryWarning(err.message);
         } else {
-          setError('Não foi possível atualizar os pacotes de categorias.');
+          setCategoryWarning('Não foi possível atualizar os pacotes de categorias.');
         }
       }
     },
@@ -390,6 +395,7 @@ export function useMimicaViewModel(
     confirmingExit,
     loading,
     error,
+    categoryWarning,
   };
 
   const actions: MimicaActions = {

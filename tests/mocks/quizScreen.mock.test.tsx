@@ -12,6 +12,7 @@ const createMockActions = (): QuizActions => ({
   handleNextQuestion: jest.fn(),
   handleSelectDuration: jest.fn(),
   handleSelectQuestionCount: jest.fn(),
+  handleToggleCategory: jest.fn(async () => {}),
   handleRequestExit: jest.fn(),
   handleCancelExit: jest.fn(),
   handleConfirmExit: jest.fn(),
@@ -48,6 +49,7 @@ const baseState: QuizState = {
       { key: 'D', text: 'Davi' },
     ],
   },
+  selectedCategories: ['Bíblico', 'Ciência'],
   selectedOptionKey: null,
   isCorrect: null,
   secondsRemaining: 20,
@@ -56,6 +58,7 @@ const baseState: QuizState = {
   confirmingExit: false,
   loading: false,
   error: null,
+  categoryWarning: null,
 };
 
 describe('QuizScreen — Testes de Tela com Mocks de ViewModel (UC04)', () => {
@@ -161,6 +164,14 @@ describe('QuizScreen — Testes de Tela com Mocks de ViewModel (UC04)', () => {
       readyBtn.props.onPress();
     });
     expect(actions.handleStartTurn).toHaveBeenCalled();
+
+    const biblicoChip = tree.root.findByProps({
+      accessibilityLabel: 'Pacote Bíblico',
+    });
+    act(() => {
+      biblicoChip.props.onPress();
+    });
+    expect(actions.handleToggleCategory).toHaveBeenCalledWith('Bíblico');
   });
 
   it('deve renderizar a fase playing com as alternativas de A a D e acionar handleSelectOption', () => {

@@ -102,6 +102,7 @@ describe('useScoreboardViewModel — Hook do Placar e Ranking Geral do PG (UC06)
   it('deve converter DomainError em mensagem de erro legível na ViewModel', async () => {
     const failingUseCases: IPgPlayUseCases = {
       listMinigames: async () => [],
+      listContentPacks: async () => [],
       listTeams: async () => [],
       addTeam: async () => {
         throw new ValidationError('Falha ao adicionar equipe.');

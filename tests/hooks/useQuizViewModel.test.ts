@@ -396,4 +396,45 @@ describe('useQuizViewModel — Hook da Arena de Quiz Relâmpago (UC04)', () => {
 
     harness.unmount();
   });
+
+  it('deve filtrar perguntas por pacotes de categorias e impedir seleção vazia com categoryWarning (RF28)', async () => {
+    const useCases = new PgPlayUseCases(
+      new MemoryTeamDataSource(),
+      new MemoryGameCatalogDataSource(),
+      new MemoryMatchSettingsDataSource()
+    );
+    const harness = createHookHarness(useCases);
+    await harness.mount();
+
+    const initialCats = [...harness.getState().selectedCategories];
+    expect(initialCats).toHaveLength(7);
+
+    // Desmarca todas menos a primeira ('Bíblico')
+    for (let i = 1; i < initialCats.length; i += 1) {
+      await act(async () => {
+        await harness.getActions().handleToggleCategory(initialCats[i]);
+      });
+    }
+
+    expect(harness.getState().selectedCategories).toEqual(['Bíblico']);
+    expect(harness.getState().currentQuestion?.category).toBe('Bíblico');
+    expect(harness.getState().categoryWarning).toBeNull();
+
+    // Tentar desmarcar o último pacote deve manter 'Bíblico' e registrar categoryWarning
+    await act(async () => {
+      await harness.getActions().handleToggleCategory('Bíblico');
+    });
+
+    expect(harness.getState().selectedCategories).toEqual(['Bíblico']);
+    expect(harness.getState().categoryWarning).toContain('Selecione pelo menos um pacote');
+
+    // Reativar uma categoria limpa o warning
+    await act(async () => {
+      await harness.getActions().handleToggleCategory('Ciência');
+    });
+    expect(harness.getState().selectedCategories).toEqual(['Bíblico', 'Ciência']);
+    expect(harness.getState().categoryWarning).toBeNull();
+
+    harness.unmount();
+  });
 });

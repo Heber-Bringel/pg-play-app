@@ -20,7 +20,7 @@ Referências: `UC11`, `RF38`–`RF40` e `RNF12` em [`requisitos-e-casos-de-uso-p
 
 | Parâmetro | Padrão | Opções |
 | :--- | :---: | :--- |
-| Quem participa | Equipes cadastradas | Lista de nomes digitada na hora **ou** modo livre (sem nomes, apenas "Próxima pessoa") |
+| Quem participa | Lista de nomes | Lista de nomes digitada na hora **ou** modo livre (sem nomes, apenas "Próxima pessoa") |
 | Tempo de fala por pessoa | `1 min` | `1 min`, `2 min`, `3 min` |
 | Ordem | Na ordem da lista | Na ordem da lista ou sorteada |
 | Aviso de tempo esgotado | Suave | Suave (só visual) ou com som discreto |
