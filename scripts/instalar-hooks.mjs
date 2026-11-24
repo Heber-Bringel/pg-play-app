@@ -31,7 +31,9 @@ if (current.stdout.trim() === HOOKS_DIR) process.exit(0);
 
 const result = spawnSync("git", ["config", "core.hooksPath", HOOKS_DIR], { cwd: ROOT, encoding: "utf8" });
 if (result.status === 0) {
-  console.log(`Git Hooks instalados: core.hooksPath = ${HOOKS_DIR} (pre-commit do Design System).`);
+  console.log(
+    `Git Hooks instalados: core.hooksPath = ${HOOKS_DIR} (pre-commit: Design System; pre-push: arquitetura e Design System).`
+  );
 } else {
   console.warn("Não foi possível instalar os Git Hooks. Rode: git config core.hooksPath .githooks");
 }
