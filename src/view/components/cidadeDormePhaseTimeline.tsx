@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { tokens, useTheme, type ThemeMode } from '@/view/theme';
+import { useTheme, type AppTokens, type ThemeMode } from '@/view/theme';
 
 export type TimelineStepItem = {
   id: 'night' | 'dawn' | 'debate' | 'voting';
@@ -34,6 +34,7 @@ export const CidadeDormePhaseTimeline = ({
   themeMode,
 }: CidadeDormePhaseTimelineProps) => {
   const activeTokens = useTheme(themeMode);
+  const styles = useMemo(() => createStyles(activeTokens), [activeTokens]);
   const cycleLabel = isNightPhase
     ? `Noite ${currentRound}`
     : `Dia ${currentRound}`;
@@ -149,42 +150,43 @@ export const CidadeDormePhaseTimeline = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    borderWidth: tokens.semantic.border.thin,
-    borderRadius: tokens.semantic.radius.lg,
-    padding: tokens.semantic.space.md,
-    gap: tokens.semantic.space.sm,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.semantic.space.xs,
-  },
-  cycleTitle: {
-    fontFamily: tokens.semantic.font.label.family,
-    fontSize: tokens.semantic.font.label.size,
-    lineHeight: tokens.semantic.font.label.lineHeight,
-    fontWeight: tokens.semantic.font.label.weight,
-  },
-  stepsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    gap: tokens.semantic.space.xs,
-  },
-  stepPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.semantic.space.xs,
-    borderWidth: tokens.semantic.border.thin,
-    paddingHorizontal: tokens.semantic.space.sm,
-    paddingVertical: tokens.semantic.space.xs,
-  },
-  stepText: {
-    fontFamily: tokens.semantic.font.caption.family,
-    fontSize: tokens.semantic.font.caption.size,
-    lineHeight: tokens.semantic.font.caption.lineHeight,
-    fontWeight: tokens.semantic.font.caption.weight,
-  },
-});
+const createStyles = (activeTokens: AppTokens) =>
+  StyleSheet.create({
+    container: {
+      borderWidth: activeTokens.semantic.border.thin,
+      borderRadius: activeTokens.semantic.radius.lg,
+      padding: activeTokens.semantic.space.md,
+      gap: activeTokens.semantic.space.sm,
+    },
+    headerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: activeTokens.semantic.space.xs,
+    },
+    cycleTitle: {
+      fontFamily: activeTokens.semantic.font.label.family,
+      fontSize: activeTokens.semantic.font.label.size,
+      lineHeight: activeTokens.semantic.font.label.lineHeight,
+      fontWeight: activeTokens.semantic.font.label.weight,
+    },
+    stepsRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      alignItems: 'center',
+      gap: activeTokens.semantic.space.xs,
+    },
+    stepPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: activeTokens.semantic.space.xs,
+      borderWidth: activeTokens.semantic.border.thin,
+      paddingHorizontal: activeTokens.semantic.space.sm,
+      paddingVertical: activeTokens.semantic.space.xs,
+    },
+    stepText: {
+      fontFamily: activeTokens.semantic.font.caption.family,
+      fontSize: activeTokens.semantic.font.caption.size,
+      lineHeight: activeTokens.semantic.font.caption.lineHeight,
+      fontWeight: activeTokens.semantic.font.caption.weight,
+    },
+  });
