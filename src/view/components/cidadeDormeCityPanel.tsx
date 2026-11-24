@@ -1,8 +1,8 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { CidadeDormePlayer } from '@/model/entities/multiplayerSession';
-import { tokens, useTheme, type ThemeMode } from '@/view/theme';
+import { useTheme, type AppTokens, type ThemeMode } from '@/view/theme';
 
 export type CidadeDormeCityPanelProgress = {
   label: string;
@@ -37,6 +37,7 @@ export const CidadeDormeCityPanel = ({
   progress = null,
 }: CidadeDormeCityPanelProps) => {
   const activeTokens = useTheme(themeMode);
+  const styles = useMemo(() => createStyles(activeTokens), [activeTokens]);
   const safeTotal = progress && progress.total > 0 ? progress.total : 1;
   const targetRatio = progress
     ? Math.min(1, Math.max(0, progress.current / safeTotal))
@@ -220,93 +221,94 @@ export const CidadeDormeCityPanel = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    borderWidth: tokens.semantic.border.thin,
-    borderRadius: tokens.semantic.radius.lg,
-    padding: tokens.semantic.space.md,
-    gap: tokens.semantic.space.md,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
-    gap: tokens.semantic.space.xs,
-  },
-  counterGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.semantic.space.xs,
-  },
-  counterText: {
-    fontFamily: tokens.semantic.font.label.family,
-    fontSize: tokens.semantic.font.label.size,
-    lineHeight: tokens.semantic.font.label.lineHeight,
-    fontWeight: tokens.semantic.font.label.weight,
-  },
-  progressSection: {
-    gap: tokens.semantic.space.xs,
-  },
-  progressHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  progressLabel: {
-    fontFamily: tokens.semantic.font.caption.family,
-    fontSize: tokens.semantic.font.caption.size,
-    lineHeight: tokens.semantic.font.caption.lineHeight,
-    fontWeight: tokens.semantic.font.caption.weight,
-  },
-  progressTrack: {
-    height: tokens.semantic.space.sm,
-    borderRadius: tokens.semantic.radius.full,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: tokens.semantic.space.sm,
-    borderRadius: tokens.semantic.radius.full,
-  },
-  avatarGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: tokens.semantic.space.sm,
-  },
-  playerChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.semantic.space.xs,
-    borderWidth: tokens.semantic.border.thin,
-    borderRadius: tokens.semantic.radius.md,
-    paddingHorizontal: tokens.semantic.space.sm,
-    paddingVertical: tokens.semantic.space.xs,
-  },
-  avatarCircle: {
-    width: tokens.semantic.space.lg,
-    height: tokens.semantic.space.lg,
-    borderRadius: tokens.semantic.radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarInitial: {
-    fontFamily: tokens.semantic.font.caption.family,
-    fontSize: tokens.semantic.font.caption.size,
-    lineHeight: tokens.semantic.font.caption.lineHeight,
-    fontWeight: tokens.semantic.font.caption.weight,
-  },
-  playerTextWrap: {
-    gap: tokens.semantic.space.xs,
-  },
-  playerName: {
-    fontFamily: tokens.semantic.font.caption.family,
-    fontSize: tokens.semantic.font.caption.size,
-    lineHeight: tokens.semantic.font.caption.lineHeight,
-    fontWeight: tokens.semantic.font.caption.weight,
-  },
-  eliminatedLabel: {
-    fontFamily: tokens.semantic.font.caption.family,
-    fontSize: tokens.semantic.font.caption.size,
-    lineHeight: tokens.semantic.font.caption.lineHeight,
-  },
-});
+const createStyles = (activeTokens: AppTokens) =>
+  StyleSheet.create({
+    container: {
+      borderWidth: activeTokens.semantic.border.thin,
+      borderRadius: activeTokens.semantic.radius.lg,
+      padding: activeTokens.semantic.space.md,
+      gap: activeTokens.semantic.space.md,
+    },
+    headerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      flexWrap: 'wrap',
+      gap: activeTokens.semantic.space.xs,
+    },
+    counterGroup: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: activeTokens.semantic.space.xs,
+    },
+    counterText: {
+      fontFamily: activeTokens.semantic.font.label.family,
+      fontSize: activeTokens.semantic.font.label.size,
+      lineHeight: activeTokens.semantic.font.label.lineHeight,
+      fontWeight: activeTokens.semantic.font.label.weight,
+    },
+    progressSection: {
+      gap: activeTokens.semantic.space.xs,
+    },
+    progressHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    progressLabel: {
+      fontFamily: activeTokens.semantic.font.caption.family,
+      fontSize: activeTokens.semantic.font.caption.size,
+      lineHeight: activeTokens.semantic.font.caption.lineHeight,
+      fontWeight: activeTokens.semantic.font.caption.weight,
+    },
+    progressTrack: {
+      height: activeTokens.semantic.space.sm,
+      borderRadius: activeTokens.semantic.radius.full,
+      overflow: 'hidden',
+    },
+    progressFill: {
+      height: activeTokens.semantic.space.sm,
+      borderRadius: activeTokens.semantic.radius.full,
+    },
+    avatarGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: activeTokens.semantic.space.sm,
+    },
+    playerChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: activeTokens.semantic.space.xs,
+      borderWidth: activeTokens.semantic.border.thin,
+      borderRadius: activeTokens.semantic.radius.md,
+      paddingHorizontal: activeTokens.semantic.space.sm,
+      paddingVertical: activeTokens.semantic.space.xs,
+    },
+    avatarCircle: {
+      width: activeTokens.semantic.space.lg,
+      height: activeTokens.semantic.space.lg,
+      borderRadius: activeTokens.semantic.radius.full,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    avatarInitial: {
+      fontFamily: activeTokens.semantic.font.caption.family,
+      fontSize: activeTokens.semantic.font.caption.size,
+      lineHeight: activeTokens.semantic.font.caption.lineHeight,
+      fontWeight: activeTokens.semantic.font.caption.weight,
+    },
+    playerTextWrap: {
+      gap: activeTokens.semantic.space.xs,
+    },
+    playerName: {
+      fontFamily: activeTokens.semantic.font.caption.family,
+      fontSize: activeTokens.semantic.font.caption.size,
+      lineHeight: activeTokens.semantic.font.caption.lineHeight,
+      fontWeight: activeTokens.semantic.font.caption.weight,
+    },
+    eliminatedLabel: {
+      fontFamily: activeTokens.semantic.font.caption.family,
+      fontSize: activeTokens.semantic.font.caption.size,
+      lineHeight: activeTokens.semantic.font.caption.lineHeight,
+    },
+  });

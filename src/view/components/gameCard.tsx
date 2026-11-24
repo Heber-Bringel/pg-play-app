@@ -126,6 +126,7 @@ export const GameCard = ({
 const createStyles = (activeTokens: AppTokens) =>
   StyleSheet.create({
     card: {
+      minHeight: activeTokens.semantic.space['2xl'],
       padding: activeTokens.component.card.padding,
       borderWidth: activeTokens.semantic.border.thin,
       gap: activeTokens.semantic.space.md,

@@ -1,0 +1,16 @@
+#!/bin/sh
+# Pre-commit do PG PLAY (issue #75, spec 025).
+# Verifica o Design System só nos arquivos de src/view/ preparados para o commit.
+# Sem telas no commit, o verificador termina na hora (não carrega o TypeScript).
+# Instalado por `npm install` (scripts/instalar-hooks.mjs).
+
+node scripts/check-design-system.mjs --staged
+status=$?
+
+if [ $status -ne 0 ]; then
+  echo ""
+  echo "Commit cancelado: corrija os erros do Design System acima (PG Play Expressive)."
+  echo "Para um caso justificado, use: // ds-ignore-next-line DS-REGRA: motivo"
+fi
+
+exit $status

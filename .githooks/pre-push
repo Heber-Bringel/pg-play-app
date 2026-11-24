@@ -1,0 +1,21 @@
+#!/bin/sh
+# Pre-push do PG PLAY (spec 025).
+# Antes de enviar commits, confere a arquitetura MVVM e o Design System do
+# projeto inteiro (~1 s). tsc e jest ficam no `npm run check` e na revisão do PR.
+# Instalado por `npm install` (scripts/instalar-hooks.mjs).
+
+echo "pre-push: verificando arquitetura MVVM e Design System..."
+
+node scripts/check-arquitetura.mjs
+arquitetura=$?
+
+node scripts/check-design-system.mjs
+design_system=$?
+
+if [ $arquitetura -ne 0 ] || [ $design_system -ne 0 ]; then
+  echo ""
+  echo "Push cancelado: corrija os erros acima e rode 'npm run check' antes de enviar."
+  exit 1
+fi
+
+exit 0
