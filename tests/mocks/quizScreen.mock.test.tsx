@@ -11,6 +11,7 @@ const createMockActions = (): QuizActions => ({
   handleTick: jest.fn(),
   handleNextQuestion: jest.fn(),
   handleSelectDuration: jest.fn(),
+  handleSelectQuestionCount: jest.fn(),
   handleToggleCategory: jest.fn(async () => {}),
   handleRequestExit: jest.fn(),
   handleCancelExit: jest.fn(),
@@ -29,7 +30,12 @@ const baseState: QuizState = {
   currentTeamIndex: 0,
   currentTeam: { id: 't1', name: 'Tribo de Judá', score: 0 },
   currentQuestionIndex: 0,
-  totalQuestions: 10,
+  totalQuestions: 4,
+  isLastQuestion: false,
+  questionsPerTeam: 2,
+  configuredQuestionCount: 5,
+  availableQuestionCounts: [5, 10],
+  questionCountNotice: null,
   currentQuestion: {
     id: 'q1',
     question: 'Quem construiu a arca sob instrução de Deus?',
@@ -221,6 +227,77 @@ describe('QuizScreen — Testes de Tela com Mocks de ViewModel (UC04)', () => {
     expect(actions.handleNextQuestion).toHaveBeenCalled();
   });
 
+  it('deve desativar quantidades de perguntas que o pacote não cumpre', () => {
+    const actions = createMockActions();
+    jest
+      .spyOn(quizVmModule, 'useQuizViewModel')
+      .mockReturnValue([{ ...baseState }, actions]);
+
+    let tree!: renderer.ReactTestRenderer;
+    act(() => {
+      tree = renderer.create(<QuizScreen />);
+    });
+
+    const chip = (label: string) =>
+      tree.root.findAll(
+        (node) => node.props.accessibilityLabel === label && node.props.disabled !== undefined
+      )[0];
+    expect(chip('10 perguntas').props.disabled).toBe(false);
+    expect(chip('15 perguntas, indisponível no pacote atual').props.disabled).toBe(true);
+  });
+
+  it('mantém visível a quantidade salva mesmo quando o pacote não a cumpre', () => {
+    const actions = createMockActions();
+    jest.spyOn(quizVmModule, 'useQuizViewModel').mockReturnValue([
+      { ...baseState, configuredQuestionCount: 15 },
+      actions,
+    ]);
+
+    let tree!: renderer.ReactTestRenderer;
+    act(() => {
+      tree = renderer.create(<QuizScreen />);
+    });
+
+    const saved = tree.root.findAll(
+      (node) =>
+        node.props.accessibilityLabel === '15 perguntas, indisponível no pacote atual' &&
+        node.props.disabled !== undefined
+    )[0];
+    expect(saved.props.selected).toBe(true);
+    expect(saved.props.disabled).toBe(false);
+  });
+
+  it('deve trocar o botão para Ver Resultado na última pergunta', () => {
+    const actions = createMockActions();
+    jest.spyOn(quizVmModule, 'useQuizViewModel').mockReturnValue([
+      {
+        ...baseState,
+        phase: 'answered',
+        currentQuestionIndex: 3,
+        isLastQuestion: true,
+        selectedOptionKey: 'B',
+        isCorrect: true,
+      },
+      actions,
+    ]);
+
+    let tree!: renderer.ReactTestRenderer;
+    act(() => {
+      tree = renderer.create(<QuizScreen />);
+    });
+
+    expect(
+      tree.root.findAllByProps({ accessibilityLabel: 'Próxima Pergunta' })
+    ).toHaveLength(0);
+    const resultBtn = tree.root.findByProps({
+      accessibilityLabel: 'Ver Resultado',
+    });
+    act(() => {
+      resultBtn.props.onPress();
+    });
+    expect(actions.handleNextQuestion).toHaveBeenCalled();
+  });
+
   it('deve renderizar a fase finished com botão para ir ao placar final', () => {
     const actions = createMockActions();
     jest
@@ -239,5 +316,33 @@ describe('QuizScreen — Testes de Tela com Mocks de ViewModel (UC04)', () => {
       scoreboardBtn.props.onPress();
     });
     expect(actions.handleGoToScoreboard).toHaveBeenCalled();
+  });
+
+  it('deve repassar os parâmetros e exibir o aviso de perguntas por equipe (RF29)', () => {
+    const actions = createMockActions();
+    jest.spyOn(quizVmModule, 'useQuizViewModel').mockReturnValue([
+      {
+        ...baseState,
+        questionCountNotice: 'Serão 4 perguntas, 2 por equipe, para todas responderem a mesma quantidade.',
+      },
+      actions,
+    ]);
+
+    let tree!: renderer.ReactTestRenderer;
+    act(() => {
+      tree = renderer.create(<QuizScreen />);
+    });
+
+    const chip30 = tree.root.findAllByProps({ accessibilityLabel: '30 segundos por pergunta' })[0];
+    const chip10 = tree.root.findAllByProps({ accessibilityLabel: '10 perguntas' })[0];
+    act(() => {
+      chip30.props.onPress();
+      chip10.props.onPress();
+    });
+    expect(actions.handleSelectDuration).toHaveBeenCalledWith(30);
+    expect(actions.handleSelectQuestionCount).toHaveBeenCalledWith(10);
+
+    const texts = tree.root.findAllByType('Text' as any);
+    expect(texts.some((t) => String(t.props.children).includes('2 por equipe'))).toBe(true);
   });
 });

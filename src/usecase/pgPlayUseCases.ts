@@ -1,4 +1,5 @@
 import type { IGameCatalogDataSource } from '@/model/datasources/iGameCatalogDataSource';
+import type { IMatchSettingsDataSource } from '@/model/datasources/iMatchSettingsDataSource';
 import type { ITeamDataSource } from '@/model/datasources/iTeamDataSource';
 import type {
   ForcaCategory,
@@ -9,6 +10,19 @@ import type {
   QuizQuestion,
 } from '@/model/entities/arenaChallenge';
 import type { ContentPack, ContentPackGameId } from '@/model/entities/contentPack';
+import {
+  DEFAULT_MATCH_SETTINGS,
+  QUIZ_QUESTION_COUNT_OPTIONS,
+  type ForcaAttemptsOption,
+  type ForcaSettings,
+  type MatchSettings,
+  type MimicaDurationOption,
+  type MimicaSettings,
+  type QuizDurationOption,
+  type QuizQuestionCountOption,
+  type QuizMatchPlan,
+  type QuizSettings,
+} from '@/model/entities/matchSettings';
 import type { GameModalityFilter, Minigame } from '@/model/entities/minigame';
 import type { Team } from '@/model/entities/team';
 import { ValidationError } from '@/model/errors';
@@ -40,10 +54,69 @@ export const DEFAULT_FORCA_WIN_POINTS = 30;
 export const DEFAULT_FORCA_ATTEMPT_BONUS = 2;
 export const DEFAULT_QUIZ_CORRECT_POINTS = 10;
 
+const VALID_MIMICA_DURATIONS: ReadonlySet<number> = new Set<MimicaDurationOption>([45, 60, 90]);
+const VALID_QUIZ_DURATIONS: ReadonlySet<number> = new Set<QuizDurationOption>([15, 20, 30]);
+const VALID_QUIZ_QUESTION_COUNTS: ReadonlySet<number> = new Set<QuizQuestionCountOption>(
+  QUIZ_QUESTION_COUNT_OPTIONS
+);
+const VALID_FORCA_ATTEMPTS: ReadonlySet<number> = new Set<ForcaAttemptsOption>([5, 6, 8]);
+const MIN_ROUNDS = 1;
+const MAX_ROUNDS = 5;
+
+const isMimicaDuration = (value: unknown): value is MimicaDurationOption =>
+  typeof value === 'number' && VALID_MIMICA_DURATIONS.has(value);
+const isQuizDuration = (value: unknown): value is QuizDurationOption =>
+  typeof value === 'number' && VALID_QUIZ_DURATIONS.has(value);
+const isQuizQuestionCount = (value: unknown): value is QuizQuestionCountOption =>
+  typeof value === 'number' && VALID_QUIZ_QUESTION_COUNTS.has(value);
+const isForcaAttempts = (value: unknown): value is ForcaAttemptsOption =>
+  typeof value === 'number' && VALID_FORCA_ATTEMPTS.has(value);
+const isValidRounds = (value: unknown): value is number =>
+  typeof value === 'number' &&
+  Number.isInteger(value) &&
+  value >= MIN_ROUNDS &&
+  value <= MAX_ROUNDS;
+
+// Valores corrompidos ou de versões antigas no armazenamento voltam ao padrão.
+function sanitizeMatchSettings(raw: MatchSettings): MatchSettings {
+  const defaults = DEFAULT_MATCH_SETTINGS;
+  return {
+    mimica: {
+      durationSeconds: isMimicaDuration(raw.mimica?.durationSeconds)
+        ? raw.mimica.durationSeconds
+        : defaults.mimica.durationSeconds,
+      totalRounds: isValidRounds(raw.mimica?.totalRounds)
+        ? raw.mimica.totalRounds
+        : defaults.mimica.totalRounds,
+    },
+    quiz: {
+      durationSeconds: isQuizDuration(raw.quiz?.durationSeconds)
+        ? raw.quiz.durationSeconds
+        : defaults.quiz.durationSeconds,
+      questionCount: isQuizQuestionCount(raw.quiz?.questionCount)
+        ? raw.quiz.questionCount
+        : defaults.quiz.questionCount,
+    },
+    forca: {
+      maxAttempts: isForcaAttempts(raw.forca?.maxAttempts)
+        ? raw.forca.maxAttempts
+        : defaults.forca.maxAttempts,
+      totalRounds: isValidRounds(raw.forca?.totalRounds)
+        ? raw.forca.totalRounds
+        : defaults.forca.totalRounds,
+    },
+  };
+}
+
 export class PgPlayUseCases implements IPgPlayUseCases {
+  // Fila que serializa as gravações de parâmetros: dois toques seguidos
+  // não podem ler o mesmo estado antigo e sobrescrever um ao outro.
+  private settingsQueue: Promise<unknown> = Promise.resolve();
+
   constructor(
     private readonly teamDataSource: ITeamDataSource,
-    private readonly gameCatalogDataSource: IGameCatalogDataSource
+    private readonly gameCatalogDataSource: IGameCatalogDataSource,
+    private readonly matchSettingsDataSource: IMatchSettingsDataSource
   ) {}
 
   async listMinigames(
@@ -255,5 +328,92 @@ export class PgPlayUseCases implements IPgPlayUseCases {
   async resetScoreboard(): Promise<Team[]> {
     await this.teamDataSource.resetScores();
     return this.getScoreboard();
+  }
+
+  async getMatchSettings(): Promise<MatchSettings> {
+    const stored = await this.matchSettingsDataSource.getSettings();
+    return sanitizeMatchSettings(stored);
+  }
+
+  updateMimicaSettings(changes: Partial<MimicaSettings>): Promise<MatchSettings> {
+    return this.saveSettingsSection((current) => {
+      const mimica: MimicaSettings = { ...current.mimica, ...changes };
+      if (!isMimicaDuration(mimica.durationSeconds)) {
+        throw new ValidationError('Duração da Mímica deve ser 45s, 60s ou 90s.');
+      }
+      if (!isValidRounds(mimica.totalRounds)) {
+        throw new ValidationError('A quantidade de rodadas da Mímica deve estar entre 1 e 5.');
+      }
+      return { ...current, mimica };
+    });
+  }
+
+  updateQuizSettings(changes: Partial<QuizSettings>): Promise<MatchSettings> {
+    return this.saveSettingsSection((current) => {
+      const quiz: QuizSettings = { ...current.quiz, ...changes };
+      if (!isQuizDuration(quiz.durationSeconds)) {
+        throw new ValidationError('Tempo por pergunta do Quiz deve ser 15s, 20s ou 30s.');
+      }
+      if (!isQuizQuestionCount(quiz.questionCount)) {
+        throw new ValidationError('A quantidade de perguntas do Quiz deve ser 5, 10 ou 15.');
+      }
+      return { ...current, quiz };
+    });
+  }
+
+  updateForcaSettings(changes: Partial<ForcaSettings>): Promise<MatchSettings> {
+    return this.saveSettingsSection((current) => {
+      const forca: ForcaSettings = { ...current.forca, ...changes };
+      if (!isForcaAttempts(forca.maxAttempts)) {
+        throw new ValidationError('Quantidade de tentativas da Forca deve ser 5, 6 ou 8.');
+      }
+      if (!isValidRounds(forca.totalRounds)) {
+        throw new ValidationError('A quantidade de palavras da Forca deve estar entre 1 e 5.');
+      }
+      return { ...current, forca };
+    });
+  }
+
+  planQuizMatch(
+    configuredCount: number,
+    availableQuestions: number,
+    teamCount: number
+  ): QuizMatchPlan {
+    const playable = Math.max(0, Math.min(configuredCount, availableQuestions));
+    if (teamCount < 2 || playable < teamCount) {
+      return {
+        totalQuestions: playable,
+        questionsPerTeam: teamCount > 0 ? Math.floor(playable / teamCount) : 0,
+        limitedByBank: availableQuestions < configuredCount,
+      };
+    }
+    // Arredonda para baixo até um múltiplo do número de equipes, para que
+    // todas respondam a mesma quantidade de perguntas (alternância justa).
+    const questionsPerTeam = Math.floor(playable / teamCount);
+    return {
+      totalQuestions: questionsPerTeam * teamCount,
+      questionsPerTeam,
+      limitedByBank: availableQuestions < configuredCount,
+    };
+  }
+
+  // Só oferece quantidades que o pacote atual consegue cumprir. A menor opção
+  // fica sempre disponível para a partida poder começar com pacotes pequenos.
+  listAvailableQuizQuestionCounts(availableQuestions: number): QuizQuestionCountOption[] {
+    const fitting = QUIZ_QUESTION_COUNT_OPTIONS.filter((count) => count <= availableQuestions);
+    return fitting.length > 0 ? fitting : [QUIZ_QUESTION_COUNT_OPTIONS[0]];
+  }
+
+  private saveSettingsSection(
+    buildNext: (current: MatchSettings) => MatchSettings
+  ): Promise<MatchSettings> {
+    const task = this.settingsQueue.then(async () => {
+      const current = await this.getMatchSettings();
+      const next = buildNext(current);
+      await this.matchSettingsDataSource.saveSettings(next);
+      return next;
+    });
+    this.settingsQueue = task.catch(() => undefined);
+    return task;
   }
 }

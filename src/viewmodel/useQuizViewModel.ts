@@ -2,13 +2,19 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { pgPlayUseCases } from '@/di/container';
 import type { QuizCategory, QuizOptionKey, QuizQuestion } from '@/model/entities/arenaChallenge';
+import {
+  DEFAULT_MATCH_SETTINGS,
+  type QuizDurationOption,
+  type QuizQuestionCountOption,
+  type QuizSettings,
+} from '@/model/entities/matchSettings';
 import type { Team } from '@/model/entities/team';
 import { DomainError } from '@/model/errors';
 import type { IPgPlayUseCases } from '@/usecase/iPgPlayUseCases';
 
 export type QuizPhase = 'pass-turn' | 'playing' | 'answered' | 'finished';
 
-export type QuizDurationOption = 15 | 20 | 30;
+export type { QuizDurationOption, QuizQuestionCountOption } from '@/model/entities/matchSettings';
 
 export const ALL_QUIZ_CATEGORIES: QuizCategory[] = [
   'Bíblico',
@@ -27,6 +33,11 @@ export type QuizState = {
   currentTeam: Team | null;
   currentQuestionIndex: number;
   totalQuestions: number;
+  isLastQuestion: boolean;
+  questionsPerTeam: number;
+  configuredQuestionCount: QuizQuestionCountOption;
+  availableQuestionCounts: QuizQuestionCountOption[];
+  questionCountNotice: string | null;
   currentQuestion: QuizQuestion | null;
   selectedCategories: QuizCategory[];
   selectedOptionKey: QuizOptionKey | null;
@@ -45,7 +56,8 @@ export type QuizActions = {
   handleSelectOption: (key: QuizOptionKey) => Promise<void>;
   handleTick: () => void;
   handleNextQuestion: () => void;
-  handleSelectDuration: (seconds: QuizDurationOption) => void;
+  handleSelectDuration: (seconds: QuizDurationOption) => Promise<void>;
+  handleSelectQuestionCount: (count: QuizQuestionCountOption) => Promise<void>;
   handleToggleCategory: (category: QuizCategory) => Promise<void>;
   handleRequestExit: () => void;
   handleCancelExit: () => void;
@@ -70,8 +82,16 @@ export function useQuizViewModel(
   const [selectedOptionKey, setSelectedOptionKey] = useState<QuizOptionKey | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [turnScoreDelta, setTurnScoreDelta] = useState<number>(0);
-  const [turnDurationSeconds, setTurnDurationSeconds] = useState<QuizDurationOption>(20);
-  const [secondsRemaining, setSecondsRemaining] = useState<number>(20);
+  const [turnDurationSeconds, setTurnDurationSeconds] = useState<QuizDurationOption>(
+    DEFAULT_MATCH_SETTINGS.quiz.durationSeconds
+  );
+  const [secondsRemaining, setSecondsRemaining] = useState<number>(
+    DEFAULT_MATCH_SETTINGS.quiz.durationSeconds
+  );
+  const [configuredQuestionCount, setConfiguredQuestionCount] =
+    useState<QuizQuestionCountOption>(
+      DEFAULT_MATCH_SETTINGS.quiz.questionCount
+    );
   const [confirmingExit, setConfirmingExit] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -83,9 +103,10 @@ export function useQuizViewModel(
       setError(null);
       setCategoryWarning(null);
       try {
-        const [loadedTeams, loadedQuestions] = await Promise.all([
+        const [loadedTeams, loadedQuestions, settings] = await Promise.all([
           useCase.listTeams(),
           useCase.listQuizQuestions(categoriesToLoad),
+          useCase.getMatchSettings(),
         ]);
 
         if (loadedTeams.length < 2) {
@@ -101,6 +122,9 @@ export function useQuizViewModel(
 
         setTeams(loadedTeams);
         setQuestions(loadedQuestions);
+        setTurnDurationSeconds(settings.quiz.durationSeconds);
+        setSecondsRemaining(settings.quiz.durationSeconds);
+        setConfiguredQuestionCount(settings.quiz.questionCount);
         setCurrentTeamIndex(0);
         setCurrentQuestionIndex(0);
         setPhase('pass-turn');
@@ -186,9 +210,28 @@ export function useQuizViewModel(
     [phase, currentQuestion, currentTeam, selectedOptionKey, useCase]
   );
 
+  const matchPlan = useCase.planQuizMatch(
+    configuredQuestionCount,
+    questions.length,
+    teams.length
+  );
+  const totalQuestions = matchPlan.totalQuestions;
+  const availableQuestionCounts = useCase.listAvailableQuizQuestionCounts(questions.length);
+  const isLastQuestion = currentQuestionIndex + 1 >= totalQuestions;
+
+  let questionCountNotice: string | null = null;
+  if (questions.length > 0 && totalQuestions !== configuredQuestionCount) {
+    const bankNotice = matchPlan.limitedByBank
+      ? `O pacote atual tem ${questions.length} perguntas. `
+      : '';
+    questionCountNotice =
+      `${bankNotice}Serão ${totalQuestions} perguntas, ` +
+      `${matchPlan.questionsPerTeam} por equipe, para todas responderem a mesma quantidade.`;
+  }
+
   const handleNextQuestion = useCallback(() => {
     const nextIndex = currentQuestionIndex + 1;
-    if (nextIndex >= questions.length) {
+    if (nextIndex >= totalQuestions) {
       setPhase('finished');
       return;
     }
@@ -199,12 +242,51 @@ export function useQuizViewModel(
     setIsCorrect(null);
     setTurnScoreDelta(0);
     setPhase('pass-turn');
-  }, [currentQuestionIndex, questions.length, teams.length]);
+  }, [currentQuestionIndex, teams.length, totalQuestions]);
 
-  const handleSelectDuration = useCallback((seconds: QuizDurationOption) => {
-    setTurnDurationSeconds(seconds);
-    setSecondsRemaining(seconds);
+  const applySettings = useCallback((changes: Partial<QuizSettings>) => {
+    if (changes.durationSeconds !== undefined) {
+      setTurnDurationSeconds(changes.durationSeconds);
+      setSecondsRemaining(changes.durationSeconds);
+    }
+    if (changes.questionCount !== undefined) {
+      setConfiguredQuestionCount(changes.questionCount);
+    }
   }, []);
+
+  // O chip responde na hora; se o UseCase rejeitar, volta ao que está salvo.
+  const saveSettings = useCallback(
+    async (changes: Partial<QuizSettings>) => {
+      setError(null);
+      applySettings(changes);
+      try {
+        await useCase.updateQuizSettings(changes);
+      } catch (err: unknown) {
+        if (err instanceof DomainError) {
+          setError(err.message);
+        } else {
+          setError('Não foi possível salvar os parâmetros da partida.');
+        }
+        try {
+          const stored = await useCase.getMatchSettings();
+          applySettings(stored.quiz);
+        } catch {
+          // Mantém a mensagem de erro original.
+        }
+      }
+    },
+    [applySettings, useCase]
+  );
+
+  const handleSelectDuration = useCallback(
+    (seconds: QuizDurationOption) => saveSettings({ durationSeconds: seconds }),
+    [saveSettings]
+  );
+
+  const handleSelectQuestionCount = useCallback(
+    (count: QuizQuestionCountOption) => saveSettings({ questionCount: count }),
+    [saveSettings]
+  );
 
   const handleToggleCategory = useCallback(
     async (category: QuizCategory) => {
@@ -261,7 +343,12 @@ export function useQuizViewModel(
     currentTeamIndex,
     currentTeam,
     currentQuestionIndex,
-    totalQuestions: questions.length,
+    totalQuestions,
+    isLastQuestion,
+    questionsPerTeam: matchPlan.questionsPerTeam,
+    configuredQuestionCount,
+    availableQuestionCounts,
+    questionCountNotice,
     currentQuestion,
     selectedCategories,
     selectedOptionKey,
@@ -281,6 +368,7 @@ export function useQuizViewModel(
     handleTick,
     handleNextQuestion,
     handleSelectDuration,
+    handleSelectQuestionCount,
     handleToggleCategory,
     handleRequestExit,
     handleCancelExit,

@@ -1,6 +1,7 @@
 import { MemoryGameCatalogDataSource } from '@/infra/datasources/memoryGameCatalogDataSource';
 import { MemoryTeamDataSource } from '@/infra/datasources/memoryTeamDataSource';
 import { PgPlayUseCases } from '@/usecase/pgPlayUseCases';
+import { MemoryMatchSettingsDataSource } from '@/infra/datasources/memoryMatchSettingsDataSource';
 
 describe('PgPlayUseCases — Regras de Negócio do Placar e Ranking do PG (UC06)', () => {
   it('deve retornar o placar ordenado decrescentemente pela pontuação acumulada (RF16)', async () => {
@@ -10,7 +11,7 @@ describe('PgPlayUseCases — Regras de Negócio do Placar e Ranking do PG (UC06)
       { id: 'team-3', name: 'Mensageiros', score: 25 },
     ]);
     const catalogDs = new MemoryGameCatalogDataSource();
-    const useCases = new PgPlayUseCases(teamDs, catalogDs);
+    const useCases = new PgPlayUseCases(teamDs, catalogDs, new MemoryMatchSettingsDataSource());
 
     const ranked = await useCases.getScoreboard();
 
@@ -28,7 +29,7 @@ describe('PgPlayUseCases — Regras de Negócio do Placar e Ranking do PG (UC06)
       { id: 'team-2', name: 'Leões da Fé', score: 30 },
     ]);
     const catalogDs = new MemoryGameCatalogDataSource();
-    const useCases = new PgPlayUseCases(teamDs, catalogDs);
+    const useCases = new PgPlayUseCases(teamDs, catalogDs, new MemoryMatchSettingsDataSource());
 
     const reset = await useCases.resetScoreboard();
 

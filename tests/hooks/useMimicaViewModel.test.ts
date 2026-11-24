@@ -11,6 +11,7 @@ import {
   type MimicaState,
 } from '@/viewmodel/useMimicaViewModel';
 import { mockPush, mockReplace } from '../__mocks__/expo-router';
+import { MemoryMatchSettingsDataSource } from '@/infra/datasources/memoryMatchSettingsDataSource';
 
 function createHookHarness(useCases: IPgPlayUseCases) {
   let latestState!: MimicaState;
@@ -54,7 +55,8 @@ describe('useMimicaViewModel — Hook da Arena de Mímica Expressiva (UC03)', ()
   it('deve iniciar na fase de passagem de turno (pass-turn) com 2 equipes e palavra protegida (RF09, RF24)', async () => {
     const useCases = new PgPlayUseCases(
       new MemoryTeamDataSource(),
-      new MemoryGameCatalogDataSource()
+      new MemoryGameCatalogDataSource(),
+      new MemoryMatchSettingsDataSource()
     );
     const harness = createHookHarness(useCases);
     await harness.mount();
@@ -72,7 +74,8 @@ describe('useMimicaViewModel — Hook da Arena de Mímica Expressiva (UC03)', ()
   it('deve iniciar o turno ao tocar em Estou Pronto, ocultar/revelar palavra, pontuar +20 e pular -5 (RF13, RF25)', async () => {
     const useCases = new PgPlayUseCases(
       new MemoryTeamDataSource(),
-      new MemoryGameCatalogDataSource()
+      new MemoryGameCatalogDataSource(),
+      new MemoryMatchSettingsDataSource()
     );
     const harness = createHookHarness(useCases);
     await harness.mount();
@@ -110,7 +113,8 @@ describe('useMimicaViewModel — Hook da Arena de Mímica Expressiva (UC03)', ()
   it('deve decrementar o cronômetro até 00:00, exibir resumo do turno e alternar entre equipes e rodadas (RF10, RF31)', async () => {
     const useCases = new PgPlayUseCases(
       new MemoryTeamDataSource(),
-      new MemoryGameCatalogDataSource()
+      new MemoryGameCatalogDataSource(),
+      new MemoryMatchSettingsDataSource()
     );
     const harness = createHookHarness(useCases);
     await harness.mount();
@@ -175,7 +179,8 @@ describe('useMimicaViewModel — Hook da Arena de Mímica Expressiva (UC03)', ()
   it('deve pausar o cronômetro enquanto a confirmação de saída estiver aberta (RF11)', async () => {
     const useCases = new PgPlayUseCases(
       new MemoryTeamDataSource(),
-      new MemoryGameCatalogDataSource()
+      new MemoryGameCatalogDataSource(),
+      new MemoryMatchSettingsDataSource()
     );
     const harness = createHookHarness(useCases);
     await harness.mount();
@@ -213,7 +218,7 @@ describe('useMimicaViewModel — Hook da Arena de Mímica Expressiva (UC03)', ()
     const smallCatalog = new MemoryGameCatalogDataSource([
       { id: 'c1', word: 'Davi', category: 'Bíblico', points: 20 },
     ]);
-    const useCases = new PgPlayUseCases(new MemoryTeamDataSource(), smallCatalog);
+    const useCases = new PgPlayUseCases(new MemoryTeamDataSource(), smallCatalog, new MemoryMatchSettingsDataSource());
     const harness = createHookHarness(useCases);
     await harness.mount();
 
@@ -234,7 +239,8 @@ describe('useMimicaViewModel — Hook da Arena de Mímica Expressiva (UC03)', ()
   it('deve tratar confirmação de saída segura e erros de validação de categorias (RF11, RF28)', async () => {
     const useCases = new PgPlayUseCases(
       new MemoryTeamDataSource(),
-      new MemoryGameCatalogDataSource()
+      new MemoryGameCatalogDataSource(),
+      new MemoryMatchSettingsDataSource()
     );
     const harness = createHookHarness(useCases);
     await harness.mount();
@@ -291,6 +297,22 @@ describe('useMimicaViewModel — Hook da Arena de Mímica Expressiva (UC03)', ()
       scoreQuizAnswer: async () => [],
       getScoreboard: async () => [],
       resetScoreboard: async () => [],
+      getMatchSettings: async () => ({
+        mimica: { durationSeconds: 60, totalRounds: 3 },
+        quiz: { durationSeconds: 20, questionCount: 5 },
+        forca: { maxAttempts: 5, totalRounds: 3 },
+      }),
+      updateMimicaSettings: async () => {
+        throw new ValidationError('Erro simulado.');
+      },
+      updateQuizSettings: async () => {
+        throw new ValidationError('Erro simulado.');
+      },
+      updateForcaSettings: async () => {
+        throw new ValidationError('Erro simulado.');
+      },
+      planQuizMatch: () => ({ totalQuestions: 0, questionsPerTeam: 0, limitedByBank: false }),
+      listAvailableQuizQuestionCounts: () => [5],
     };
     const errorHarness = createHookHarness(failingUseCases);
     await errorHarness.mount();

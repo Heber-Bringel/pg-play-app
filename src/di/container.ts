@@ -1,3 +1,4 @@
+import { AsyncStorageMatchSettingsDataSource } from '@/infra/datasources/asyncStorageMatchSettingsDataSource';
 import { AsyncStorageTeamDataSource } from '@/infra/datasources/asyncStorageTeamDataSource';
 import { AsyncStorageThemePreferenceDataSource } from '@/infra/datasources/asyncStorageThemePreferenceDataSource';
 import { HelloAoVerseDataSource } from '@/infra/datasources/helloAoVerseDataSource';
@@ -35,6 +36,7 @@ const teamDataSource = new AsyncStorageTeamDataSource();
 const themePreferenceDataSource = new AsyncStorageThemePreferenceDataSource();
 const gameCatalogDataSource = new MemoryGameCatalogDataSource();
 const verseDataSource = new HelloAoVerseDataSource(new MemoryVerseDataSource());
+const matchSettingsDataSource = new AsyncStorageMatchSettingsDataSource();
 const quemSouEuDataSource = new MemoryQuemSouEuDataSource();
 const tiltSensorService: ITiltSensorService =
   new ExpoSensorsTiltSensorService();
@@ -63,7 +65,8 @@ export const isSupabaseMultiplayerEnabled: boolean = Boolean(
 
 export const pgPlayUseCases: IPgPlayUseCases = new PgPlayUseCases(
   teamDataSource,
-  gameCatalogDataSource
+  gameCatalogDataSource,
+  matchSettingsDataSource
 );
 
 export const adedonhaUseCases: IAdedonhaUseCases = new AdedonhaUseCases(

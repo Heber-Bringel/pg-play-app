@@ -17,7 +17,11 @@ import {
   ALL_FORCA_CATEGORIES,
   normalizeChar,
   useForcaViewModel,
+  type ForcaAttemptsOption,
 } from '@/viewmodel/useForcaViewModel';
+
+const FORCA_ATTEMPTS: ForcaAttemptsOption[] = [5, 6, 8];
+const FORCA_ROUNDS = [1, 2, 3, 4, 5];
 
 const ALL_LETTERS = [
   'A', 'B', 'C', 'D', 'E', 'F',
@@ -179,6 +183,41 @@ export const ForcaScreen = () => {
             playersTag="Passa-Celular"
             icon="account-group"
           />
+          {state.currentRound === 1 && state.currentTeamIndex === 0 ? (
+            <View style={styles.settingsCard}>
+              <Text allowFontScaling style={styles.settingsTitle}>
+                Parâmetros da Partida
+              </Text>
+              <Text allowFontScaling style={styles.settingsLabel}>
+                Tentativas por palavra
+              </Text>
+              <View style={styles.chipRow}>
+                {FORCA_ATTEMPTS.map((attempts) => (
+                  <ExpressiveChip
+                    key={attempts}
+                    label={`${attempts}`}
+                    accessibilityLabel={`${attempts} tentativas por palavra`}
+                    selected={state.maxAttempts === attempts}
+                    onPress={() => actions.handleSelectAttempts(attempts)}
+                  />
+                ))}
+              </View>
+              <Text allowFontScaling style={styles.settingsLabel}>
+                Palavras por equipe
+              </Text>
+              <View style={styles.chipRow}>
+                {FORCA_ROUNDS.map((rounds) => (
+                  <ExpressiveChip
+                    key={rounds}
+                    label={`${rounds}`}
+                    accessibilityLabel={`${rounds} ${rounds === 1 ? 'palavra' : 'palavras'} por equipe`}
+                    selected={state.totalRounds === rounds}
+                    onPress={() => actions.handleSelectRounds(rounds)}
+                  />
+                ))}
+              </View>
+            </View>
+          ) : null}
           <View style={styles.actionBlock}>
             <ExpressiveButton
               label="Estou Pronto!"
@@ -456,6 +495,33 @@ const createStyles = (activeTokens: AppTokens) => {
       lineHeight: font.title.lineHeight,
       color: color.onSurface,
       textAlign: 'center',
+    },
+    settingsCard: {
+      backgroundColor: activeTokens.component.card.bg,
+      borderColor: activeTokens.component.card.border,
+      borderWidth: border.thin,
+      borderRadius: activeTokens.component.card.radius,
+      padding: activeTokens.component.card.padding,
+      gap: space.sm,
+    },
+    settingsTitle: {
+      fontFamily: font.subtitle.family,
+      fontSize: font.subtitle.size,
+      fontWeight: font.subtitle.weight,
+      lineHeight: font.subtitle.lineHeight,
+      color: color.onSurface,
+    },
+    settingsLabel: {
+      fontFamily: font.label.family,
+      fontSize: font.label.size,
+      fontWeight: font.label.weight,
+      lineHeight: font.label.lineHeight,
+      color: color.onSurfaceMuted,
+    },
+    chipRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: space.sm,
     },
   });
 };

@@ -10,6 +10,7 @@ import {
   type TeamsState,
 } from '@/viewmodel/useTeamsViewModel';
 import { mockBack, mockPush } from '../__mocks__/expo-router';
+import { MemoryMatchSettingsDataSource } from '@/infra/datasources/memoryMatchSettingsDataSource';
 
 function createHookHarness(useCases: IPgPlayUseCases) {
   let latestState!: TeamsState;
@@ -48,7 +49,8 @@ describe('useTeamsViewModel — Hook de Configuração e Gestão de Equipes (UC0
   it('deve carregar as 2 equipes padrão ao montar e definir canStartRound = true (RF05, RF08)', async () => {
     const useCases = new PgPlayUseCases(
       new MemoryTeamDataSource(),
-      new MemoryGameCatalogDataSource()
+      new MemoryGameCatalogDataSource(),
+      new MemoryMatchSettingsDataSource()
     );
     const harness = createHookHarness(useCases);
     await harness.mount();
@@ -66,7 +68,8 @@ describe('useTeamsViewModel — Hook de Configuração e Gestão de Equipes (UC0
   it('deve adicionar nova equipe, limpar newTeamName e atualizar a lista (RF06)', async () => {
     const useCases = new PgPlayUseCases(
       new MemoryTeamDataSource(),
-      new MemoryGameCatalogDataSource()
+      new MemoryGameCatalogDataSource(),
+      new MemoryMatchSettingsDataSource()
     );
     const harness = createHookHarness(useCases);
     await harness.mount();
@@ -92,7 +95,8 @@ describe('useTeamsViewModel — Hook de Configuração e Gestão de Equipes (UC0
   it('deve capturar ValidationError e exibir errorMessage ao tentar nome inválido (RF06)', async () => {
     const useCases = new PgPlayUseCases(
       new MemoryTeamDataSource(),
-      new MemoryGameCatalogDataSource()
+      new MemoryGameCatalogDataSource(),
+      new MemoryMatchSettingsDataSource()
     );
     const harness = createHookHarness(useCases);
     await harness.mount();
@@ -120,7 +124,8 @@ describe('useTeamsViewModel — Hook de Configuração e Gestão de Equipes (UC0
   it('deve capturar erro ao tentar adicionar equipe duplicada (RF06)', async () => {
     const useCases = new PgPlayUseCases(
       new MemoryTeamDataSource(),
-      new MemoryGameCatalogDataSource()
+      new MemoryGameCatalogDataSource(),
+      new MemoryMatchSettingsDataSource()
     );
     const harness = createHookHarness(useCases);
     await harness.mount();
@@ -142,7 +147,8 @@ describe('useTeamsViewModel — Hook de Configuração e Gestão de Equipes (UC0
   it('deve remover equipe e desabilitar canStartRound se restar apenas 1 (RF07, RF08)', async () => {
     const useCases = new PgPlayUseCases(
       new MemoryTeamDataSource(),
-      new MemoryGameCatalogDataSource()
+      new MemoryGameCatalogDataSource(),
+      new MemoryMatchSettingsDataSource()
     );
     const harness = createHookHarness(useCases);
     await harness.mount();
@@ -163,7 +169,8 @@ describe('useTeamsViewModel — Hook de Configuração e Gestão de Equipes (UC0
   it('deve navegar para a arena ao iniciar rodada com pelo menos 2 equipes (RF08)', async () => {
     const useCases = new PgPlayUseCases(
       new MemoryTeamDataSource(),
-      new MemoryGameCatalogDataSource()
+      new MemoryGameCatalogDataSource(),
+      new MemoryMatchSettingsDataSource()
     );
     const harness = createHookHarness(useCases);
     await harness.mount();
@@ -180,7 +187,8 @@ describe('useTeamsViewModel — Hook de Configuração e Gestão de Equipes (UC0
   it('deve bloquear início da rodada e exibir erro se canStartRound for falso (RF08)', async () => {
     const useCases = new PgPlayUseCases(
       new MemoryTeamDataSource([{ id: '1', name: 'Só Uma', score: 0 }]),
-      new MemoryGameCatalogDataSource()
+      new MemoryGameCatalogDataSource(),
+      new MemoryMatchSettingsDataSource()
     );
     const harness = createHookHarness(useCases);
     await harness.mount();
@@ -202,7 +210,8 @@ describe('useTeamsViewModel — Hook de Configuração e Gestão de Equipes (UC0
   it('deve chamar router.back ao acionar handleBack', async () => {
     const useCases = new PgPlayUseCases(
       new MemoryTeamDataSource(),
-      new MemoryGameCatalogDataSource()
+      new MemoryGameCatalogDataSource(),
+      new MemoryMatchSettingsDataSource()
     );
     const harness = createHookHarness(useCases);
     await harness.mount();

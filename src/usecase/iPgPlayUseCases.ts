@@ -7,6 +7,14 @@ import type {
   QuizQuestion,
 } from '@/model/entities/arenaChallenge';
 import type { ContentPack, ContentPackGameId } from '@/model/entities/contentPack';
+import type {
+  ForcaSettings,
+  MatchSettings,
+  MimicaSettings,
+  QuizMatchPlan,
+  QuizQuestionCountOption,
+  QuizSettings,
+} from '@/model/entities/matchSettings';
 import type { GameModalityFilter, Minigame } from '@/model/entities/minigame';
 import type { Team } from '@/model/entities/team';
 
@@ -25,4 +33,14 @@ export interface IPgPlayUseCases {
   scoreQuizAnswer(teamId: string, isCorrect: boolean, points?: number): Promise<Team[]>;
   getScoreboard(): Promise<Team[]>;
   resetScoreboard(): Promise<Team[]>;
+  getMatchSettings(): Promise<MatchSettings>;
+  updateMimicaSettings(changes: Partial<MimicaSettings>): Promise<MatchSettings>;
+  updateQuizSettings(changes: Partial<QuizSettings>): Promise<MatchSettings>;
+  updateForcaSettings(changes: Partial<ForcaSettings>): Promise<MatchSettings>;
+  planQuizMatch(
+    configuredCount: number,
+    availableQuestions: number,
+    teamCount: number
+  ): QuizMatchPlan;
+  listAvailableQuizQuestionCounts(availableQuestions: number): QuizQuestionCountOption[];
 }

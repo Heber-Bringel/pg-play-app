@@ -7,7 +7,14 @@ import { ExpressiveTag } from '@/view/components/expressiveTag';
 import { ExpressiveTimer } from '@/view/components/expressiveTimer';
 import { GameCard } from '@/view/components/gameCard';
 import { useTheme, type AppTokens } from '@/view/theme';
-import { ALL_MIMICA_CATEGORIES, useMimicaViewModel } from '@/viewmodel/useMimicaViewModel';
+import {
+  ALL_MIMICA_CATEGORIES,
+  useMimicaViewModel,
+  type MimicaDurationOption,
+} from '@/viewmodel/useMimicaViewModel';
+
+const MIMICA_DURATIONS: MimicaDurationOption[] = [45, 60, 90];
+const MIMICA_ROUNDS = [1, 2, 3, 4, 5];
 
 export const MimicaScreen = () => {
   const [state, actions] = useMimicaViewModel();
@@ -159,6 +166,41 @@ export const MimicaScreen = () => {
             playersTag={`${state.turnDurationSeconds}s por turno`}
             icon="drama-masks"
           />
+          {state.currentRound === 1 && state.currentTeamIndex === 0 ? (
+            <View style={styles.settingsCard}>
+              <Text allowFontScaling style={styles.settingsTitle}>
+                Parâmetros da Partida
+              </Text>
+              <Text allowFontScaling style={styles.settingsLabel}>
+                Tempo por turno
+              </Text>
+              <View style={styles.chipRow}>
+                {MIMICA_DURATIONS.map((seconds) => (
+                  <ExpressiveChip
+                    key={seconds}
+                    label={`${seconds}s`}
+                    accessibilityLabel={`${seconds} segundos por turno`}
+                    selected={state.turnDurationSeconds === seconds}
+                    onPress={() => actions.handleSelectDuration(seconds)}
+                  />
+                ))}
+              </View>
+              <Text allowFontScaling style={styles.settingsLabel}>
+                Rodadas
+              </Text>
+              <View style={styles.chipRow}>
+                {MIMICA_ROUNDS.map((rounds) => (
+                  <ExpressiveChip
+                    key={rounds}
+                    label={`${rounds}`}
+                    accessibilityLabel={`${rounds} ${rounds === 1 ? 'rodada' : 'rodadas'}`}
+                    selected={state.totalRounds === rounds}
+                    onPress={() => actions.handleSelectRounds(rounds)}
+                  />
+                ))}
+              </View>
+            </View>
+          ) : null}
           <ExpressiveButton
             label="Estou Pronto!"
             variant="primaryJumbo"
@@ -235,9 +277,9 @@ export const MimicaScreen = () => {
             icon="timer-outline"
           />
           <ExpressiveButton
-            label="Próxima Equipe"
+            label={state.isLastTurn ? 'Ver Resultado' : 'Próxima Equipe'}
             variant="primaryJumbo"
-            icon="play"
+            icon={state.isLastTurn ? 'flag-checkered' : 'play'}
             onPress={actions.handleNextTurn}
           />
         </View>
@@ -392,6 +434,33 @@ const createStyles = (activeTokens: AppTokens) => {
       lineHeight: font.title.lineHeight,
       color: color.onSurface,
       textAlign: 'center',
+    },
+    settingsCard: {
+      backgroundColor: activeTokens.component.card.bg,
+      borderColor: activeTokens.component.card.border,
+      borderWidth: border.thin,
+      borderRadius: activeTokens.component.card.radius,
+      padding: activeTokens.component.card.padding,
+      gap: space.sm,
+    },
+    settingsTitle: {
+      fontFamily: font.subtitle.family,
+      fontSize: font.subtitle.size,
+      fontWeight: font.subtitle.weight,
+      lineHeight: font.subtitle.lineHeight,
+      color: color.onSurface,
+    },
+    settingsLabel: {
+      fontFamily: font.label.family,
+      fontSize: font.label.size,
+      fontWeight: font.label.weight,
+      lineHeight: font.label.lineHeight,
+      color: color.onSurfaceMuted,
+    },
+    chipRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: space.sm,
     },
   });
 };

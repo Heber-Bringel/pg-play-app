@@ -11,6 +11,7 @@ import {
   type ScoreboardState,
 } from '@/viewmodel/useScoreboardViewModel';
 import { mockPush } from '../__mocks__/expo-router';
+import { MemoryMatchSettingsDataSource } from '@/infra/datasources/memoryMatchSettingsDataSource';
 
 function createHookHarness(useCases: IPgPlayUseCases) {
   let latestState!: ScoreboardState;
@@ -51,7 +52,8 @@ describe('useScoreboardViewModel — Hook do Placar e Ranking Geral do PG (UC06)
         { id: 'team-1', name: 'Tribo de Judá', score: 20 },
         { id: 'team-2', name: 'Leões da Fé', score: 40 },
       ]),
-      new MemoryGameCatalogDataSource()
+      new MemoryGameCatalogDataSource(),
+      new MemoryMatchSettingsDataSource()
     );
     const harness = createHookHarness(useCases);
     await harness.mount();
@@ -72,7 +74,8 @@ describe('useScoreboardViewModel — Hook do Placar e Ranking Geral do PG (UC06)
         { id: 'team-1', name: 'Tribo de Judá', score: 20 },
         { id: 'team-2', name: 'Leões da Fé', score: 25 },
       ]),
-      new MemoryGameCatalogDataSource()
+      new MemoryGameCatalogDataSource(),
+      new MemoryMatchSettingsDataSource()
     );
     const harness = createHookHarness(useCases);
     await harness.mount();
@@ -120,6 +123,22 @@ describe('useScoreboardViewModel — Hook do Placar e Ranking Geral do PG (UC06)
       resetScoreboard: async () => {
         throw new ValidationError('Falha ao zerar placar.');
       },
+      getMatchSettings: async () => ({
+        mimica: { durationSeconds: 60, totalRounds: 3 },
+        quiz: { durationSeconds: 20, questionCount: 5 },
+        forca: { maxAttempts: 5, totalRounds: 3 },
+      }),
+      updateMimicaSettings: async () => {
+        throw new ValidationError('Falha ao salvar parâmetros.');
+      },
+      updateQuizSettings: async () => {
+        throw new ValidationError('Falha ao salvar parâmetros.');
+      },
+      updateForcaSettings: async () => {
+        throw new ValidationError('Falha ao salvar parâmetros.');
+      },
+      planQuizMatch: () => ({ totalQuestions: 0, questionsPerTeam: 0, limitedByBank: false }),
+      listAvailableQuizQuestionCounts: () => [5],
     };
 
     const harness = createHookHarness(failingUseCases);
@@ -140,7 +159,8 @@ describe('useScoreboardViewModel — Hook do Placar e Ranking Geral do PG (UC06)
         { id: 'team-1', name: 'Tribo de Judá', score: 20 },
         { id: 'team-2', name: 'Leões da Fé', score: 20 },
       ]),
-      new MemoryGameCatalogDataSource()
+      new MemoryGameCatalogDataSource(),
+      new MemoryMatchSettingsDataSource()
     );
     const harness = createHookHarness(useCases);
     await harness.mount();

@@ -9,7 +9,15 @@ import { ExpressiveTimer } from '@/view/components/expressiveTimer';
 import { GameCard } from '@/view/components/gameCard';
 import { QuizOption } from '@/view/components/quizOption';
 import { useTheme, type AppTokens } from '@/view/theme';
-import { ALL_QUIZ_CATEGORIES, useQuizViewModel } from '@/viewmodel/useQuizViewModel';
+import {
+  ALL_QUIZ_CATEGORIES,
+  useQuizViewModel,
+  type QuizDurationOption,
+  type QuizQuestionCountOption,
+} from '@/viewmodel/useQuizViewModel';
+
+const QUIZ_DURATIONS: QuizDurationOption[] = [15, 20, 30];
+const QUIZ_QUESTION_COUNTS: QuizQuestionCountOption[] = [5, 10, 15];
 
 export const QuizScreen = () => {
   const [state, actions] = useQuizViewModel();
@@ -185,8 +193,62 @@ export const QuizScreen = () => {
               </Text>
             </View>
 
+            {state.currentQuestionIndex === 0 ? (
+              <View style={styles.settingsCard}>
+                <Text allowFontScaling style={styles.settingsTitle}>
+                  Parâmetros da Partida
+                </Text>
+                <Text allowFontScaling style={styles.settingsLabel}>
+                  Tempo por pergunta
+                </Text>
+                <View style={styles.chipRow}>
+                  {QUIZ_DURATIONS.map((seconds) => (
+                    <ExpressiveChip
+                      key={seconds}
+                      label={`${seconds}s`}
+                      accessibilityLabel={`${seconds} segundos por pergunta`}
+                      selected={state.turnDurationSeconds === seconds}
+                      onPress={() => actions.handleSelectDuration(seconds)}
+                    />
+                  ))}
+                </View>
+                <Text allowFontScaling style={styles.settingsLabel}>
+                  Quantidade de perguntas
+                </Text>
+                <View style={styles.chipRow}>
+                  {QUIZ_QUESTION_COUNTS.map((count) => {
+                    const selected = state.configuredQuestionCount === count;
+                    const unavailable = !state.availableQuestionCounts.includes(count);
+                    return (
+                      <ExpressiveChip
+                        key={count}
+                        label={`${count}`}
+                        accessibilityLabel={
+                          unavailable
+                            ? `${count} perguntas, indisponível no pacote atual`
+                            : `${count} perguntas`
+                        }
+                        selected={selected}
+                        disabled={unavailable && !selected}
+                        onPress={() => actions.handleSelectQuestionCount(count)}
+                      />
+                    );
+                  })}
+                </View>
+                {state.questionCountNotice ? (
+                  <Text
+                    allowFontScaling
+                    accessibilityLiveRegion="polite"
+                    style={styles.settingsNotice}
+                  >
+                    {state.questionCountNotice}
+                  </Text>
+                ) : null}
+              </View>
+            ) : null}
+
             <Text allowFontScaling style={styles.instructionNotice}>
-              A equipe terá 20 segundos para responder após tocar no botão abaixo.
+              {`A equipe terá ${state.turnDurationSeconds} segundos para responder após tocar no botão abaixo.`}
             </Text>
           </View>
         </ScrollView>
@@ -327,9 +389,9 @@ export const QuizScreen = () => {
       {isAnswered && (
         <View style={styles.fixedFooter}>
           <ExpressiveButton
-            label="Próxima Pergunta"
+            label={state.isLastQuestion ? 'Ver Resultado' : 'Próxima Pergunta'}
             variant="primaryJumbo"
-            icon="arrow-right"
+            icon={state.isLastQuestion ? 'flag-checkered' : 'arrow-right'}
             onPress={actions.handleNextQuestion}
           />
         </View>
@@ -539,6 +601,41 @@ const createStyles = (activeTokens: AppTokens) => {
       backgroundColor: color.highlight,
       justifyContent: 'center',
       alignItems: 'center',
+    },
+    settingsCard: {
+      width: '100%',
+      backgroundColor: activeTokens.component.card.bg,
+      borderColor: activeTokens.component.card.border,
+      borderWidth: border.thin,
+      borderRadius: activeTokens.component.card.radius,
+      padding: activeTokens.component.card.padding,
+      gap: space.sm,
+    },
+    settingsTitle: {
+      fontFamily: font.subtitle.family,
+      fontSize: font.subtitle.size,
+      fontWeight: font.subtitle.weight,
+      lineHeight: font.subtitle.lineHeight,
+      color: color.onSurface,
+    },
+    settingsLabel: {
+      fontFamily: font.label.family,
+      fontSize: font.label.size,
+      fontWeight: font.label.weight,
+      lineHeight: font.label.lineHeight,
+      color: color.onSurfaceMuted,
+    },
+    settingsNotice: {
+      fontFamily: font.body.family,
+      fontSize: font.body.size,
+      fontWeight: font.body.weight,
+      lineHeight: font.body.lineHeight,
+      color: color.onSurfaceMuted,
+    },
+    chipRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: space.sm,
     },
   });
 };

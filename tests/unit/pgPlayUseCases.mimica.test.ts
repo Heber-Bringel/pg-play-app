@@ -2,12 +2,13 @@ import { MemoryGameCatalogDataSource } from '@/infra/datasources/memoryGameCatal
 import { MemoryTeamDataSource } from '@/infra/datasources/memoryTeamDataSource';
 import { AuthError, DataSourceError, DomainError, ValidationError } from '@/model/errors';
 import { PgPlayUseCases } from '@/usecase/pgPlayUseCases';
+import { MemoryMatchSettingsDataSource } from '@/infra/datasources/memoryMatchSettingsDataSource';
 
 describe('PgPlayUseCases — Regras de Negócio da Arena de Mímica Expressiva (UC03)', () => {
   it('deve listar as equipes padrão sugeridas e o banco de cartas da Mímica', async () => {
     const teamDs = new MemoryTeamDataSource();
     const catalogDs = new MemoryGameCatalogDataSource();
-    const useCases = new PgPlayUseCases(teamDs, catalogDs);
+    const useCases = new PgPlayUseCases(teamDs, catalogDs, new MemoryMatchSettingsDataSource());
 
     const teams = await useCases.listTeams();
     const cards = await useCases.listMimicaCards();
@@ -21,7 +22,7 @@ describe('PgPlayUseCases — Regras de Negócio da Arena de Mímica Expressiva (
   it('deve filtrar cartas da Mímica apenas pelos pacotes de categorias selecionados (RF28)', async () => {
     const teamDs = new MemoryTeamDataSource();
     const catalogDs = new MemoryGameCatalogDataSource();
-    const useCases = new PgPlayUseCases(teamDs, catalogDs);
+    const useCases = new PgPlayUseCases(teamDs, catalogDs, new MemoryMatchSettingsDataSource());
 
     const packs = await useCases.listContentPacks('mimica');
     expect(packs).toHaveLength(7);
@@ -47,7 +48,7 @@ describe('PgPlayUseCases — Regras de Negócio da Arena de Mímica Expressiva (
   it('deve lançar ValidationError ao solicitar cartas da Mímica com lista de categorias vazia (RF28)', async () => {
     const teamDs = new MemoryTeamDataSource();
     const catalogDs = new MemoryGameCatalogDataSource();
-    const useCases = new PgPlayUseCases(teamDs, catalogDs);
+    const useCases = new PgPlayUseCases(teamDs, catalogDs, new MemoryMatchSettingsDataSource());
 
     await expect(useCases.listMimicaCards([])).rejects.toThrow(ValidationError);
     await expect(useCases.listContentPacks('invalido' as never)).rejects.toThrow(
@@ -58,7 +59,7 @@ describe('PgPlayUseCases — Regras de Negócio da Arena de Mímica Expressiva (
   it('deve somar +20 pontos à equipe da vez ao registrar acerto na Mímica (RF13)', async () => {
     const teamDs = new MemoryTeamDataSource();
     const catalogDs = new MemoryGameCatalogDataSource();
-    const useCases = new PgPlayUseCases(teamDs, catalogDs);
+    const useCases = new PgPlayUseCases(teamDs, catalogDs, new MemoryMatchSettingsDataSource());
 
     const updatedTeams = await useCases.scoreMimicaHit('team-1');
     const team1 = updatedTeams.find((team) => team.id === 'team-1');
@@ -72,7 +73,7 @@ describe('PgPlayUseCases — Regras de Negócio da Arena de Mímica Expressiva (
       { id: 'team-2', name: 'Leões da Fé', score: 0 },
     ]);
     const catalogDs = new MemoryGameCatalogDataSource();
-    const useCases = new PgPlayUseCases(teamDs, catalogDs);
+    const useCases = new PgPlayUseCases(teamDs, catalogDs, new MemoryMatchSettingsDataSource());
 
     const updatedTeams = await useCases.scoreMimicaSkip('team-1');
     const team1 = updatedTeams.find((team) => team.id === 'team-1');
@@ -86,7 +87,7 @@ describe('PgPlayUseCases — Regras de Negócio da Arena de Mímica Expressiva (
       { id: 'team-2', name: 'Leões da Fé', score: 3 },
     ]);
     const catalogDs = new MemoryGameCatalogDataSource();
-    const useCases = new PgPlayUseCases(teamDs, catalogDs);
+    const useCases = new PgPlayUseCases(teamDs, catalogDs, new MemoryMatchSettingsDataSource());
 
     const afterZeroSkip = await useCases.scoreMimicaSkip('team-1');
     expect(afterZeroSkip.find((t) => t.id === 'team-1')?.score).toBe(0);
@@ -98,7 +99,7 @@ describe('PgPlayUseCases — Regras de Negócio da Arena de Mímica Expressiva (
   it('deve lançar ValidationError para identificadores de equipe inválidos ou valores incorretos', async () => {
     const teamDs = new MemoryTeamDataSource();
     const catalogDs = new MemoryGameCatalogDataSource();
-    const useCases = new PgPlayUseCases(teamDs, catalogDs);
+    const useCases = new PgPlayUseCases(teamDs, catalogDs, new MemoryMatchSettingsDataSource());
 
     await expect(useCases.scoreMimicaHit('   ')).rejects.toThrow(ValidationError);
     await expect(useCases.scoreMimicaHit('team-inexistente')).rejects.toThrow(ValidationError);

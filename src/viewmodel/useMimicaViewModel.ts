@@ -2,13 +2,18 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { pgPlayUseCases } from '@/di/container';
 import type { MimicaCard, MimicaCategory } from '@/model/entities/arenaChallenge';
+import {
+  DEFAULT_MATCH_SETTINGS,
+  type MatchSettings,
+  type MimicaDurationOption,
+} from '@/model/entities/matchSettings';
 import type { Team } from '@/model/entities/team';
 import { DomainError } from '@/model/errors';
 import type { IPgPlayUseCases } from '@/usecase/iPgPlayUseCases';
 
 export type MimicaPhase = 'pass-turn' | 'playing' | 'turn-summary' | 'finished';
 
-export type MimicaDurationOption = 45 | 60 | 90;
+export type { MimicaDurationOption } from '@/model/entities/matchSettings';
 
 export const ALL_MIMICA_CATEGORIES: MimicaCategory[] = [
   'Bíblico',
@@ -27,6 +32,7 @@ export type MimicaState = {
   currentTeam: Team | null;
   currentRound: number;
   totalRounds: number;
+  isLastTurn: boolean;
   turnDurationSeconds: MimicaDurationOption;
   secondsRemaining: number;
   selectedCategories: MimicaCategory[];
@@ -49,8 +55,8 @@ export type MimicaActions = {
   handleSkip: () => Promise<void>;
   handleTick: () => void;
   handleNextTurn: () => void;
-  handleSelectDuration: (seconds: MimicaDurationOption) => void;
-  handleSelectRounds: (rounds: number) => void;
+  handleSelectDuration: (seconds: MimicaDurationOption) => Promise<void>;
+  handleSelectRounds: (rounds: number) => Promise<void>;
   handleToggleCategory: (category: MimicaCategory) => Promise<void>;
   handleRequestExit: () => void;
   handleCancelExit: () => void;
@@ -68,9 +74,15 @@ export function useMimicaViewModel(
   const [teams, setTeams] = useState<Team[]>([]);
   const [currentTeamIndex, setCurrentTeamIndex] = useState<number>(0);
   const [currentRound, setCurrentRound] = useState<number>(1);
-  const [totalRounds, setTotalRounds] = useState<number>(3);
-  const [turnDurationSeconds, setTurnDurationSeconds] = useState<MimicaDurationOption>(60);
-  const [secondsRemaining, setSecondsRemaining] = useState<number>(60);
+  const [totalRounds, setTotalRounds] = useState<number>(
+    DEFAULT_MATCH_SETTINGS.mimica.totalRounds
+  );
+  const [turnDurationSeconds, setTurnDurationSeconds] = useState<MimicaDurationOption>(
+    DEFAULT_MATCH_SETTINGS.mimica.durationSeconds
+  );
+  const [secondsRemaining, setSecondsRemaining] = useState<number>(
+    DEFAULT_MATCH_SETTINGS.mimica.durationSeconds
+  );
   const [selectedCategories, setSelectedCategories] = useState<MimicaCategory[]>(ALL_MIMICA_CATEGORIES);
   const [freshDeck, setFreshDeck] = useState<MimicaCard[]>([]);
   const [skippedDeck, setSkippedDeck] = useState<MimicaCard[]>([]);
@@ -89,13 +101,17 @@ export function useMimicaViewModel(
       setError(null);
       setCategoryWarning(null);
       try {
-        const [loadedTeams, loadedCards] = await Promise.all([
+        const [loadedTeams, loadedCards, settings] = await Promise.all([
           useCases.listTeams(),
           useCases.listMimicaCards(categoriesToLoad),
+          useCases.getMatchSettings(),
         ]);
         setTeams(loadedTeams);
         setFreshDeck(loadedCards);
         setSkippedDeck([]);
+        setTotalRounds(settings.mimica.totalRounds);
+        setTurnDurationSeconds(settings.mimica.durationSeconds);
+        setSecondsRemaining(settings.mimica.durationSeconds);
       } catch (err: unknown) {
         if (err instanceof DomainError) {
           setError(err.message);
@@ -122,6 +138,9 @@ export function useMimicaViewModel(
 
   const remainingCardsCount = freshDeck.length + skippedDeck.length;
   const currentTeam: Team | null = teams[currentTeamIndex] ?? null;
+  const isLastTurn =
+    remainingCardsCount === 0 ||
+    (currentTeamIndex + 1 >= teams.length && currentRound >= totalRounds);
 
   const handleTick = useCallback(() => {
     setSecondsRemaining((prev) => {
@@ -266,15 +285,49 @@ export function useMimicaViewModel(
     setPhase('pass-turn');
   }, [remainingCardsCount, currentTeamIndex, teams.length, turnDurationSeconds, currentRound, totalRounds]);
 
-  const handleSelectDuration = useCallback((seconds: MimicaDurationOption) => {
-    setTurnDurationSeconds(seconds);
-    setSecondsRemaining(seconds);
+  const applySettings = useCallback((changes: Partial<MatchSettings['mimica']>) => {
+    if (changes.totalRounds !== undefined) {
+      setTotalRounds(changes.totalRounds);
+    }
+    if (changes.durationSeconds !== undefined) {
+      setTurnDurationSeconds(changes.durationSeconds);
+      setSecondsRemaining(changes.durationSeconds);
+    }
   }, []);
 
-  const handleSelectRounds = useCallback((rounds: number) => {
-    const clamped = Math.max(1, Math.min(5, rounds));
-    setTotalRounds(clamped);
-  }, []);
+  // O chip responde na hora; se o UseCase rejeitar, volta ao que está salvo.
+  const saveSettings = useCallback(
+    async (changes: Partial<MatchSettings['mimica']>) => {
+      setError(null);
+      applySettings(changes);
+      try {
+        await useCases.updateMimicaSettings(changes);
+      } catch (err: unknown) {
+        if (err instanceof DomainError) {
+          setError(err.message);
+        } else {
+          setError('Não foi possível salvar os parâmetros da partida.');
+        }
+        try {
+          const stored = await useCases.getMatchSettings();
+          applySettings(stored.mimica);
+        } catch {
+          // Mantém a mensagem de erro original.
+        }
+      }
+    },
+    [applySettings, useCases]
+  );
+
+  const handleSelectDuration = useCallback(
+    (seconds: MimicaDurationOption) => saveSettings({ durationSeconds: seconds }),
+    [saveSettings]
+  );
+
+  const handleSelectRounds = useCallback(
+    (rounds: number) => saveSettings({ totalRounds: rounds }),
+    [saveSettings]
+  );
 
   const handleToggleCategory = useCallback(
     async (category: MimicaCategory) => {
@@ -329,6 +382,7 @@ export function useMimicaViewModel(
     currentTeam,
     currentRound,
     totalRounds,
+    isLastTurn,
     turnDurationSeconds,
     secondsRemaining,
     selectedCategories,

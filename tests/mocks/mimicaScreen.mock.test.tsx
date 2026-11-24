@@ -32,6 +32,7 @@ const baseState: MimicaState = {
   currentTeam: { id: 't1', name: 'Tribo de Judá', score: 40 },
   currentRound: 1,
   totalRounds: 3,
+  isLastTurn: false,
   turnDurationSeconds: 60,
   secondsRemaining: 60,
   selectedCategories: ['Bíblico'],
@@ -170,5 +171,51 @@ describe('MimicaScreen — Testes de Tela com Mocks de ViewModel (UC03)', () => 
       scoreboardBtn.props.onPress();
     });
     expect(actions.handleGoToScoreboard).toHaveBeenCalledTimes(1);
+  });
+
+  it('deve exibir os Parâmetros da Partida só no 1º turno e repassar a escolha (RF29)', () => {
+    const actions = createMockActions();
+    const spy = jest
+      .spyOn(mimicaVmModule, 'useMimicaViewModel')
+      .mockReturnValue([baseState, actions]);
+
+    let tree!: renderer.ReactTestRenderer;
+    act(() => {
+      tree = renderer.create(<MimicaScreen />);
+    });
+
+    const chip90 = tree.root.findAllByProps({ accessibilityLabel: '90 segundos por turno' })[0];
+    const chip5 = tree.root.findAllByProps({ accessibilityLabel: '5 rodadas' })[0];
+    act(() => {
+      chip90.props.onPress();
+      chip5.props.onPress();
+    });
+    expect(actions.handleSelectDuration).toHaveBeenCalledWith(90);
+    expect(actions.handleSelectRounds).toHaveBeenCalledWith(5);
+
+    spy.mockReturnValue([{ ...baseState, currentTeamIndex: 1 }, actions]);
+    act(() => {
+      tree.update(<MimicaScreen />);
+    });
+    const texts = tree.root.findAllByType('Text' as any);
+    expect(texts.some((t) => t.props.children === 'Parâmetros da Partida')).toBe(false);
+  });
+
+  it('deve mostrar "Ver Resultado" no resumo do último turno', () => {
+    const actions = createMockActions();
+    jest
+      .spyOn(mimicaVmModule, 'useMimicaViewModel')
+      .mockReturnValue([{ ...baseState, phase: 'turn-summary', isLastTurn: true }, actions]);
+
+    let tree!: renderer.ReactTestRenderer;
+    act(() => {
+      tree = renderer.create(<MimicaScreen />);
+    });
+
+    const resultBtn = tree.root.findByProps({ accessibilityLabel: 'Ver Resultado' });
+    act(() => {
+      resultBtn.props.onPress();
+    });
+    expect(actions.handleNextTurn).toHaveBeenCalledTimes(1);
   });
 });
