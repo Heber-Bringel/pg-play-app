@@ -21,10 +21,12 @@ import type { IAdedonhaUseCases } from '@/usecase/iAdedonhaUseCases';
 import type { ICidadeDormeUseCases } from '@/usecase/iCidadeDormeUseCases';
 import type { IPgPlayUseCases } from '@/usecase/iPgPlayUseCases';
 import type { IQuemSouEuUseCases } from '@/usecase/iQuemSouEuUseCases';
+import type { ITermometroUseCases } from '@/usecase/iTermometroUseCases';
 import type { IThemePreferenceUseCases } from '@/usecase/iThemePreferenceUseCases';
 import type { IVersiculoUseCases } from '@/usecase/iVersiculoUseCases';
 import { PgPlayUseCases } from '@/usecase/pgPlayUseCases';
 import { QuemSouEuUseCases } from '@/usecase/quemSouEuUseCases';
+import { TermometroUseCases } from '@/usecase/termometroUseCases';
 import { ThemePreferenceUseCases } from '@/usecase/themePreferenceUseCases';
 import { VersiculoUseCases } from '@/usecase/versiculoUseCases';
 
@@ -86,3 +88,6 @@ export const quemSouEuUseCases: IQuemSouEuUseCases = new QuemSouEuUseCases(
 
 export const themePreferenceUseCases: IThemePreferenceUseCases =
   new ThemePreferenceUseCases(themePreferenceDataSource);
+
+export const termometroUseCases: ITermometroUseCases =
+  new TermometroUseCases();

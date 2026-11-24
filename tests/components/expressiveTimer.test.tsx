@@ -28,4 +28,24 @@ describe('ExpressiveTimer (RNTL)', () => {
     expect(timer.props.accessibilityRole).toBe('timer');
     expect(screen.getByText('00:00')).toBeTruthy();
   });
+
+  it('renderiza variante thermometer pausada mantendo progresso visível, selo Pausado e botão Continuar (Issue #72)', async () => {
+    const onTogglePause = jest.fn();
+    await render(
+      <ExpressiveTimer
+        variant="thermometer"
+        totalSeconds={60}
+        secondsRemaining={36}
+        paused
+        onTogglePause={onTogglePause}
+      />
+    );
+
+    expect(screen.getByText('Pausado')).toBeTruthy();
+    expect(screen.getByText('00:36')).toBeTruthy();
+    expect(
+      screen.getByLabelText('Pausado. Tempo restante: 00:36. Preenchimento: 40%')
+    ).toBeTruthy();
+    expect(screen.getByLabelText('Continuar')).toBeTruthy();
+  });
 });
