@@ -570,4 +570,371 @@ describe('useCidadeDormeViewModel — Hook do Cidade Dorme em Sala Multiplayer (
 
     harness.unmount();
   });
+
+  it('deve expor phaseTimeline, aliveCount, eliminatedCount e handleSetReduceMotion (#56)', async () => {
+    const useCases = new CidadeDormeUseCases(
+      new MemoryMultiplayerRoomService(),
+      new MemoryNarratorAudioService()
+    );
+    const harness = createHookHarness(useCases);
+    await harness.mount();
+
+    expect(harness.getState().reduceMotion).toBe(false);
+    act(() => {
+      harness.getActions().handleSetReduceMotion(true);
+    });
+    expect(harness.getState().reduceMotion).toBe(true);
+
+    await act(async () => {
+      await harness.getActions().handleCreateRoom('Héber');
+    });
+    const code = harness.getState().room!.code;
+    if (harness.getState().room!.players.length < 5) {
+      await act(async () => {
+        await useCases.joinRoom(code, 'Pedro');
+      });
+    }
+
+    const totalPlayers = harness.getState().room!.players.length;
+    expect(harness.getState().aliveCount).toBe(totalPlayers);
+    expect(harness.getState().eliminatedCount).toBe(0);
+
+    await act(async () => {
+      await harness
+        .getActions()
+        .handleStartMatch([
+          'detetive',
+          'assassino',
+          'anjo',
+          'cidadao',
+          'cidadao',
+          'cidadao',
+        ]);
+    });
+    await act(async () => {
+      await harness.getActions().handleConfirmRoleReady(true);
+    });
+
+    expect(harness.getState().room?.phase).toBe('night_assassin');
+    expect(harness.getState().phaseTimeline).toEqual([
+      { id: 'night', label: 'Noite', isActive: true, isCompleted: false },
+      { id: 'dawn', label: 'Amanhecer', isActive: false, isCompleted: false },
+      { id: 'debate', label: 'Debate', isActive: false, isCompleted: false },
+      { id: 'voting', label: 'Votação', isActive: false, isCompleted: false },
+    ]);
+
+    const detective = harness.getState().room!.players[0];
+    const assassin = harness.getState().room!.players[1];
+    const angel = harness.getState().room!.players[2];
+    const citizen = harness.getState().room!.players[3];
+    await act(async () => {
+      const roomId = harness.getState().room!.id;
+      await useCases.submitAssassinTarget(roomId, assassin.id, citizen.id);
+      await useCases.autoAdvanceNightTurn(roomId, 'night_assassin', 1);
+      await useCases.submitAngelProtection(roomId, angel.id, detective.id);
+      await useCases.autoAdvanceNightTurn(roomId, 'night_angel', 1);
+      await useCases.submitDetectiveInvestigation(roomId, detective.id, assassin.id);
+      await useCases.advanceToDawn(roomId);
+    });
+
+    expect(harness.getState().room?.phase).toBe('day_debate');
+    expect(harness.getState().aliveCount).toBe(totalPlayers - 1);
+    expect(harness.getState().eliminatedCount).toBe(1);
+    expect(harness.getState().phaseTimeline).toEqual([
+      { id: 'night', label: 'Noite', isActive: false, isCompleted: true },
+      { id: 'dawn', label: 'Amanhecer', isActive: true, isCompleted: false },
+      { id: 'debate', label: 'Debate', isActive: false, isCompleted: false },
+      { id: 'voting', label: 'Votação', isActive: false, isCompleted: false },
+    ]);
+
+    act(() => {
+      jest.advanceTimersByTime(4_000);
+    });
+
+    expect(harness.getState().phaseTimeline).toEqual([
+      { id: 'night', label: 'Noite', isActive: false, isCompleted: true },
+      { id: 'dawn', label: 'Amanhecer', isActive: false, isCompleted: true },
+      { id: 'debate', label: 'Debate', isActive: true, isCompleted: false },
+      { id: 'voting', label: 'Votação', isActive: false, isCompleted: false },
+    ]);
+
+    await act(async () => {
+      await harness.getActions().handleStartVotingPhase();
+    });
+    expect(harness.getState().phaseTimeline[3]).toEqual({
+      id: 'voting',
+      label: 'Votação',
+      isActive: true,
+      isCompleted: false,
+    });
+
+    harness.unmount();
+  });
+
+  it('deve recuperar turno noturno do convidado em até 3s via getRoom quando subscribeToRoom omite evento e descartar versão menor (Issue #65)', async () => {
+    const baseService = new MemoryMultiplayerRoomService();
+    const baseUseCases = new CidadeDormeUseCases(
+      baseService,
+      new MemoryNarratorAudioService()
+    );
+
+    const created = await baseUseCases.createRoom('Anfitrião');
+    const guestJoined = await baseUseCases.joinRoom(created.code, 'Ana');
+    const guestId = guestJoined.players.find((p) => p.nickname === 'Ana')!.id;
+
+    await baseUseCases.startMatch(created.id, [
+      'detetive',
+      'anjo',
+      'assassino',
+      'cidadao',
+      'cidadao',
+      'cidadao',
+    ]);
+    const nightAssassinRoom = await baseUseCases.confirmPlayerReady(
+      created.id,
+      created.hostId,
+      true
+    );
+
+    let emitRoomUpdate: ((room: typeof nightAssassinRoom) => void) | null = null;
+    let currentServerRoom = {
+      ...nightAssassinRoom,
+      phaseEndsAt: new Date(Date.now() + 1_000).toISOString(),
+    };
+
+    const mockUseCases: ICidadeDormeUseCases = {
+      ...baseUseCases,
+      getLocalPlayerId: async () => guestId,
+      subscribeToRoom: (_rid, cb) => {
+        emitRoomUpdate = cb;
+        return () => {
+          emitRoomUpdate = null;
+        };
+      },
+      getRoom: jest.fn(async () => currentServerRoom),
+      joinRoom: async () => currentServerRoom,
+      createRoom: async () => currentServerRoom,
+      leaveRoom: async () => {},
+      removePlayer: async () => currentServerRoom,
+      updateConfig: async () => currentServerRoom,
+      getRoleMetadata: (role) => baseUseCases.getRoleMetadata(role),
+      startMatch: async () => currentServerRoom,
+      confirmPlayerReady: async () => currentServerRoom,
+      submitAssassinTarget: async () => currentServerRoom,
+      submitAngelProtection: async () => currentServerRoom,
+      submitDetectiveInvestigation: async () => currentServerRoom,
+      advanceToDawn: async () => currentServerRoom,
+      autoAdvanceNightTurn: async () => currentServerRoom,
+      startVotingPhase: async () => currentServerRoom,
+      castVote: async () => currentServerRoom,
+      tallyVotes: async () => currentServerRoom,
+      startNextNight: async () => currentServerRoom,
+      restartMatch: async () => currentServerRoom,
+      speakNarratorCaption: async () => {},
+      stopNarratorAudio: async () => {},
+    };
+
+    const guestHarness = createHookHarness(mockUseCases);
+    await guestHarness.mount();
+
+    await act(async () => {
+      await guestHarness.getActions().handleJoinRoom(created.code, 'Ana');
+    });
+    expect(guestHarness.getState().isCurrentPlayerHost).toBe(false);
+    expect(guestHarness.getState().room?.phase).toBe('night_assassin');
+
+    // Servidor avança para night_angel com version maior, mas evento Realtime é perdido
+    currentServerRoom = {
+      ...currentServerRoom,
+      phase: 'night_angel',
+      version: currentServerRoom.version + 1,
+      phaseEndsAt: new Date(Date.now() + 15_000).toISOString(),
+    };
+
+    // Avança 1s para phaseEndsAt expirar (secondsRemaining -> 0) e depois 1.5s para o watchdog disparar (<= 3s pós-phaseEndsAt)
+    await act(async () => {
+      jest.advanceTimersByTime(1_000);
+    });
+    expect(guestHarness.getState().secondsRemaining).toBe(0);
+
+    await act(async () => {
+      jest.advanceTimersByTime(1_500);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockUseCases.getRoom).toHaveBeenCalledWith(created.id);
+    expect(guestHarness.getState().room?.phase).toBe('night_angel');
+    expect(guestHarness.getState().room?.version).toBe(
+      currentServerRoom.version
+    );
+
+    // Snapshot atrasado com version menor é descartado sem regredir a fase
+    act(() => {
+      emitRoomUpdate?.({
+        ...nightAssassinRoom,
+        phase: 'night_assassin',
+        version: currentServerRoom.version - 1,
+      });
+    });
+    expect(guestHarness.getState().room?.phase).toBe('night_angel');
+
+    guestHarness.unmount();
+  });
+
+  it('deve expulsar imediatamente o jogador convidado do Lobby quando o Moderador o remove da sala', async () => {
+    const roomService = new MemoryMultiplayerRoomService();
+    const useCases = new CidadeDormeUseCases(
+      roomService,
+      new MemoryNarratorAudioService()
+    );
+    const leaveSpy = jest.spyOn(useCases, 'leaveRoom');
+
+    const hostHarness = createHookHarness(useCases);
+    await hostHarness.mount();
+
+    await act(async () => {
+      await hostHarness.getActions().handleCreateRoom('Héber');
+    });
+    const code = hostHarness.getState().room!.code;
+
+    const guestHarness = createHookHarness(useCases);
+    await guestHarness.mount();
+    await act(async () => {
+      await guestHarness.getActions().handleJoinRoom(code, 'Carlos');
+    });
+
+    const carlos = guestHarness
+      .getState()
+      .room!.players.find((p) => p.nickname === 'Carlos')!;
+    expect(guestHarness.getState().room?.phase).toBe('lobby');
+
+    await act(async () => {
+      await hostHarness.getActions().handleRemovePlayer(carlos.id);
+    });
+
+    expect(guestHarness.getState().room).toBeNull();
+    expect(guestHarness.getState().currentPlayerId).toBeNull();
+    expect(guestHarness.getState().error).toBe(
+      'Você foi removido da sala pelo Moderador.'
+    );
+    expect(leaveSpy).toHaveBeenCalledWith(hostHarness.getState().room!.id, carlos.id);
+
+    guestHarness.unmount();
+    hostHarness.unmount();
+  });
+
+  it('deve gerenciar isNightCardRevealed com ocultação imediata no Assassino/Anjo e automática em 4s no Detetive (Issue #66)', async () => {
+    const roomService = new MemoryMultiplayerRoomService();
+    const useCases = new CidadeDormeUseCases(
+      roomService,
+      new MemoryNarratorAudioService()
+    );
+    const harness = createHookHarness(useCases);
+    await harness.mount();
+
+    await act(async () => {
+      await harness.getActions().handleCreateRoom('Héber');
+    });
+    await act(async () => {
+      await harness
+        .getActions()
+        .handleStartMatch([
+          'detetive',
+          'assassino',
+          'anjo',
+          'cidadao',
+          'cidadao',
+          'cidadao',
+        ]);
+    });
+    await act(async () => {
+      await harness.getActions().handleConfirmRoleReady(true);
+    });
+
+    expect(harness.getState().room?.phase).toBe('night_assassin');
+    expect(harness.getState().isNightCardRevealed).toBe(false);
+
+    // Abre manualmente e fecha manualmente
+    act(() => {
+      harness.getActions().handleToggleNightCardVisibility();
+    });
+    expect(harness.getState().isNightCardRevealed).toBe(true);
+
+    act(() => {
+      harness.getActions().handleHideNightCard();
+    });
+    expect(harness.getState().isNightCardRevealed).toBe(false);
+
+    // Ao trocar de turno para night_angel e depois night_detective, mantém oculto e auto-oculta veredito após 4s
+    const roomId = harness.getState().room!.id;
+    await act(async () => {
+      await useCases.autoAdvanceNightTurn(roomId, 'night_assassin', 1);
+    });
+    expect(harness.getState().room?.phase).toBe('night_angel');
+    expect(harness.getState().isNightCardRevealed).toBe(false);
+
+    await act(async () => {
+      await useCases.autoAdvanceNightTurn(roomId, 'night_angel', 1);
+    });
+    expect(harness.getState().room?.phase).toBe('night_detective');
+
+    act(() => {
+      harness.getActions().handleToggleNightCardVisibility();
+      harness.getActions().handleSelectNightTarget('cd-player-2');
+    });
+    expect(harness.getState().isNightCardRevealed).toBe(true);
+
+    await act(async () => {
+      await harness.getActions().handleConfirmDetectiveInvestigation();
+    });
+    expect(harness.getState().room?.detectiveVerdict?.isAssassin).toBe(true);
+    expect(harness.getState().isNightCardRevealed).toBe(true);
+
+    act(() => {
+      jest.advanceTimersByTime(4_000);
+    });
+    expect(harness.getState().isNightCardRevealed).toBe(false);
+
+    // Simula hook como Assassino para verificar ocultação imediata pós-confirmação
+    const assassinRoomService = new MemoryMultiplayerRoomService();
+    const assassinUseCases = new CidadeDormeUseCases(
+      assassinRoomService,
+      new MemoryNarratorAudioService()
+    );
+    const assassinHarness = createHookHarness(assassinUseCases);
+    await assassinHarness.mount();
+    await act(async () => {
+      await assassinHarness.getActions().handleCreateRoom('AssassinoHost');
+    });
+    await act(async () => {
+      await assassinHarness
+        .getActions()
+        .handleStartMatch([
+          'assassino',
+          'anjo',
+          'detetive',
+          'cidadao',
+          'cidadao',
+          'cidadao',
+        ]);
+    });
+    await act(async () => {
+      await assassinHarness.getActions().handleConfirmRoleReady(true);
+    });
+
+    act(() => {
+      assassinHarness.getActions().handleToggleNightCardVisibility();
+      assassinHarness.getActions().handleSelectNightTarget('cd-player-4');
+    });
+    expect(assassinHarness.getState().isNightCardRevealed).toBe(true);
+
+    await act(async () => {
+      await assassinHarness.getActions().handleConfirmAssassinTarget();
+    });
+    expect(assassinHarness.getState().isNightCardRevealed).toBe(false);
+
+    assassinHarness.unmount();
+    harness.unmount();
+  });
 });

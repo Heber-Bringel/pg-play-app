@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import {
   getFocusRingStyle,
@@ -15,6 +15,7 @@ export type SelectableOptionItemProps = {
   disabled?: boolean;
   error?: boolean;
   themeMode?: ThemeMode;
+  reduceMotion?: boolean;
   accessibilityLabel?: string;
   onPress: () => void;
 };
@@ -27,6 +28,7 @@ export const SelectableOptionItem = ({
   disabled = false,
   error = false,
   themeMode,
+  reduceMotion = false,
   accessibilityLabel,
   onPress,
 }: SelectableOptionItemProps) => {
@@ -34,6 +36,27 @@ export const SelectableOptionItem = ({
   const styles = useMemo(() => createStyles(activeTokens), [activeTokens]);
   const [pressed, setPressed] = useState(false);
   const keyboardFocus = useKeyboardFocus();
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (selected && !reduceMotion) {
+      scaleAnim.setValue(0.97);
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        damping: activeTokens.semantic.motion.spring.effects.damping,
+        stiffness: activeTokens.semantic.motion.spring.effects.stiffness,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      scaleAnim.setValue(1);
+    }
+  }, [
+    activeTokens.semantic.motion.spring.effects.damping,
+    activeTokens.semantic.motion.spring.effects.stiffness,
+    reduceMotion,
+    scaleAnim,
+    selected,
+  ]);
 
   const backgroundColor = disabled
     ? activeTokens.component.option.bg.disabled
@@ -82,67 +105,69 @@ export const SelectableOptionItem = ({
   );
 
   return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      onPressIn={() => {
-        setPressed(true);
-        keyboardFocus.onPressIn();
-      }}
-      onPressOut={() => {
-        setPressed(false);
-        keyboardFocus.onPressOut();
-      }}
-      onFocus={keyboardFocus.onFocus}
-      onBlur={keyboardFocus.onBlur}
-      accessibilityRole="button"
-      accessibilityLabel={resolvedAccessibilityLabel}
-      accessibilityState={{ disabled, selected }}
-      style={[
-        styles.container,
-        {
-          backgroundColor,
-          borderColor,
-          borderWidth: activeTokens.semantic.border.thin,
-          borderRadius,
-        },
-        focusRingStyle,
-      ]}
-    >
-      <View style={styles.leftGroup}>
-        <View style={[styles.leadingBadge, { backgroundColor: badgeBg }]}>
-          {icon ? (
-            <MaterialCommunityIcons
-              name={icon}
-              size={activeTokens.semantic.icon.sm}
-              color={badgeContentColor}
-            />
-          ) : (
-            <Text
-              allowFontScaling
-              maxFontSizeMultiplier={activeTokens.semantic.typography.maxScale}
-              style={[styles.indexText, { color: badgeContentColor }]}
-            >
-              {index !== undefined ? String(index) : ''}
-            </Text>
-          )}
+    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+      <Pressable
+        onPress={onPress}
+        disabled={disabled}
+        onPressIn={() => {
+          setPressed(true);
+          keyboardFocus.onPressIn();
+        }}
+        onPressOut={() => {
+          setPressed(false);
+          keyboardFocus.onPressOut();
+        }}
+        onFocus={keyboardFocus.onFocus}
+        onBlur={keyboardFocus.onBlur}
+        accessibilityRole="button"
+        accessibilityLabel={resolvedAccessibilityLabel}
+        accessibilityState={{ disabled, selected }}
+        style={[
+          styles.container,
+          {
+            backgroundColor,
+            borderColor,
+            borderWidth: activeTokens.semantic.border.thin,
+            borderRadius,
+          },
+          focusRingStyle,
+        ]}
+      >
+        <View style={styles.leftGroup}>
+          <View style={[styles.leadingBadge, { backgroundColor: badgeBg }]}>
+            {icon ? (
+              <MaterialCommunityIcons
+                name={icon}
+                size={activeTokens.semantic.icon.sm}
+                color={badgeContentColor}
+              />
+            ) : (
+              <Text
+                allowFontScaling
+                maxFontSizeMultiplier={activeTokens.semantic.typography.maxScale}
+                style={[styles.indexText, { color: badgeContentColor }]}
+              >
+                {index !== undefined ? String(index) : ''}
+              </Text>
+            )}
+          </View>
+          <Text
+            allowFontScaling
+            style={[styles.optionLabel, { color: labelColor }]}
+          >
+            {label}
+          </Text>
         </View>
-        <Text
-          allowFontScaling
-          style={[styles.optionLabel, { color: labelColor }]}
-        >
-          {label}
-        </Text>
-      </View>
 
-      {selected && (
-        <MaterialCommunityIcons
-          name="check-circle"
-          size={activeTokens.semantic.icon.md}
-          color={activeTokens.semantic.color.action}
-        />
-      )}
-    </Pressable>
+        {selected && (
+          <MaterialCommunityIcons
+            name="check-circle"
+            size={activeTokens.semantic.icon.md}
+            color={activeTokens.semantic.color.action}
+          />
+        )}
+      </Pressable>
+    </Animated.View>
   );
 };
 

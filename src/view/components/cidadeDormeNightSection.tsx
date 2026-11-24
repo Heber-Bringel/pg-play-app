@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useMemo, useRef } from 'react';
+import { Animated, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type {
   CidadeDormePlayer,
@@ -17,7 +17,11 @@ export type CidadeDormeNightSectionProps = {
   currentPlayer: CidadeDormePlayer | null;
   selectedNightTargetId: string | null;
   hasSubmittedNightAction?: boolean;
+  isNightCardRevealed?: boolean;
   secondsRemaining: number;
+  reduceMotion?: boolean;
+  onToggleNightCardVisibility?: () => void;
+  onHideNightCard?: () => void;
   onSelectNightTarget: (targetPlayerId: string) => void;
   onConfirmAssassinTarget: () => Promise<void>;
   onConfirmAngelProtection: () => Promise<void>;
@@ -29,7 +33,11 @@ export const CidadeDormeNightSection = ({
   currentPlayer,
   selectedNightTargetId,
   hasSubmittedNightAction = false,
+  isNightCardRevealed = false,
   secondsRemaining,
+  reduceMotion = false,
+  onToggleNightCardVisibility,
+  onHideNightCard,
   onSelectNightTarget,
   onConfirmAssassinTarget,
   onConfirmAngelProtection,
@@ -37,6 +45,25 @@ export const CidadeDormeNightSection = ({
 }: CidadeDormeNightSectionProps) => {
   const activeTokens = useTheme('dark');
   const styles = useMemo(() => createStyles(activeTokens), [activeTokens]);
+  const narratorFadeAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (reduceMotion) {
+      narratorFadeAnim.setValue(1);
+      return;
+    }
+    narratorFadeAnim.setValue(0.6);
+    Animated.timing(narratorFadeAnim, {
+      toValue: 1,
+      duration: activeTokens.semantic.motion.duration.short,
+      useNativeDriver: true,
+    }).start();
+  }, [
+    activeTokens.semantic.motion.duration.short,
+    narratorFadeAnim,
+    reduceMotion,
+    room.narratorCaption,
+  ]);
 
   const alivePlayers = room.players.filter((p) => p.isAlive);
   const isAlive = Boolean(currentPlayer?.isAlive);
@@ -68,6 +95,7 @@ export const CidadeDormeNightSection = ({
       if (currentPlayer && player.id === currentPlayer.id) return false;
       return true;
     }
+    // Anjo pode proteger qualquer jogador vivo, inclusive a si mesmo
     return true;
   });
 
@@ -106,8 +134,8 @@ export const CidadeDormeNightSection = ({
 
   return (
     <View style={styles.container}>
-      <View
-        style={styles.narratorBanner}
+      <Animated.View
+        style={[styles.narratorBanner, { opacity: narratorFadeAnim }]}
         accessibilityRole="text"
         accessibilityLabel={`Legenda do Narrador: ${room.narratorCaption}`}
       >
@@ -126,7 +154,7 @@ export const CidadeDormeNightSection = ({
             {room.narratorCaption}
           </Text>
         </View>
-      </View>
+      </Animated.View>
 
       {!isAlive && (
         <View
@@ -146,7 +174,11 @@ export const CidadeDormeNightSection = ({
       )}
 
       <View style={styles.timerRow}>
-        <ExpressiveTimer secondsRemaining={secondsRemaining} themeMode="dark" />
+        <ExpressiveTimer
+          secondsRemaining={secondsRemaining}
+          reduceMotion={reduceMotion}
+          themeMode="dark"
+        />
       </View>
 
       <GameCard
@@ -157,7 +189,32 @@ export const CidadeDormeNightSection = ({
         themeMode="dark"
       />
 
-      {hasVerdictThisRound && room.detectiveVerdict ? (
+      {!isAlive || !isNightCardRevealed ? (
+        <View style={styles.sleepingCard}>
+          <MaterialCommunityIcons
+            name="sleep"
+            size={activeTokens.semantic.icon.lg}
+            color={activeTokens.semantic.color.onSurface}
+          />
+          <Text allowFontScaling style={styles.sleepingTitle}>
+            A Cidade Dorme... Mantenha os olhos fechados
+          </Text>
+          <Text allowFontScaling style={styles.sleepingSubtitle}>
+            Aguarde o Narrador conduzir os turnos noturnos até o amanhecer.
+          </Text>
+          {isAlive && (
+            <ExpressiveButton
+              label="Tocar para Consultar Turno"
+              variant="tonal"
+              icon="eye-outline"
+              themeMode="dark"
+              onPress={() => {
+                onToggleNightCardVisibility?.();
+              }}
+            />
+          )}
+        </View>
+      ) : hasVerdictThisRound && room.detectiveVerdict ? (
         <View
           style={[
             styles.verdictCard,
@@ -235,6 +292,15 @@ export const CidadeDormeNightSection = ({
               Investigação concluída — aguarde o término do cronômetro para o amanhecer.
             </Text>
           </View>
+          <ExpressiveButton
+            label="Ocultar Tela Noturna"
+            variant="outlined"
+            icon="eye-off-outline"
+            themeMode="dark"
+            onPress={() => {
+              (onHideNightCard ?? onToggleNightCardVisibility)?.();
+            }}
+          />
         </View>
       ) : isMyActiveTurn ? (
         <View style={styles.nightCard}>
@@ -266,6 +332,7 @@ export const CidadeDormeNightSection = ({
                 index={index + 1}
                 label={player.nickname}
                 themeMode="dark"
+                reduceMotion={reduceMotion}
                 selected={selectedNightTargetId === player.id}
                 onPress={() => onSelectNightTarget(player.id)}
               />
@@ -282,20 +349,39 @@ export const CidadeDormeNightSection = ({
               void handleConfirmNightAction();
             }}
           />
+
+          <ExpressiveButton
+            label="Ocultar Tela Noturna"
+            variant="outlined"
+            icon="eye-off-outline"
+            themeMode="dark"
+            onPress={() => {
+              (onHideNightCard ?? onToggleNightCardVisibility)?.();
+            }}
+          />
         </View>
       ) : (
         <View style={styles.sleepingCard}>
           <MaterialCommunityIcons
-            name="sleep"
+            name="eye-off-outline"
             size={activeTokens.semantic.icon.lg}
             color={activeTokens.semantic.color.onSurface}
           />
           <Text allowFontScaling style={styles.sleepingTitle}>
-            A Cidade Dorme... Mantenha os olhos fechados
+            Não é seu turno de ação — mantenha os olhos fechados
           </Text>
           <Text allowFontScaling style={styles.sleepingSubtitle}>
-            Aguarde o Narrador conduzir os turnos noturnos até o amanhecer.
+            Oculte a tela para manter o sigilo da rodada na mesa.
           </Text>
+          <ExpressiveButton
+            label="Ocultar Tela Noturna"
+            variant="outlined"
+            icon="eye-off-outline"
+            themeMode="dark"
+            onPress={() => {
+              (onHideNightCard ?? onToggleNightCardVisibility)?.();
+            }}
+          />
         </View>
       )}
     </View>
@@ -352,6 +438,8 @@ const createStyles = (activeTokens: AppTokens) => {
       alignItems: 'center',
     },
     nightCard: {
+      minHeight: space['3xl'] * 4,
+      justifyContent: 'center',
       backgroundColor: card.bg,
       borderColor: card.border,
       borderWidth: border.thin,
@@ -371,6 +459,8 @@ const createStyles = (activeTokens: AppTokens) => {
       gap: space.sm,
     },
     verdictCard: {
+      minHeight: space['3xl'] * 4,
+      justifyContent: 'center',
       padding: card.padding,
       borderWidth: border.focus,
       gap: space.md,
@@ -438,6 +528,8 @@ const createStyles = (activeTokens: AppTokens) => {
       color: banner.info.text,
     },
     sleepingCard: {
+      minHeight: space['3xl'] * 4,
+      justifyContent: 'center',
       backgroundColor: card.bg,
       borderColor: card.border,
       borderWidth: border.thin,

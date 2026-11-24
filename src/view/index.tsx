@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { GameModalityFilter } from '@/model/entities/minigame';
@@ -6,7 +6,15 @@ import { ExpressiveButton } from '@/view/components/expressiveButton';
 import { ExpressiveChip } from '@/view/components/expressiveChip';
 import { ExpressiveTag } from '@/view/components/expressiveTag';
 import { GameCard } from '@/view/components/gameCard';
-import { useTheme, type AppTokens } from '@/view/theme';
+import {
+  ThemeModePanel,
+  ThemeModeToggleButton,
+} from '@/view/components/themeModeSwitcher';
+import {
+  useTheme,
+  useThemePreference,
+  type AppTokens,
+} from '@/view/theme';
 import { useHubViewModel } from '@/viewmodel/useHubViewModel';
 
 type ModalityOption = {
@@ -28,6 +36,9 @@ const MODALITY_OPTIONS: ModalityOption[] = [
 export const HubScreen = () => {
   const [state, actions] = useHubViewModel();
   const activeTokens = useTheme();
+  const { preference: themePreference, setPreference: setThemePreference } =
+    useThemePreference();
+  const [themePanelExpanded, setThemePanelExpanded] = useState<boolean>(false);
   const styles = useMemo(() => createStyles(activeTokens), [activeTokens]);
 
   if (state.loading) {
@@ -94,11 +105,26 @@ export const HubScreen = () => {
               color={activeTokens.semantic.color.onActionContainer}
             />
           </View>
-          <ExpressiveTag
-            label={`${state.games.length} de ${state.allGamesCount} jogos`}
-            tone="neutral"
-          />
+          <View style={styles.brandActions}>
+            <ExpressiveTag
+              label={`${state.games.length} de ${state.allGamesCount} jogos`}
+              tone="neutral"
+            />
+            <ThemeModeToggleButton
+              preference={themePreference}
+              expanded={themePanelExpanded}
+              onPress={() => setThemePanelExpanded((prev) => !prev)}
+            />
+          </View>
         </View>
+
+        {themePanelExpanded && (
+          <ThemeModePanel
+            preference={themePreference}
+            onSelectPreference={setThemePreference}
+            onMinimize={() => setThemePanelExpanded(false)}
+          />
+        )}
 
         <Text allowFontScaling style={styles.title}>
           PG PLAY
@@ -248,7 +274,15 @@ const createStyles = (activeTokens: AppTokens) => {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
+      flexWrap: 'wrap',
+      gap: space.sm,
       marginBottom: space.xs,
+    },
+    brandActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flexWrap: 'wrap',
+      gap: space.sm,
     },
     brandBadge: {
       width: space['2xl'],
