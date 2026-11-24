@@ -74,4 +74,6 @@ Lê os `.tsx` de `src/view/` com o parser do TypeScript e confere o checklist ac
 
 **Modos:** `--files <arquivos>`, `--staged` (conteúdo preparado no Git, usado pelo hook), `--root <pasta>` (testes) e `--tempo`.
 
-**Hook de `pre-commit`:** `.githooks/pre-commit`, instalado sozinho no `npm install` pelo script `prepare` (`scripts/instalar-hooks.mjs`, que define `core.hooksPath = .githooks` e é ignorado em CI, Vercel e EAS). Se o hook não estiver ativo, rode `git config core.hooksPath .githooks`. Commits sem arquivos de `src/view/` terminam na hora, sem carregar o TypeScript.
+**Git Hooks** (instalados sozinhos no `npm install` pelo script `prepare` → `scripts/instalar-hooks.mjs`, que define `core.hooksPath = .githooks` e é ignorado em CI, Vercel e EAS; se não estiverem ativos, rode `git config core.hooksPath .githooks`):
+- **`.githooks/pre-commit`:** roda este verificador em modo `--staged`, só nos arquivos de `src/view/` do commit. Commits sem telas terminam na hora, sem carregar o TypeScript.
+- **`.githooks/pre-push`:** roda `check-arquitetura.mjs` e este verificador no projeto inteiro (~1 s) e cancela o push se algum falhar. `tsc` e `jest` ficam no `npm run check`.

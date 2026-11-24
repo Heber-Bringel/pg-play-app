@@ -96,7 +96,16 @@ Adotamos o **GitHub Spec Kit** (`.specify/` e `specs/`) aliado ao **Harness MVVM
    ```bash
    npm run check
    ```
-   *(Executa `node scripts/check-arquitetura.mjs && tsc --noEmit && jest --passWithNoTests`)*
+   *(Executa `node scripts/check-arquitetura.mjs && node scripts/check-design-system.mjs && tsc --noEmit && jest --passWithNoTests`)*
+
+   Dois **Git Hooks** reforçam essa verificação automaticamente. Eles são instalados no `npm install` (script `prepare`, que define `core.hooksPath = .githooks`); se não estiverem ativos, rode `git config core.hooksPath .githooks`.
+
+   | Hook | Quando roda | O que verifica | Tempo |
+   | :--- | :--- | :--- | :--- |
+   | `.githooks/pre-commit` | `git commit` | Design System (`check-design-system.mjs --staged`) só nos arquivos de `src/view/` do commit | Imediato sem telas; menos de 0,5 s com telas |
+   | `.githooks/pre-push` | `git push` | Arquitetura MVVM (`check-arquitetura.mjs`) e Design System no projeto inteiro | Cerca de 1 s |
+
+   Os hooks analisam os arquivos da sua pasta de trabalho e **não substituem** o `npm run check`: `tsc` e `jest` só rodam no `check`. Regras e exceções do Design System: [`docs/harness/04-views-e-design-system.md`](docs/harness/04-views-e-design-system.md) (seção 5).
 5. **Abra o Pull Request** preenchendo integralmente o template [`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md) e vinculando a Issue (`Closes #X`) e a pasta `specs/NNN-slug/`.
 
 ---
