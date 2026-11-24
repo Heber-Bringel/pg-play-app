@@ -39,6 +39,17 @@ A pessoa desenvolvedora altera uma tela ou componente em `src/view/` e tenta faz
 
 ---
 
+### História de Usuário 2b — Barrar o push com violação de arquitetura ou Design System (Prioridade: P1, adendo)
+
+Hoje nenhuma verificação roda antes do push, e a CI só roda em PRs para a `main`, enquanto os PRs do grupo vão para a `develop`.
+
+**Cenários de Aceitação (Dado / Quando / Então):**
+
+1. **Dado** um commit local com violação de arquitetura (ex.: import relativo em `src/`) ou de Design System, **Quando** a pessoa roda `git push`, **Então** o hook `pre-push` cancela o envio e mostra os erros dos verificadores.
+2. **Dado** que os dois verificadores passam, **Quando** roda `git push`, **Então** o envio segue normalmente, em cerca de 1 segundo a mais.
+
+---
+
 ### História de Usuário 3 — Instalação automática do hook para todo o grupo (Prioridade: P2)
 
 **Cenários de Aceitação (Dado / Quando / Então):**
@@ -75,6 +86,8 @@ A pessoa desenvolvedora altera uma tela ou componente em `src/view/` e tenta faz
 - **`RF-03`**: Modos de execução: projeto inteiro (padrão), `--files <lista>` e `--staged` (conteúdo preparado no Git).
 - **`RF-04`**: Hook `.githooks/pre-commit` chamando o verificador em modo `--staged`, instalado por `npm install` via script `prepare` (`scripts/instalar-hooks.mjs`) que ignora ambientes sem Git ou de CI.
 - **`RF-05`**: `package.json` com `"check:ds"` e o `"check"` incluindo o novo verificador.
+- **`RF-07`** *(adendo de 2026-11-24)*: Hook `.githooks/pre-push` rodando `check-arquitetura.mjs` e `check-design-system.mjs` no projeto inteiro antes de cada `git push`; com qualquer erro, o push é cancelado. `tsc` e `jest` ficam fora do hook para não atrasar o push (continuam no `npm run check`).
+- **`RF-08`** *(adendo)*: `CONTRIBUTING.md` descreve o `npm run check` atual e os dois hooks (`pre-commit` e `pre-push`).
 - **`RF-06`**: Ajustar o código atual para começar com **0 erros**: `GameCard` declara `minHeight` por token; `cidadeDormeCityPanel` e `cidadeDormePhaseTimeline` passam a usar `useTheme()` em vez de `tokens` estático.
 
 ### Entidades de Domínio Envolvidas (`src/model/entities/`)

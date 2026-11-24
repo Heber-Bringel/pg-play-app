@@ -40,6 +40,12 @@
 
 - [x] **T015** `docs/harness/04-views-e-design-system.md`: seção "Verificador do Design System" com as 5 regras, a exceção `ds-ignore-next-line` e como o hook é instalado
 
+## Fase 5b: Adendo — verificação antes do push
+
+- [x] **T019** Criar `.githooks/pre-push` (`sh`, LF, executável) rodando `check-arquitetura.mjs` e `check-design-system.mjs`
+- [x] **T020** Atualizar `CONTRIBUTING.md` (passo 4) e `docs/harness/04-views-e-design-system.md` com o `check` atual e os dois hooks
+- [x] **T021** Teste manual com `git push --dry-run`: import relativo temporário em `src/view/` cancelou o push (`GLOBAL-IMPORT-RELATIVO`); sem ele, liberou. Tempo do hook: ~540 ms no Windows
+
 ## Fase 6: Verificação e PR
 
 - [x] **T016** Teste manual do hook: commit com `padding: 13` bloqueado (nenhum commit criado), commit sem `src/view/` liberado. Tempos registrados no `CS-03` da spec
