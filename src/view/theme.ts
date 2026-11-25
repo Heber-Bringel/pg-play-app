@@ -390,7 +390,8 @@ export function createTokens(mode: ThemeMode = 'light') {
       paperBg: semantic.color.canvasPaper,
       border: semantic.color.outline,
       radius: semantic.radius.lg,
-      minHeight: semantic.space['3xl'] * 4,
+      minHeight: semantic.space['3xl'] * 5,
+      expandedMinHeight: semantic.space['3xl'] * 6,
       pen: {
         ink: semantic.color.canvasInk,
         purple: semantic.color.canvasPurple,
