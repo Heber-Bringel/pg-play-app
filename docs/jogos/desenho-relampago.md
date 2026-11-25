@@ -1,70 +1,98 @@
-# 🎨 Especificação de Jogo: Desenho Relâmpago (Modo 1 Celular)
+# 🎨 Especificação de Jogo: Desenho Relâmpago (Sala Multiplayer)
 
-> **Modalidade:** 1 Celular Compartilhado (Por Equipes / Offline)  
-> **Caso de Uso:** `UC12` · **Requisitos:** `RF41`, `RF42`, `RF43`, `RF44`, `RF09`–`RF12`, `RF24`, `RF28`–`RF31`  
-> **Sistema de Design:** [`PG Play Expressive`](../../design-system/README.md) (`DrawingCanvas`, `ExpressiveTimer`, `GameCard`, `ExpressiveButton`, `ExpressiveChip`, `ExpressiveTag`)
+> **Modalidade:** Sala Multiplayer (1 Celular por Jogador via PIN · Realtime + Fallback `Memory*`)  
+> **Caso de Uso:** `UC12` · **Requisitos:** `RF41`, `RF42`, `RF43`, `RF44`, `RF09`–`RF12`, `RF28`–`RF30`, `RNF01`–`RNF11`  
+> **Sistema de Design:** [`PG Play Expressive`](../../design-system/README.md) (`DrawingCanvas`, `ExpressiveTimer`, `ExpressiveTextField`, `GameCard`, `ExpressiveButton`, `ExpressiveChip`, `ExpressiveTag`, `ConfirmModal`)
 
 ---
 
 ## 1. Visão Geral
 
-O **Desenho Relâmpago** é uma dinâmica visual em **1 celular compartilhado** pensada para incluir participantes que preferem se expressar desenhando em vez de falar ou fazer mímica na frente do grupo. O representante da equipe da vez confere uma palavra secreta concreta, oculta a palavra da tela e a desenha com o dedo na folha digital enquanto sua equipe tenta adivinhar o máximo de desenhos antes de o cronômetro zerar.
+O **Desenho Relâmpago** é uma dinâmica visual em **Sala Multiplayer** (estilo *Gartic*, adaptada ao PG presencial), onde cada participante joga no próprio celular entrando via código PIN sem cadastro (**RNF03**). A cada turno, um jogador assume o papel de **Desenhista**: a palavra secreta aparece em destaque no início do turno por **5 segundos** e depois desaparece automaticamente para o **canvas se expandir e ocupar a área do tema**, permitindo desenhar com pincel livre ou formas geométricas (linha, retângulo, círculo e triângulo — contorno ou preenchido). Os demais jogadores acompanham o desenho **em tempo real** no próprio aparelho e digitam palpites com validação automática e pontuação por rapidez.
 
-- **Participantes:** `2` a `6` equipes; um representante desenhista por turno, alternado a cada equipe.
-- **Duração padrão de um turno:** `90s` por equipe (ajustável entre `60s`, `90s` e `120s`).
-- **Conteúdo:** banco local próprio de palavras concretas e "desenháveis", organizado em 5 pacotes selecionáveis por chips: **Bíblico** (ex.: *Arca de Noé*, *Tábua dos Dez Mandamentos*, *Cova dos Leões*), **Animais** (ex.: *Girafa*, *Polvo*, *Borboleta*), **Objetos** (ex.: *Guarda-chuva*, *Violão*, *Lanterna*), **Comidas** (ex.: *Melancia*, *Pipoca*, *Sorvete*) e **Lugares e Natureza** (ex.: *Vulcão*, *Farol*, *Ilha Deserta*).
-- **Regra de honra (`RF42`):** é proibido escrever letras, sílabas, números ou falar/apontar dicas; o aviso *"Sem letras nem números"* permanece visível na arena durante todo o turno.
+- **Participantes:** `2` a `16` jogadores na mesma sala (o próprio Anfitrião/Moderador joga normalmente).
+- **Duração padrão de um turno:** `90s` por desenhista (ajustável entre `60s`, `90s` e `120s`).
+- **Conteúdo:** banco próprio de palavras concretas e "desenháveis", organizado em 5 pacotes selecionáveis por chips no Lobby: **Bíblico** (ex.: *Arca de Noé*, *Tábua dos Dez Mandamentos*, *Cova dos Leões*), **Animais** (ex.: *Girafa*, *Polvo*, *Borboleta*), **Objetos** (ex.: *Guarda-chuva*, *Violão*, *Lanterna*), **Comidas** (ex.: *Melancia*, *Pipoca*, *Sorvete*) e **Lugares e Natureza** (ex.: *Vulcão*, *Farol*, *Ilha Deserta*).
+- **Isolamento do segredo (`RNF11`):** apenas o Desenhista da vez recebe a palavra secreta; os adivinhadores recebem somente a categoria e os traços/formas sincronizados em tempo real.
+- **Regra de honra (`RF42`):** é proibido desenhar letras, sílabas ou números; o aviso *"Sem letras nem números"* permanece indicado na folha de desenho.
 
 ---
 
-## 2. Parâmetros da Partida (`RF28`, `RF29`, `RF44`)
+## 2. Parâmetros da Sala (`RF28`, `RF29`, `RF44`)
+
+Configurados pelo **Anfitrião** no Lobby antes de iniciar a partida:
 
 | Parâmetro | Padrão | Opções |
 | :--- | :---: | :--- |
+| Jogadores na sala | `2+` | `2` a `16` participantes (entrada por código PIN + apelido, sem login) |
 | Tempo por turno | `90s` | `60s`, `90s`, `120s` |
-| Pontos por acerto (`RF43`) | `+20 pts` | fixo |
-| Penalidade por pular palavra (`RF43`) | `-5 pts` | fixo (a pontuação acumulada da equipe nunca fica negativa; piso `0`) |
-| Número de rodadas | `3` | `1` a `5` (cada rodada = todas as equipes jogam uma vez) |
+| Número de rodadas | `2` | `1` a `5` (cada rodada = todos os jogadores da sala desenham 1 vez) |
 | Pacotes desenháveis (`RF44`) | Todos selecionados | seleção múltipla por `ExpressiveChip` (*Bíblico*, *Animais*, *Objetos*, *Comidas*, *Lugares e Natureza*); ao menos 1 ativo |
+| Exibição inicial do tema (`RF42`) | `5s` | fixo (`5s` no início do turno; botão discreto **"Espiar palavra"** exibe novamente por `3s` para o desenhista) |
 
 ---
 
 ## 3. Fluxo Completo da Partida
 
-### 🚪 Fase 1 — Passagem de Turno (`pass-turn`)
-1. O sistema exibe um card (`GameCard`) com **"Vez da Equipe [Nome]"** (**RF09**), os seletores rápidos de tempo, rodadas e pacotes de palavras (editáveis antes de iniciar a partida) e o botão `Primário Jumbo` **"Estou Pronto!"** (**RF24**).
-2. O celular é entregue ao representante da equipe da vez. A palavra secreta e a tela de desenho **só aparecem após o toque em "Estou Pronto!"**, impedindo visualização acidental pelo grupo.
+### 🚪 Fase 1 — Lobby da Sala (`lobby`)
+1. O participante escolhe **Criar Sala** (como Anfitrião) ou **Entrar na Sala** informando um apelido (`2` a `20` caracteres) e o código PIN curto (**RNF03**).
+2. A sala exibe o código PIN para compartilhar, a lista de jogadores conectados em tempo real e (para o Anfitrião) os controles de **Pacotes Desenháveis**, **Tempo por turno** (`60s` / `90s` / `120s`) e **Rodadas** (`1` a `5`).
+3. Com pelo menos `2` jogadores na sala, o Anfitrião toca no botão `Primário Jumbo` **"Começar Partida!"** (`64 dp`), iniciando o 1º turno.
 
-### 🎨 Fase 2 — Arena do Desenho (`drawing`)
-1. **Cronômetro e Feedback Tátil:** o `ExpressiveTimer` inicia a contagem regressiva (`MM:SS`), entra em **Modo Crítico** nos últimos `10s` (cor `error`, forma `16 dp`, ícone `alert` e pulsação respeitando `useReduceMotion`) e dispara os pulsos táteis via `IGameFeedbackUseCases` até `00:00` (`bell-ring`) (**RF10**).
-2. **Palavra Secreta e Regra de Honra (`RF42`):**
-   - No início de cada nova carta, a palavra secreta aparece em destaque com o botão tonal **"Esconder do Grupo"** (ícone `eye-off-outline`).
-   - Ao tocar em **"Esconder do Grupo"**, a palavra é substituída pelo selo seguro *"Palavra oculta — só o desenhista sabe"* (com opção **"Mostrar Palavra"** para espiar rapidamente), liberando o grupo para olhar diretamente para o celular enquanto o representante desenha!
-   - Banner/aviso constante de regra de honra: *"Sem letras nem números"*.
-3. **Tela de Desenho (`DrawingCanvas` — `RF41`):**
-   - Folha de papel clara (`canvas.paperBg` = `#FDF8FF`) com traço contínuo ao arrastar o dedo (`react-native-svg` + `PanResponder`), bloqueando a rolagem vertical da tela durante o gesto de desenho.
-   - Barra de ferramentas com **4 cores acessíveis** (*Grafite*, *Roxo*, *Coral* e *Verde*), **2 espessuras** (*Fina 4 dp* e *Grossa 8 dp*), **"Desfazer"** (remove o último traço) e **"Limpar"** (apaga todos os traços da palavra atual).
-4. **Ações de Resultado (`RF43`):**
-   - ✅ **"Acertaram! (+20 pts)"** (`ExpressiveButton` variante `successJumbo`, `64 dp`): soma `+20 pts` à equipe da vez, limpa os traços da tela, sorteia a próxima palavra (com palavra inicialmente visível para o desenhista conferir antes de esconder) e mantém o cronômetro correndo.
-   - ⏭️ **"Pular (-5 pts)"** (`ExpressiveButton` variante `secondary`, `48 dp`): desconta `5` pontos da equipe (respeitando o piso `0`), limpa os traços da tela e sorteia outra palavra.
-5. **Saída Segura (`RF11`):** botão **"Sair"** (delineado) no canto superior esquerdo, afastado dos botões de pontuação e da folha de desenho, pausando o cronômetro enquanto o `ConfirmModal` está aberto.
+### 🎨 Fase 2 — Turno de Desenho e Adivinhação (`drawing`)
+1. **Cronômetro e Feedback Tátil (`RF10`):** o `ExpressiveTimer` sincronizado (`phaseEndsAt`) conta regressivamente em todos os celulares, entra em **Modo Crítico** nos últimos `10s` (cor `error`, raio `16 dp`, ícone `alert`) e dispara pulsos táteis via `IGameFeedbackUseCases` respeitando `useReduceMotion`.
+2. **Visão do Desenhista — Tema Temporário de 5s e Canvas Expandido (`RF42`):**
+   - No instante em que o turno começa, um card/faixa de destaque exibe a **palavra secreta** (em `font.display`, `30 dp`), a categoria e a regra *"Sem letras nem números"* com contagem regressiva de **`5 segundos`**.
+   - Ao concluir os **`5 segundos`**, o bloco do tema **desaparece automaticamente**, e o **`DrawingCanvas` se expande ocupando toda a área que era do tema** (`canvas.expandedMinHeight` / `flex: 1`), maximizando o espaço útil de desenho na tela.
+   - Um botão discreto **"Espiar palavra"** no cabeçalho permite ao desenhista rever a palavra secreta em um banner sobreposto por **`3 segundos`** caso esqueça, sem interromper o cronômetro nem apagar os traços.
+3. **Tela de Desenho com Formas Geométricas (`DrawingCanvas` — `RF41`):**
+   - Folha de papel clara fixa (`canvas.paperBg` = `#FDF8FF`) ocupando a área principal da tela (`canvas.expandedMinHeight`), com `react-native-svg` + `PanResponder` e trava de rolagem vertical durante o gesto.
+   - **Ferramentas de Desenho:**
+     - **Pincel Livre (`freehand`)**: traço contínuo acompanhando o movimento do dedo.
+     - **4 Formas Geométricas (`line`, `rectangle`, `circle`, `triangle`)**: arraste o dedo do ponto inicial ao ponto final para dimensionar **Linha**, **Retângulo**, **Círculo** ou **Triângulo** com pré-visualização em tempo real antes de soltar.
+     - **Modo de Preenchimento (`stroke` | `fill`)**: alterna entre **Contorno** e **Preenchido** para *Retângulo*, *Círculo* e *Triângulo* (na ferramenta *Linha*, o modo permanece sempre contorno/traço).
+   - **Cores, Espessuras e Edição:**
+     - **4 cores acessíveis** (*Grafite*, *Roxo*, *Coral* e *Verde*);
+     - **2 espessuras** (*Fina 4 dp* e *Grossa 8 dp*);
+     - **"Desfazer"** (remove o último traço/forma sincronizado) e **"Limpar"** (apaga todos os elementos da folha atual).
+   - Cada elemento finalizado (traço ou forma), bem como *"Desfazer"* e *"Limpar"*, é sincronizado em tempo real para todos os jogadores da sala.
+4. **Visão dos Adivinhadores — Acompanhamento em Tempo Real e Palpites (`RF43`):**
+   - Exibem o `DrawingCanvas` expandido em modo **somente leitura** (`readOnly={true}`, sem barra de ferramentas e sem opacidade reduzida), renderizando traços e formas conforme o desenhista cria.
+   - Acima/abaixo da folha veem a **categoria da palavra** (nunca o texto secreto — `RNF11`), o histórico recente de palpites da sala e um campo `ExpressiveTextField` + botão **"Enviar"** para chutar a palavra.
+   - **Validação automática:** o sistema normaliza o palpite (ignora maiúsculas/minúsculas, acentos, cedilha e espaços extras).
+     - Se o palpite **acertar**, o texto exato **não é exibido no chat público** (exibe o selo *"✅ [Jogador] acertou!"*), o jogador recebe os pontos imediatamente e o campo de palpite é bloqueado para ele até o próximo turno.
+     - Se **errar**, o palpite aparece no feed de tentativas da sala para ajudar ou divertir o grupo.
+   - **Fim do Turno:** encerra automaticamente quando o cronômetro chega a `00:00` **ou** assim que **todos os adivinhadores da sala acertam a palavra**.
+5. **Saída Segura (`RF11`):** botão **"Sair"** (delineado) no canto superior esquerdo abre `ConfirmModal` antes de desconectar o jogador da sala.
 
-### 🔔 Fase 3 — Resumo do Turno (`turn-summary`)
-1. Ao chegar a `00:00`, o `DrawingCanvas` e os botões de pontuação são bloqueados imediatamente.
-2. O app exibe o resumo do turno: desenhos acertados, palavras puladas (revelando também a última palavra em andamento, sem pontuar) e o saldo de pontos conquistados pela equipe.
-3. O toque em **"Próxima Equipe"** (ou **"Ver Resumo Final"** no último turno) limpa o estado do turno e avança a partida.
+### 🔔 Fase 3 — Resumo do Turno (`turn_summary`)
+1. Ao encerrar o turno, o `DrawingCanvas` é bloqueado para edição e a **palavra secreta é revelada** para toda a sala junto ao desenho final.
+2. Exibe quem acertou na ordem de chegada, os pontos ganhos por cada jogador (incluindo o desenhista) e o placar atualizado da sala.
+3. O Anfitrião toca em **"Próximo Desenhista"** (ou **"Ver Pódio Final"** no último turno) para avançar a fila de desenhistas.
 
-### 🏁 Fase 4 — Encerramento (`finished`)
-- Quando todas as equipes completam as rodadas configuradas **ou** quando o banco de palavras selecionado se esgota (**RF12**, **RF30**), o sistema exibe o card de conclusão com o resumo da partida e o botão **"Ir para o Placar Final"** (**RF31**), levando ao Placar Geral (`UC06`).
+### 🏆 Fase 4 — Pódio Final (`finished`)
+- Quando todos os jogadores completam as rodadas configuradas **ou** o banco de palavras dos pacotes selecionados se esgota (**RF12**, **RF30**), o sistema exibe o **Pódio Final da Sala** com ranking ordenado e destaques:
+  - 🥇 **Campeão Geral** (maior pontuação total na sala);
+  - 🎨 **Melhor Artista** (mais pontos acumulados desenhando);
+  - ⚡ **Olho de Águia** (mais acertos em 1º lugar).
+- Oferece **"Jogar Novamente"** (reinicia no Lobby mantendo os participantes) ou **"Voltar ao Hub"**.
 
 ---
 
-## 4. Regras de Pontuação e Banco de Palavras
+## 4. Regras de Pontuação e Banco de Palavras (`RF43`)
 
-- **Sem repetição de acertos (`RF30`):** uma palavra acertada nunca volta a ser sorteada na mesma partida.
-- **Reciclagem de puladas:** palavras puladas vão para o fim de uma fila secundária e só retornam ao sorteio caso todas as palavras inéditas dos pacotes selecionados se esgotem antes do término das rodadas.
-- **Limpeza automática:** ao acertar, pular ou encerrar o turno, a lista de traços (`strokes`) é zerada automaticamente para a próxima palavra/equipe.
-- **Piso zero (`RF43`):** se a equipe tiver `0` pontos (ou menos de `5`, ex.: `3 pts`), pular reduz a pontuação apenas até `0 pts`, nunca deixando saldo total negativo no placar.
+| Evento no Turno | Pontuação | Regra |
+| :--- | :---: | :--- |
+| **1º adivinhador a acertar** | `+20 pts` | Máxima pontuação pela rapidez |
+| **2º adivinhador a acertar** | `+15 pts` | Bônus de vice-liderança no turno |
+| **3º+ adivinhadores a acertar** | `+10 pts` | Incentiva todos a continuarem tentando |
+| **Desenhista (1º acerto na sala)** | `+10 pts` | Recompensa quando o desenho é compreendido |
+| **Desenhista (cada acerto extra)** | `+5 pts` | Incentiva clareza para o grupo inteiro acertar |
+| **Ninguém acertou / Pular turno** | `0 pts` | Sem pontuação negativa; palavra revelada no resumo |
+
+- **Sem repetição de palavras (`RF30`):** nenhuma palavra sorteada volta a aparecer na mesma partida.
+- **Limpeza automática:** ao iniciar um novo turno, a lista de elementos do canvas (`elements`) e o feed de palpites são zerados automaticamente.
+- **Proteção contra spoiler no chat (`RNF11`):** palpites corretos são interceptados na validação e substituídos por confirmação de acerto sem vazar a palavra para quem ainda não adivinhou.
 
 ---
 
@@ -72,19 +100,19 @@ O **Desenho Relâmpago** é uma dinâmica visual em **1 celular compartilhado** 
 
 | Elemento da Tela | Componente / Token do Design System | Regra de Acessibilidade (WCAG 2.1 / M3 Expressive) |
 | :--- | :--- | :--- |
-| **Equipe da vez e rodada** | `GameCard` + `ExpressiveTag` | Contraste `>= 4,5:1`; anunciado via `accessibilityLiveRegion="polite"`. |
-| **Contagem regressiva** | `ExpressiveTimer` (`reduceMotion`) | Modo crítico (`<= 10s`) combina cor + forma (`16 dp`) + ícone `alert`; vibração via `IGameFeedbackUseCases` respeitando `Reduce Motion`. |
-| **Palavra secreta e regra** | `GameCard` / `ExpressiveTag` + `ExpressiveButton` | Tipografia `font.display` (`30 dp`); estado oculto anunciado claramente no `accessibilityLabel`. |
-| **Folha e ferramentas** | [`DrawingCanvas`](../../design-system/04-componentes/tela-de-desenho.md) (`component.canvas`) | Alvos `>= 48 dp`; 4 cores com contraste `>= 4,88:1` sobre `canvas.paperBg`; seleção de cor indicada por forma (`9999 dp` → `16 dp`) + borda + ícone `check` + rótulo textual (`"Cor Grafite"`, etc.). |
-| **Acertaram / Pular / Sair** | `ExpressiveButton` + `ConfirmModal` | Jumbo `64 dp` para acerto; `"Sair"` isolado no topo esquerdo com confirmação modal. |
+| **Lobby, PIN e jogadores** | `GameCard` + `ExpressiveTextField` + `ExpressiveChip` + `ExpressiveButton` | Entrada rápida sem login (`RNF03`); alvos `>= 48 dp` e botão iniciar Jumbo `64 dp`. |
+| **Contagem regressiva** | `ExpressiveTimer` (`reduceMotion`) | Modo crítico (`<= 10s`) combina cor + forma (`16 dp`) + ícone `alert`; pulsos táteis via `IGameFeedbackUseCases`. |
+| **Tema temporário (5s) + Espiar (3s)** | Banner/Overlay temático (`card.*` / `banner.warning.*`) + `ExpressiveButton` (`variant="tonal"`) | Tipografia `font.display` (`30 dp`); anúncio via `accessibilityLiveRegion="polite"` ao exibir e ao recolher; botão *"Espiar palavra"* com `accessibilityLabel` explícito. |
+| **Folha expandida + Formas + Preenchimento** | [`DrawingCanvas`](../../design-system/04-componentes/tela-de-desenho.md) (`component.canvas`) | Área ampliada (`canvas.expandedMinHeight`); alvos `>= 48 dp`; 4 cores `>= 4,88:1` sobre `canvas.paperBg`; seleção de ferramenta/forma/cor/preenchimento indicada por forma (`9999 dp` → `16 dp`) + borda + ícone + rótulo textual. |
+| **Campo de palpite e feed** | `ExpressiveTextField` (`56 dp`) + `ExpressiveButton` + `ExpressiveTag` | Acerto comunicado por cor `success` + ícone `check-circle` + texto (`RNF06`); nunca vaza resposta correta aos demais. |
+| **Saída Segura** | `ExpressiveButton` (`outlined`) + `ConfirmModal` | Isolado no topo esquerdo para evitar saída acidental durante o desenho (`RF11`). |
 
 ---
 
 ## 6. Critérios de Aceite (Dado / Quando / Então)
 
-- **Dado** que é a vez de uma equipe na passagem de turno, **Quando** o representante toca em **"Estou Pronto!"**, **Então** o cronômetro inicia, a palavra secreta aparece para o representante e o `DrawingCanvas` fica pronto em branco.
-- **Dado** que a palavra secreta está visível, **Quando** o representante toca em **"Esconder do Grupo"**, **Então** a palavra é ocultada na tela para que a equipe possa acompanhar o celular sem ver a resposta.
-- **Dado** que o turno está em andamento, **Quando** o representante arrasta o dedo na folha, troca de cor/espessura ou aciona **"Desfazer"** / **"Limpar"**, **Então** os traços respondem em tempo real sem afetar traços anteriores ao mudar a ferramenta.
-- **Dado** um desenho em jogo, **Quando** o representante toca em **"Acertaram! (+20 pts)"**, **Então** a equipe recebe `+20 pts`, a folha é limpa e uma nova palavra inédita é sorteada.
-- **Dado** uma palavra difícil, **Quando** o representante toca em **"Pular (-5 pts)"**, **Então** a equipe perde até `5 pts` (mínimo `0`), a folha é limpa e outra palavra é sorteada.
-- **Dado** que o cronômetro chegou a `00:00`, **Então** o desenho é bloqueado imediatamente e o resumo do turno é exibido antes de passar à próxima equipe.
+- **Dado** que `2` ou mais jogadores entraram na sala com código PIN e o Anfitrião tocou em **"Começar Partida!"**, **Quando** o 1º turno inicia, **Então** o Desenhista vê a palavra secreta em destaque por `5 segundos` enquanto os adivinhadores veem apenas a categoria e a folha em modo somente leitura.
+- **Dado** que se passaram `5 segundos` desde o início do turno, **Quando** o temporizador do tema zera, **Então** o card do tema desaparece automaticamente, o `DrawingCanvas` se expande ocupando o espaço do tema e o botão discreto **"Espiar palavra"** permite rever o tema por `3 segundos`.
+- **Dado** que o Desenhista seleciona **Retângulo**, **Círculo**, **Triângulo** ou **Linha** e alterna entre **Contorno** e **Preenchido**, **Quando** arrasta o dedo na folha, **Então** vê a pré-visualização da forma em tempo real e, ao soltar, a forma é sincronizada imediatamente na tela dos adivinhadores.
+- **Dado** que um adivinhador digita a palavra correta (mesmo sem acento ou com diferença de maiúsculas), **Quando** envia o palpite, **Então** o sistema registra o acerto sem vazar a palavra no chat, soma pontos ao adivinhador e ao desenhista e bloqueia novos envios daquele jogador no turno.
+- **Dado** que todos os adivinhadores acertaram ou o cronômetro chegou a `00:00`, **Então** o desenho é bloqueado, a palavra é revelada no `turn_summary` e o Anfitrião pode avançar para o próximo desenhista até o Pódio Final.

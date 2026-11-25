@@ -1,7 +1,7 @@
-# 🏗️ Plano de Implementação Técnica (`plan.md`): UC12 — Desenho Relâmpago
+# 🏗️ Plano de Implementação Técnica (`plan.md`): UC12 — Desenho Relâmpago (Multiplayer)
 
 - **Branch:** `feat/028-uc12-desenho-relampago`
-- **Data:** 2026-11-25
+- **Data:** 2026-11-25 (Refatoração Multiplayer + Formas Geométricas + Canvas Expandido + Tema 5s)
 - **Especificação de Origem:** `specs/028-uc12-desenho-relampago/spec.md`
 - **Constituição de Referência:** `.specify/memory/constitution.md`
 
@@ -9,20 +9,26 @@
 
 ## 1. Resumo Técnico
 
-Implementação do minigame **Desenho Relâmpago** (`UC12`, Issue `#83`) em modo **1 Celular (Passa-Celular)** estruturada rigorosamente nas 7 camadas do **MVVM Sofisticado**. O domínio (`src/model/`) modela os tipos puros de traço (`DrawingPoint`, `DrawingStroke`, `DrawingPenColorId`, `DrawingStrokeWidthId`), as cartas desenháveis (`DesenhoCard`, `DesenhoCategory`) e a seção `desenho` em `MatchSettings`. Na infraestrutura (`src/infra/`), `MemoryGameCatalogDataSource` registra o 9º minigame no Hub (`/desenho`), recebe `initialDesenhoCards` como 6º parâmetro opcional retrocompatível e fornece os 5 pacotes próprios de palavras desenháveis, enquanto `MemoryMatchSettingsDataSource` e `AsyncStorageMatchSettingsDataSource` persistem `MatchSettings.desenho` com fallback seguro. O `PgPlayUseCases` concentra as validações (`ValidationError`), a pontuação (`+20 pts` no acerto, `-5 pts` com piso `0` no pulo) e a atualização de parâmetros. Na camada visual, sincronizamos os tokens `canvas.*` (incluindo `canvas.pen.onPen` e export nomeado `canvas`) em `src/view/theme.ts`, criamos `useDesenhoViewModel` (integrada a `IGameFeedbackUseCases`), o componente reutilizável `DrawingCanvas` (`react-native-svg` + `PanResponder` com trava de scroll), a tela espelhada `src/view/desenho.tsx` e a rota fina `src/app/desenho.tsx`.
+Refatoração arquitetural do minigame **Desenho Relâmpago** (`UC12`, Issue `#83`) da modalidade 1 Celular para **Sala Multiplayer em Tempo Real** (estilo *Gartic*, `2` a `16` jogadores via PIN), adicionando **4 formas geométricas** (*Linha*, *Retângulo*, *Círculo*, *Triângulo*) com alternância **Contorno/Preenchido**, **canvas expandido** (`canvas.expandedMinHeight`) que ocupa o espaço do tema após **`5 segundos`** e botão discreto **"Espiar palavra"** (`3s`).
+
+Seguindo o mesmo padrão consolidado de **Adedonha Bíblica (`UC08`)** e **Cidade Dorme (`UC07`)**:
+- O domínio (`src/model/`) define `DrawingElement` (pincel livre + formas geométricas com `fillMode`), `DesenhoRoom`, `DesenhoPlayer`, `DesenhoGuess`, `DesenhoConfig` e estende `IMultiplayerRoomService` com operações da sala de desenho.
+- A infraestrutura (`src/infra/`) atualiza o card `'desenho'` no `MemoryGameCatalogDataSource` para `mode: 'Sala Multiplayer'` (`2 a 16 jogadores`), implementa a sala de desenho em `MemoryMultiplayerRoomService` (offline/testes) e `SupabaseMultiplayerRoomService` (Realtime + tabela/colunas via migração SQL em `supabase/migrations/007_desenho_multiplayer.sql` com RLS protegendo o segredo do desenhista — `RNF11`).
+- O caso de uso dedicado **`DesenhoUseCases`** (`src/usecase/iDesenhoUseCases.ts` + `src/usecase/desenhoUseCases.ts`, injetado em `src/di/container.ts`) concentra criação/entrada de sala, validação de configurações e pacotes, sorteio sem repetição, normalização/validação de palpites, cálculo de pontuação (`+20`/`+15`/`+10` e `+10`/`+5`), encerramento de turno e premiação final (`DesenhoAwards`).
+- Na apresentação, `src/view/theme.ts` sincroniza `canvas.minHeight` (`320 dp`) e `canvas.expandedMinHeight` (`384 dp`), `DrawingCanvas` ganha ferramentas de forma + preenchimento + modo `expanded` + modo `readOnly`, `useDesenhoViewModel` orquestra sala Realtime + timer de `5s` do tema + espiada de `3s` + `IGameFeedbackUseCases`, e `src/view/desenho.tsx` renderiza Lobby, Arena do Desenhista, Arena do Adivinhador, Resumo do Turno e Pódio Final.
 
 ---
 
 ## 2. Verificação Constitucional (*Constitution Check*)
 
-*GATE OBRIGATÓRIO: Todos os itens abaixo devem estar marcados antes de gerar o `tasks.md` ou iniciar código.*
+*GATE OBRIGATÓRIO: Todos os itens abaixo devem estar verificados antes de iniciar `/speckit.implement`.*
 
-- [x] **Artigo I (SDD)**: A especificação `spec.md` foi revisada, aprovada e alinhada com `UC12`, `RF41`–`RF44`, `docs/jogos/desenho-relampago.md` e `design-system/04-componentes/tela-de-desenho.md`.
-- [x] **Artigo II (MVVM 7 Pastas)**: Todos os arquivos planejados em `src/` residem exclusivamente em `app`, `view`, `viewmodel`, `usecase`, `model`, `infra` ou `di`.
-- [x] **Artigo II (Rotas Finas e View Burra)**: `src/app/desenho.tsx` terá apenas 2 linhas (`import` + `export default`) e toda a navegação (`expo-router`) ficará restrita a `useDesenhoViewModel.ts`.
-- [x] **Artigo II (Vocabulário)**: Nenhum arquivo, contrato ou classe utiliza `Repository` ou `Connector` (apenas `DataSource` e `Service`).
-- [x] **Artigo III (Design System)**: As cores de caneta, ícone `check` (`canvas.pen.onPen`), superfície de papel, espessuras e tamanhos de ferramentas foram formalizados como tokens `canvas.*` em `design-system/02-tokens.md` e `src/view/theme.ts`; zero `#hex` ou números mágicos fora de `theme.ts`.
-- [x] **Artigo IV (Testabilidade Offline)**: O jogo funciona 100% offline com `MemoryGameCatalogDataSource`, `MemoryTeamDataSource` e `MemoryMatchSettingsDataSource`, validado por testes unitários, componentes, hooks, mocks e integração, além da atualização de todos os testes existentes impactados.
+- [x] **Artigo I (SDD)**: `spec.md`, `docs/jogos/desenho-relampago.md`, `docs/requisitos/requisitos-e-casos-de-uso-pg-play.md` e `design-system/04-componentes/tela-de-desenho.md` atualizados e alinhados; implementação aguardando aprovação humana das tarefas (`tasks.md`).
+- [x] **Artigo II (MVVM 7 Pastas)**: Todos os arquivos em `src/` permanecem estritamente dentro das 7 pastas canônicas (`app`, `view`, `viewmodel`, `usecase`, `model`, `infra`, `di`).
+- [x] **Artigo II (Rotas Finas e View Burra)**: `src/app/desenho.tsx` permanece com 2 linhas e toda a navegação/timers/efeitos de rede ficam isolados na ViewModel/UseCase/Service.
+- [x] **Artigo II (Vocabulário)**: Apenas `DataSource` e `Service` (zero `Repository` ou `Connector`).
+- [x] **Artigo III (Design System)**: `canvas.expandedMinHeight` e `canvas.minHeight` formalizados em `design-system/02-tokens.md` (`v1.3.0`) e `tela-de-desenho.md`; zero `#hex` ou números mágicos fora de `theme.ts`.
+- [x] **Artigo IV (Testabilidade Offline)**: 100% testável offline com `MemoryMultiplayerRoomService` + `MemoryGameCatalogDataSource` sem depender de rede nos testes Jest.
 
 ---
 
@@ -31,73 +37,56 @@ Implementação do minigame **Desenho Relâmpago** (`UC12`, Issue `#83`) em modo
 Ordem estrita de criação/alteração de dentro para fora:
 
 ```text
+supabase/
+└─ migrations/
+   └─ 007_desenho_multiplayer.sql                  # [CRIAR] Tabelas/RLS/RPCs da sala de Desenho Relâmpago (proteção RNF11 da palavra secreta)
+
 src/
 ├─ model/
-│  ├─ entities/drawingChallenge.ts                    # [CRIAR] DrawingPenColorId, DrawingStrokeWidthId, DrawingPoint, DrawingStroke, DesenhoCategory, DesenhoCard
-│  ├─ entities/minigame.ts                            # [ALTERAR] Adicionar rota '/desenho' e ícone 'palette'
-│  ├─ entities/contentPack.ts                         # [ALTERAR] Adicionar 'desenho' em ContentPackGameId e DesenhoCategory em ContentPackCategory
-│  ├─ entities/matchSettings.ts                       # [ALTERAR] Adicionar DesenhoDurationOption (60|90|120), DesenhoSettings e chave desenho em MatchSettings/DEFAULT_MATCH_SETTINGS
-│  └─ datasources/iGameCatalogDataSource.ts           # [ALTERAR] Adicionar listDesenhoCards(categories?: DesenhoCategory[]): Promise<DesenhoCard[]>
+│  ├─ entities/drawingChallenge.ts                 # [ALTERAR] Adicionar DrawingToolId, DrawingFillMode, DrawingElement (freehand + 4 formas geométricas)
+│  ├─ entities/multiplayerSession.ts               # [ALTERAR] Adicionar DesenhoPhase, DesenhoConfig, DesenhoPlayer, DesenhoGuess, DesenhoAwards, DesenhoRoom
+│  └─ services/iMultiplayerRoomService.ts          # [ALTERAR] Adicionar métodos da sala de desenho (create, join, leave, updateConfig, startTurn, addElement, undoElement, clearCanvas, submitGuess, finishTurn, advanceTurn, restartLobby, subscribeToDesenhoRoom)
 ├─ infra/
-│  ├─ datasources/memoryGameCatalogDataSource.ts      # [ALTERAR] Adicionar minigame 'desenho', 5 ContentPacks, banco desenhável e 6º parâmetro opcional initialDesenhoCards
-│  ├─ datasources/memoryMatchSettingsDataSource.ts    # [ALTERAR] Clonar seção settings.desenho em cloneSettings()
-│  └─ datasources/asyncStorageMatchSettingsDataSource.ts # [ALTERAR] Mesclar DEFAULT_MATCH_SETTINGS.desenho em mergeWithDefaults()
+│  ├─ datasources/memoryGameCatalogDataSource.ts   # [ALTERAR] Atualizar minigame 'desenho' para mode: 'Sala Multiplayer' e playersLabel: '2 a 16 jogadores'
+│  ├─ services/memoryMultiplayerRoomService.ts     # [ALTERAR] Implementar todos os métodos de DesenhoRoom em memória com isolamento de segredo (viewerPlayerId)
+│  └─ services/supabaseMultiplayerRoomService.ts   # [ALTERAR] Implementar persistência + Supabase Realtime (Postgres Changes + Broadcast de elementos) com isolamento RNF11
 ├─ usecase/
-│  ├─ iPgPlayUseCases.ts                              # [ALTERAR] Adicionar listDesenhoCards, scoreDesenhoHit(teamId, points?), scoreDesenhoSkip(teamId, penalty?), updateDesenhoSettings(changes)
-│  └─ pgPlayUseCases.ts                               # [ALTERAR] Implementar regras, DEFAULT_DESENHO_HIT_POINTS (20), DEFAULT_DESENHO_SKIP_PENALTY (5), validações e sanitizeMatchSettings
+│  ├─ iDesenhoUseCases.ts                          # [CRIAR] Contrato IDesenhoUseCases (sala, config, desenho, palpites, turnos, prêmios)
+│  ├─ desenhoUseCases.ts                           # [CRIAR] Implementação DesenhoUseCases (validações, normalização de palpites, pontuação +20/+15/+10 e +10/+5, sorteio sem repetição)
+│  ├─ iPgPlayUseCases.ts                           # [VERIFICAR/LIMPAR] Manter listDesenhoCards ou remover métodos legados de 1-celular (scoreDesenhoHit/Skip) se não usados
+│  └─ pgPlayUseCases.ts                            # [VERIFICAR/LIMPAR] Alinhar com o contrato de catálogo/configurações
 ├─ di/
-│  └─ container.ts                                    # [VERIFICAR] pgPlayUseCases e gameFeedbackUseCases já expostos com os DataSources injetados
+│  └─ container.ts                                 # [ALTERAR] Instanciar e exportar desenhoUseCases: IDesenhoUseCases com multiplayerRoomService + gameCatalogDataSource
 ├─ viewmodel/
-│  └─ useDesenhoViewModel.ts                          # [CRIAR] useDesenhoViewModel(useCases = pgPlayUseCases, gameFeedback = gameFeedbackUseCases): [DesenhoState, DesenhoActions]
+│  └─ useDesenhoViewModel.ts                       # [ALTERAR] Refatorar para Sala Multiplayer + timer de tema 5s + espiar 3s + estado de ferramenta/forma/preenchimento + envio de palpites + IGameFeedbackUseCases
 ├─ view/
-│  ├─ theme.ts                                        # [ALTERAR] Sincronizar color.canvas*, component.canvas (incl. pen.onPen) e exportar canvas no nível superior
-│  ├─ components/drawingCanvas.tsx                    # [CRIAR] Folha Svg + PanResponder (com onDrawingStart/onDrawingEnd e ponto único) + barra acessível de 4 cores, 2 espessuras, Desfazer e Limpar
-│  └─ desenho.tsx                                     # [CRIAR] Tela espelhada consumindo useDesenhoViewModel, useReduceMotion e useTheme, com bloqueio de scroll ao desenhar
+│  ├─ theme.ts                                     # [ALTERAR] Sincronizar canvas.minHeight (320 dp) e canvas.expandedMinHeight (384 dp) conforme v1.3.0
+│  ├─ components/drawingCanvas.tsx                 # [ALTERAR] Suportar DrawingElement (Path, Line, Rect, Ellipse, Polygon), pré-visualização ao arrastar, 5 ferramentas, Contorno/Preenchido, expanded e readOnly
+│  └─ desenho.tsx                                  # [ALTERAR] Renderizar Lobby PIN, Arena do Desenhista (tema 5s -> canvas expandido + botão Espiar 3s), Arena do Adivinhador (canvas readOnly + feed + campo palpite), Resumo do Turno e Pódio Final
 └─ app/
-   └─ desenho.tsx                                     # [CRIAR] Rota fina de 2 linhas reexportando @/view/desenho
+   └─ desenho.tsx                                  # [MANTER] Rota fina de 2 linhas reexportando @/view/desenho
 ```
-
-### Dependência Expo e Mocks de Teste
-- `npx expo install react-native-svg` (compatível com SDK 58 no Expo Go Android/iOS e `react-native-web`).
-- `jest.config.js`: adicionar mapeamento `'^react-native-svg$': '<rootDir>/tests/__mocks__/react-native-svg.tsx'`.
-- `tests/__mocks__/react-native-svg.tsx`: criar mock leve para `Svg` (default) e `Path`.
-- `tests/__mocks__/react-native.tsx`: exportar mock de `PanResponder` (`PanResponder.create`).
 
 ---
 
-## 4. Inventário do Design System (`PG Play Expressive v1.2.0`)
+## 4. Inventário do Design System (`PG Play Expressive v1.3.0`)
 
-| Elemento da Tela | Componente (`@/view/components/`) | Tokens Semânticos / de Componente (`@/view/theme`) |
+| Elemento da Tela | Componente (`@/view/components/`) | Tokens (`@/view/theme`) |
 | :--- | :--- | :--- |
-| Barra superior (Saída + Rodada) | `ExpressiveButton` (`variant="outlined"`) + `ExpressiveTag` (`tone="neutral"`) | `space.md`, `space.sm`, `tag.neutral.*` |
-| Cabeçalho da equipe da vez | `View` acessível + pontuação em destaque | `color.actionContainer`, `color.onActionContainer`, `radius.lg`, `font.title`, `font.subtitle`, `font.caption` |
-| Passagem de turno (`pass-turn`) | `GameCard` + `ExpressiveChip` + `ExpressiveButton` (`variant="primaryJumbo"`) | `card.bg`, `card.border`, `card.radius`, `chip.border.*`, `button.jumbo.height` (`64 dp`) |
-| Cronômetro regressivo (`drawing`) | `ExpressiveTimer` (`reduceMotion`) | `timer.bg.normal`, `timer.bg.critical`, `timer.radius.normal`, `timer.radius.critical` |
-| Card da palavra secreta + Regra de honra | Container estilizado (`card.*`) + `ExpressiveTag` (`tone="secondary"`) + banner de regra (`banner.warning.*`) + `ExpressiveButton` (`variant="tonal"`) | `card.bg`, `card.border`, `card.radius`, `font.display` (`30 dp`), `banner.warning.*`, `tag.secondary.*` |
-| Folha de desenho e ferramentas (`RF41`) | `DrawingCanvas` (`Svg` + `PanResponder`) | `canvas.paperBg`, `canvas.border`, `canvas.radius`, `canvas.minHeight`, `canvas.pen.{ink,purple,coral,green,onPen}`, `canvas.stroke.{thin,thick}`, `canvas.tool.*` |
-| Ações de pontuação do turno (`RF43`) | `ExpressiveButton` (`variant="successJumbo"`) + `ExpressiveButton` (`variant="secondary"`) | `button.jumbo.height` (`64 dp`), `color.success`, `color.secondary`, `space.sm` |
-| Resumo do turno e Fim de partida | `GameCard` (`highlightLeader` no `finished`) + `ExpressiveTag` + `ExpressiveButton` (`variant="primaryJumbo"`) | `tag.success.*`, `tag.secondary.*`, `card.borderLeader` |
-| Confirmação de saída segura (`RF11`) | `ConfirmModal` | `elevation.floating`, `color.scrim`, `card.radius` |
+| Lobby (Criar/Entrar PIN + Config) | `GameCard`, `ExpressiveTextField`, `ExpressiveChip`, `ExpressiveTag`, `ExpressiveButton` (`primaryJumbo`) | `card.*`, `input.*`, `chip.*`, `tag.*`, `button.jumbo.height` |
+| Cabeçalho do turno + Espiar palavra | `ExpressiveButton` (`outlined`, `tonal`), `ExpressiveTag`, `ExpressiveTimer` | `space.sm`, `timer.*`, `tag.action.*`, `tag.secondary.*` |
+| Tema temporário (5s inicial / 3s espiar) | Container/Overlay temático + `ExpressiveTag` + banner `Sem letras nem números` | `card.bg`, `card.border`, `card.radius`, `font.display`, `banner.warning.*` |
+| Folha expandida + Formas + Preenchimento | `DrawingCanvas` (`Svg`: `Path`, `Line`, `Rect`, `Ellipse`, `Polygon`) + `useKeyboardFocus` | `canvas.paperBg`, `canvas.border`, `canvas.radius`, `canvas.minHeight`, `canvas.expandedMinHeight`, `canvas.pen.*`, `canvas.stroke.*`, `canvas.tool.*` |
+| Adivinhação (Adivinhador) | `DrawingCanvas` (`readOnly`), `ExpressiveTextField`, `ExpressiveButton`, `ExpressiveTag` | `input.*`, `banner.success.*`, `tag.success.*`, `color.surfaceContainer` |
+| Resumo do Turno e Pódio Final | `GameCard` (`highlightLeader`), `ExpressiveTag`, `ExpressiveButton` (`primaryJumbo`, `outlined`) | `card.borderLeader`, `tag.highlight.*`, `tag.success.*` |
+| Saída Segura (`RF11`) | `ConfirmModal` | `elevation.floating`, `color.scrim`, `card.radius` |
 
 ---
 
 ## 5. Estratégia de Testes (`tests/`)
 
-Seguindo a governança de commits incrementais de testes (`CONTRIBUTING.md` seção 4):
-
-- **Atualização de Testes Existentes Impactados pelo Catálogo, `IPgPlayUseCases` e `MatchSettings`:**
-  - `tests/unit/pgPlayUseCases.hub.test.ts` (9 jogos no Hub, 7 em `'1 Celular'`, `'desenho'` incluído no filtro `'biblico'`).
-  - `tests/hooks/useHubViewModel.test.ts` (contagens `9` / `7` e novos métodos em `flakyUseCases`).
-  - `tests/hooks/useForcaViewModel.test.ts`, `tests/hooks/useMimicaViewModel.test.ts` e `tests/hooks/useScoreboardViewModel.test.ts` (novos métodos de `IPgPlayUseCases` e chave `desenho` em `getMatchSettings` nos mocks manuais).
-  - `tests/unit/asyncStorageMatchSettingsDataSource.test.ts` (incluir `desenho` no objeto literal salvo + teste de fallback sem chave `desenho`).
-  - `tests/hooks/gameFeedback.viewmodels.test.ts` (cenário de pulsos táteis e vibração ao zerar no `useDesenhoViewModel`).
-- **Testes de Tokens (`tests/tokens.test.ts`)**:
-  - Resolução de `semantic.color.canvas*`, `component.canvas.*` e export `canvas` nos modos claro e escuro, e verificação matemática de contraste `>= 4,5:1` (e `>= 3:1` WCAG 1.4.11) das 4 canetas sobre `canvas.paperBg` e de `canvas.pen.onPen` sobre cada uma das 4 canetas.
-- **Testes Unitários de Caso de Uso e Infra (`tests/unit/pgPlayUseCases.desenho.test.ts`, `tests/unit/pgPlayUseCases.matchSettings.test.ts`)**:
-  - Listagem de pacotes `'desenho'` e cartas por categoria, lançamento de `ValidationError` para lista vazia de pacotes, `scoreDesenhoHit` (`+20 pts`), `scoreDesenhoSkip` (`-5 pts` e piso `0`) e `updateDesenhoSettings` (`60|90|120` e rodadas `1..5`).
-- **Testes de Componente RNTL (`tests/components/drawingCanvas.test.tsx`)**:
-  - Renderização da folha, desenho via `PanResponder` (incluindo ponto único e callbacks `onDrawingStart`/`onDrawingEnd`), seleção das 4 cores e 2 espessuras com `accessibilityRole`, `accessibilityLabel` e `accessibilityState={{ selected }}`, estados habilitado/desabilitado de *"Desfazer"* e *"Limpar"* e bloqueio quando `disabled={true}`.
-- **Testes de Hook (`tests/hooks/useDesenhoViewModel.test.ts`)**:
-  - Transição completa de fases (`pass-turn` → `drawing` → `turn-summary` → `finished`), adição/desfazer/limpar traços, revelação da última palavra em andamento no `turn-summary`, limpeza automática no acerto/pulo, reciclagem de palavras puladas sem repetir acertos, pausa na saída segura e disparo de `gameFeedback.notifyTimerTick`.
-- **Testes de Tela com Mock e Integração Real (`tests/mocks/desenhoScreen.mock.test.tsx` e `tests/integration/desenho.integration.test.tsx`)**:
-  - Cobertura dos 4 estados visuais (`loading`, `error`, equipes insuficientes e `content`) + rota fina `src/app/desenho.tsx`, e fluxo ponta a ponta `View + ViewModel + PgPlayUseCases + Memory*DataSource` atualizando o placar das equipes.
+- **Tokens (`tests/tokens.test.ts`):** validar `canvas.minHeight` (`320 dp`) e `canvas.expandedMinHeight` (`384 dp`) nos modos claro e escuro + contrastes WCAG das 4 cores e `onPen`.
+- **Unitários (`tests/unit/desenhoUseCases.test.ts`, `tests/unit/pgPlayUseCases.hub.test.ts`):** criar/entrar sala, validações (`ValidationError`), isolamento de segredo para adivinhadores (`RNF11`), adição/desfazer/limpar elementos (pincel e 4 formas com `stroke`/`fill`), normalização de palpites, cálculo de pontos (`+20`/`+15`/`+10` e `+10`/`+5`), encerramento antecipado quando todos acertam, premiação final e contagem no Hub (`3` jogos em `'Sala Multiplayer'`, `6` em `'1 Celular'`).
+- **Componente (`tests/components/drawingCanvas.test.tsx`):** renderização de `Path`, `Line`, `Rect`, `Ellipse` e `Polygon` em modos `stroke` e `fill`, pré-visualização via `PanResponder`, seleção de ferramentas/preenchimento com acessibilidade (`48 dp`, `accessibilityState`), modo `expanded` (`384 dp`) e modo `readOnly` (oculta toolbar e mantém opacidade cheia).
+- **Hook (`tests/hooks/useDesenhoViewModel.test.ts`, `tests/hooks/gameFeedback.viewmodels.test.ts`):** Lobby, início de turno, desaparecimento automático do tema após `5000 ms`, expansão do canvas, espiada de `3000 ms`, ferramentas/formas/preenchimento, envio de palpite, feedback háptico do cronômetro e saída segura.
+- **Mock de Tela e Integração (`tests/mocks/desenhoScreen.mock.test.tsx`, `tests/integration/desenho.integration.test.tsx`):** todas as fases (Lobby, Desenhista com/sem tema 5s, Adivinhador, Resumo, Pódio) + fluxo real ponta a ponta com `MemoryMultiplayerRoomService` e 2 jogadores simulados.

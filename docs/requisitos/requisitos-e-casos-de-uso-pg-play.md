@@ -4,7 +4,7 @@
 **Disciplinas:** Interação Humano-Computador (IHC) e Programação para Dispositivos Móveis (PDM)  
 **Instituição:** IFPI Campus Piripiri  
 **Equipe:** Héber Bringel, Douglas Leone, Mikaelle Barroso e Roger Pierre  
-**Versão do Documento:** 1.3.0 (novas dinâmicas UC09–UC12, RF32–RF44, RNF12; busca no Hub adiada)  
+**Versão do Documento:** 1.4.0 (Desenho Relâmpago UC12 refatorado para Sala Multiplayer com formas geométricas, canvas expandido e tema temporário de 5s)  
 
 ---
 
@@ -12,9 +12,9 @@
 
 Este documento formaliza os **Requisitos Funcionais (RF)**, os **Requisitos Não Funcionais (RNF)** e os **Casos de Uso (UC)** do aplicativo móvel **PG PLAY**, alinhados com a arquitetura de componentes (`src/`), o sistema de design **PG Play Expressive** (`design-system/`) e as especificações dos jogos (`docs/jogos/`).
 
-O **PG PLAY** é um aplicativo voltado para dinâmicas presenciais em Pequenos Grupos (PGs) de jovens e adultos, oferecendo tanto jogos rápidos em **1 celular compartilhado** (**Mímica Expressiva**, **Quiz Relâmpago** e **Jogo da Forca**) quanto jogos em **Sala Multiplayer** cada participante no próprio aparelho ([**Cidade Dorme**](../jogos/cidade-dorme.md) e [**Adedonha Bíblica**](../jogos/adedonha-biblica.md)).
+O **PG PLAY** é um aplicativo voltado para dinâmicas presenciais em Pequenos Grupos (PGs) de jovens e adultos, oferecendo tanto jogos rápidos em **1 celular compartilhado** (**Mímica Expressiva**, **Quiz Relâmpago** e **Jogo da Forca**) quanto jogos em **Sala Multiplayer** cada participante no próprio aparelho ([**Cidade Dorme**](../jogos/cidade-dorme.md), [**Adedonha Bíblica**](../jogos/adedonha-biblica.md) e [**Desenho Relâmpago**](../jogos/desenho-relampago.md)).
 
-As versões 1.2.0 e 1.3.0 acrescentam três dinâmicas competitivas em 1 celular, [**Quem Sou Eu?**](../jogos/quem-sou-eu.md), [**Complete o Versículo**](../jogos/complete-o-versiculo.md) e [**Desenho Relâmpago**](../jogos/desenho-relampago.md), além do [**Termômetro de Pedidos**](../jogos/termometro-de-pedidos.md), um momento de pedidos de oração com tempo de fala por pessoa, sem pontuação, usado para fechar o encontro.
+As versões 1.2.0 a 1.4.0 acrescentam duas dinâmicas competitivas em 1 celular ([**Quem Sou Eu?**](../jogos/quem-sou-eu.md) e [**Complete o Versículo**](../jogos/complete-o-versiculo.md)), a arena multiplayer de desenho em tempo real ([**Desenho Relâmpago**](../jogos/desenho-relampago.md)), e o [**Termômetro de Pedidos**](../jogos/termometro-de-pedidos.md), um momento de pedidos de oração com tempo de fala por pessoa, sem pontuação, usado para fechar o encontro.
 
 ---
 
@@ -95,7 +95,7 @@ As versões 1.2.0 e 1.3.0 acrescentam três dinâmicas competitivas em 1 celular
 | **RF22** | Validar letra inicial e acionar "ADEDONHA!" | O sistema deve validar em tempo real se as respostas digitadas por cada jogador começam com a letra sorteada e habilitar o botão Jumbo *"ADEDONHA!"* assim que o jogador preencher todas as colunas, disparando a contagem final de encerramento para toda a sala. | Alta | [`docs/jogos/adedonha-biblica.md`](../jogos/adedonha-biblica.md) |
 | **RF23** | Apurar respostas pelo Moderador com botão "Levantar Dúvida ✋" | Na apuração da *Adedonha Bíblica*, o sistema deve pré-classificar respostas únicas (`+10 pts`), repetidas (`+5 pts`) e vazias/inválidas (`0 pts`), permitindo aos jogadores acionar *"Levantar Dúvida ✋"* e ao Moderador validar, unificar repetidas ou invalidar respostas coluna por coluna. | Alta | [`docs/jogos/adedonha-biblica.md`](../jogos/adedonha-biblica.md) |
 
-### 3.7. Novas Dinâmicas em 1 Celular: Quem Sou Eu?, Complete o Versículo, Termômetro de Pedidos e Desenho Relâmpago
+### 3.7. Novas Dinâmicas: Quem Sou Eu?, Complete o Versículo, Termômetro de Pedidos e Desenho Relâmpago (Multiplayer)
 
 | Código | Requisito | Descrição Detalhada | Prioridade | Origem no Projeto |
 | :--- | :--- | :--- | :---: | :--- |
@@ -108,10 +108,10 @@ As versões 1.2.0 e 1.3.0 acrescentam três dinâmicas competitivas em 1 celular
 | **RF38** | Configurar o momento de pedidos | No *Termômetro de Pedidos*, o sistema deve permitir ao Líder definir os participantes (nomes digitados na hora ou modo livre sem nomes), o tempo de fala por pessoa (`1`, `2` ou `3 min`) e a ordem (lista ou sorteio). | Média | [`docs/jogos/termometro-de-pedidos.md`](../jogos/termometro-de-pedidos.md) |
 | **RF39** | Conduzir a vez de fala com o termômetro | O sistema deve mostrar de quem é a vez e um termômetro que enche com o tempo de fala, iniciado apenas quando a pessoa tocar em *"Começar a falar"*, sinalizando o fim do tempo **sem interromper a fala**, e oferecer *"Próximo"*, *"Pular minha vez"* e *"Pausar"*. | Média | [`docs/jogos/termometro-de-pedidos.md`](../jogos/termometro-de-pedidos.md) |
 | **RF40** | Encerrar o momento sem pontuação | Ao fim da roda, o sistema deve exibir um resumo apenas com números (quantos falaram e quantos pularam, sem nomes), oferecer a tela *"Momento de Oração"* sem cronômetro e encerrar voltando ao Hub, **sem alterar o placar** do encontro. | Média | [`docs/jogos/termometro-de-pedidos.md`](../jogos/termometro-de-pedidos.md) |
-| **RF41** | Desenhar na tela com cores, espessuras, desfazer e limpar | No *Desenho Relâmpago*, o sistema deve oferecer uma folha de desenho em tempo real ao arrastar o dedo (`DrawingCanvas` sobre fundo de papel claro fixo), acompanhada de barra de ferramentas acessível com `4` cores de caneta (`Grafite`, `Roxo`, `Coral` e `Verde`), `2` espessuras (`4 dp` e `8 dp`), *"Desfazer"* (último traço) e *"Limpar"*. | Alta | [`docs/jogos/desenho-relampago.md`](../jogos/desenho-relampago.md), `tela-de-desenho.md` |
-| **RF42** | Exibir e ocultar palavra secreta com regra de honra | No *Desenho Relâmpago*, o sistema deve mostrar a palavra secreta apenas ao representante desenhista, permitir ocultá-la/revelá-la com *"Esconder do Grupo"* para que a equipe acompanhe o celular em segurança e manter visível o aviso de regra de honra (*"Sem letras nem números"*). | Alta | [`docs/jogos/desenho-relampago.md`](../jogos/desenho-relampago.md) |
-| **RF43** | Pontuar acerto e pulo no Desenho Relâmpago | O sistema deve somar `+20 pts` por acerto (*"Acertaram! (+20 pts)"*) e descontar `5` pontos ao pular (*"Pular (-5 pts)"*, sem deixar a pontuação acumulada da equipe negativa — piso `0`), limpando automaticamente a tela de desenho e sorteando a próxima palavra. | Alta | [`docs/jogos/desenho-relampago.md`](../jogos/desenho-relampago.md) |
-| **RF44** | Configurar tempo, rodadas e pacotes desenháveis | Antes de iniciar o *Desenho Relâmpago*, o sistema deve permitir ajustar o tempo por turno (`60s`, `90s` padrão ou `120s`), o número de rodadas por equipe (`1` a `5`, padrão `3`) e selecionar um ou mais pacotes próprios de palavras concretas desenháveis (*Bíblico*, *Animais*, *Objetos*, *Comidas* e *Lugares e Natureza*). | Média | [`docs/jogos/desenho-relampago.md`](../jogos/desenho-relampago.md) |
+| **RF41** | Desenhar em tempo real com pincel, formas geométricas e canvas expandido | No *Desenho Relâmpago* (Sala Multiplayer), o sistema deve oferecer uma folha de desenho expandida (`DrawingCanvas` sobre fundo de papel claro fixo) sincronizada em tempo real com os aparelhos da sala, equipada com **pincel livre**, **4 formas geométricas** (*Linha*, *Retângulo*, *Círculo* e *Triângulo*) com alternância entre **contorno** e **preenchido** (arrastando para dimensionar), `4` cores acessíveis (`Grafite`, `Roxo`, `Coral` e `Verde`), `2` espessuras (`4 dp` e `8 dp`), *"Desfazer"* e *"Limpar"*. | Alta | [`docs/jogos/desenho-relampago.md`](../jogos/desenho-relampago.md), `tela-de-desenho.md` |
+| **RF42** | Exibir tema temporário por 5s, expandir canvas e permitir espiar por 3s | No início de cada turno do *Desenho Relâmpago*, o sistema deve exibir o tema/palavra secreta **exclusivamente ao Desenhista** por `5 segundos` junto ao aviso *"Sem letras nem números"*; após `5 segundos`, o bloco do tema deve desaparecer automaticamente para o canvas ocupar a área do tema, mantendo um botão discreto *"Espiar palavra"* que reexibe o tema ao Desenhista por `3 segundos`. | Alta | [`docs/jogos/desenho-relampago.md`](../jogos/desenho-relampago.md) |
+| **RF43** | Enviar palpites em tempo real com validação automática e pontuação | Durante o turno do *Desenho Relâmpago*, os adivinhadores devem visualizar o desenho em modo somente leitura e enviar palpites digitados no próprio aparelho; o sistema deve validar automaticamente ignorando maiúsculas, acentos e espaços extras, ocultar a resposta correta do chat público (*"[Jogador] acertou!"*), pontuar adivinhadores por ordem de acerto (`+20` / `+15` / `+10 pts`) e o Desenhista (`+10 pts` + `+5 pts` por acerto extra), encerrando o turno quando todos acertarem ou o tempo zerar. | Alta | [`docs/jogos/desenho-relampago.md`](../jogos/desenho-relampago.md) |
+| **RF44** | Criar/entrar em sala e configurar tempo, rodadas e pacotes desenháveis | No Lobby multiplayer do *Desenho Relâmpago*, participantes devem criar ou entrar na sala por apelido e código PIN (`2` a `16` jogadores, sem login), e o Anfitrião deve poder ajustar tempo por turno (`60s`, `90s` padrão ou `120s`), rodadas (`1` a `5`, padrão `2`) e selecionar um ou mais pacotes próprios de palavras concretas desenháveis (*Bíblico*, *Animais*, *Objetos*, *Comidas* e *Lugares e Natureza*). | Alta | [`docs/jogos/desenho-relampago.md`](../jogos/desenho-relampago.md) |
 
 ---
 
@@ -129,7 +129,7 @@ As versões 1.2.0 e 1.3.0 acrescentam três dinâmicas competitivas em 1 celular
 | **RNF08** | Acessibilidade Assistiva | Suporte a leitores de tela, legendas e foco | Todos os componentes devem implementar `accessibilityRole`, `accessibilityLabel`, `accessibilityState`, anel de foco de `3 dp` (`color.focus`) e legendas visuais sincronizadas para todas as falas do Narrador do *Cidade Dorme*. | `06-acessibilidade.md`, [`cidade-dorme.md`](../jogos/cidade-dorme.md) |
 | **RNF09** | Acessibilidade Visual e Vestibular | Escala dinâmica de fonte e redução de movimento | Textos devem suportar `allowFontScaling` até `200%` (com `maxFontSizeMultiplier={1.5}` em botões/cronômetro) e respeitar `prefers-reduced-motion`, desativando pulsações e giros longos da roleta quando ativo. | `06-acessibilidade.md`, [`adedonha-biblica.md`](../jogos/adedonha-biblica.md) |
 | **RNF10** | Manutenibilidade | Arquitetura estrita baseada em Design Tokens | Nenhum componente ou tela pode conter valores hexadecimais, tamanhos ou raios literais (*magic numbers*) no `StyleSheet`; 100% das propriedades visuais devem referenciar `src/theme/tokens.ts`. | `design-system/README.md`, `07-teste-com-ia.md` |
-| **RNF11** | Segurança e Anti-Trapaça (Multiplayer) | Isolamento de estado secreto e cadência da noite | No *Cidade Dorme*, cada aparelho deve receber apenas seu próprio papel secreto (e veredito do Detetive), e os turnos noturnos devem respeitar janela mínima de tempo para impedir dedução pela velocidade do toque. O Anfitrião configura a sala apenas no Lobby; depois da distribuição dos papéis, ele é um jogador como os demais e não pode ver papéis, ações noturnas ou o veredito do Detetive de outros jogadores. | [`docs/jogos/cidade-dorme.md`](../jogos/cidade-dorme.md) |
+| **RNF11** | Segurança e Anti-Trapaça (Multiplayer) | Isolamento de estado secreto e cadência da noite | No *Cidade Dorme*, cada aparelho deve receber apenas seu próprio papel secreto (e veredito do Detetive), e os turnos noturnos devem respeitar janela mínima de tempo para impedir dedução pela velocidade do toque. O Anfitrião configura a sala apenas no Lobby; depois da distribuição dos papéis, ele é um jogador como os demais e não pode ver papéis, ações noturnas ou o veredito do Detetive de outros jogadores. No *Desenho Relâmpago*, apenas o Desenhista da vez recebe a palavra secreta durante o turno, e palpites corretos nunca expõem o texto da resposta aos demais participantes. | [`docs/jogos/cidade-dorme.md`](../jogos/cidade-dorme.md), [`docs/jogos/desenho-relampago.md`](../jogos/desenho-relampago.md) |
 | **RNF12** | Privacidade | Dinâmicas pessoais sem registro de conteúdo | O *Termômetro de Pedidos* não deve gravar áudio, registrar o texto dos pedidos nem enviar dados para a rede; a lista de nomes existe apenas em memória durante o momento e é descartada ao encerrar. | [`docs/jogos/termometro-de-pedidos.md`](../jogos/termometro-de-pedidos.md) |
 
 ---
@@ -352,23 +352,23 @@ Fluxo de relacionamento entre os atores e os casos de uso do **PG PLAY**:
 
 ---
 
-#### UC12 — Jogar Rodada de Desenho Relâmpago
-* **Ator Principal:** Jogador / Equipe da Vez
+#### UC12 — Jogar Partida de Desenho Relâmpago (Multiplayer em Tempo Real)
+* **Atores:** Moderador/Anfitrião e Jogadores da Sala (`2` a `16` participantes)
 * **Referência Detalhada:** [`docs/jogos/desenho-relampago.md`](../jogos/desenho-relampago.md)
-* **Objetivo:** Fazer a equipe adivinhar o maior número de palavras secretas desenhadas na tela do celular, sem escrever letras nem números, antes que o cronômetro zere.
-* **Pré-condições:** Ao menos `2` equipes cadastradas (UC01); jogo escolhido no Hub (UC02); pacotes desenháveis e parâmetros de partida definidos (**RF28**, **RF29**, **RF44**).
+* **Objetivo:** Desenhar palavras secretas em tempo real (com pincel livre e formas geométricas) enquanto os demais jogadores da sala acompanham no próprio celular e competem para adivinhar mais rápido.
+* **Pré-condições:** Jogo escolhido no Hub (UC02); sala multiplayer criada/acessada por código PIN com pelo menos `2` jogadores (**RNF03**, **RF44**); pacotes desenháveis e parâmetros definidos no Lobby.
 * **Fluxo Principal:**
-    1. O sistema exibe a tela de passagem de turno com a equipe da vez e o botão *"Estou Pronto!"* (**RF09**, **RF24**).
-    2. O representante toca em *"Estou Pronto!"*; o sistema inicia o *Cronômetro Expressivo*, exibe a palavra secreta com o aviso *"Sem letras nem números"* e abre a tela de desenho em branco (**RF10**, **RF41**, **RF42**).
-    3. O representante toca em *"Esconder do Grupo"* e desenha na tela com o dedo usando as opções de cor (`4` cores), espessura (`2` espessuras), *"Desfazer"* e *"Limpar"* enquanto a equipe acompanha o desenho no mesmo celular (**RF41**, **RF42**).
-    4. Quando a equipe adivinha, toca no botão Jumbo *"Acertaram! (+20 pts)"*, somando `+20 pts`, limpando a folha de desenho e sorteando a próxima palavra (**RF43**).
-    5. Ao zerar o cronômetro, o sistema bloqueia a folha e as ações, exibe o resumo do turno e passa a vez à próxima equipe (volta ao passo 1).
-    6. Concluídas as rodadas configuradas, o sistema exibe o resumo da partida e envia os pontos ao placar acumulado (**RF31**).
+    1. No Lobby, o Anfitrião configura tempo por turno (`60s`/`90s`/`120s`), rodadas (`1` a `5`) e pacotes desenháveis, e toca em *"Começar Partida!"* (**RF44**).
+    2. O turno inicia: o sistema sorteia o Desenhista da vez e uma palavra inédita (**RF30**), exibindo a palavra secreta **apenas ao Desenhista** por `5 segundos` com o aviso *"Sem letras nem números"* (**RF42**, **RNF11**).
+    3. Após `5 segundos`, o bloco do tema desaparece automaticamente e o `DrawingCanvas` se expande ocupando a área do tema; o Desenhista desenha em tempo real usando pincel livre, formas geométricas (*Linha*, *Retângulo*, *Círculo*, *Triângulo* — contorno ou preenchido), `4` cores, `2` espessuras, *"Desfazer"* e *"Limpar"*, podendo tocar em *"Espiar palavra"* para rever o tema por `3 segundos` (**RF41**, **RF42**).
+    4. Simultaneamente, os adivinhadores visualizam o canvas expandido em modo somente leitura, conferem a categoria e digitam palpites no app; acertos são validados automaticamente sem vazar a palavra no chat e pontuam o adivinhador (`+20`/`+15`/`+10 pts`) e o Desenhista (`+10` + `+5 pts` por acerto extra) (**RF43**).
+    5. Quando todos os adivinhadores acertam ou o cronômetro chega a `00:00` (**RF10**), o sistema bloqueia a folha, revela a palavra no resumo do turno e o Anfitrião avança para o próximo desenhista (volta ao passo 2).
+    6. Concluídas as rodadas configuradas, o sistema exibe o Pódio Final da sala com destaques (*Campeão Geral*, *Melhor Artista*, *Olho de Águia*).
 * **Fluxos Alternativos:**
-    * **FA01 — Pular palavra:** o representante toca em *"Pular (-5 pts)"*; o sistema desconta `5` pontos (sem ficar negativo), limpa a folha e sorteia outra palavra (**RF43**).
-    * **FA02 — Banco esgotado:** se todas as palavras dos pacotes ativos forem usadas, o sistema exibe o card de conclusão com *"Ir para o Placar Final"* (**RF12**, **RF30**).
-    * **FA03 — Sair da partida:** o Líder toca em *"Sair"* e confirma; a partida é encerrada com segurança (**RF11**).
-* **Pós-condições:** Pontos das equipes atualizados no placar acumulado do PG.
+    * **FA01 — Espiar palavra:** o Desenhista toca em *"Espiar palavra"* no cabeçalho e visualiza novamente o tema por `3 segundos` sem pausar o turno (**RF42**).
+    * **FA02 — Banco esgotado:** se todas as palavras dos pacotes ativos forem usadas, o sistema encerra a partida graciosamente no Pódio Final (**RF12**, **RF30**).
+    * **FA03 — Sair da sala:** qualquer participante toca em *"Sair"* e confirma no `ConfirmModal` (**RF11**).
+* **Pós-condições:** Pódio final da sala exibido com pontuações consolidadas dos jogadores.
 
 ---
 
@@ -387,4 +387,4 @@ Fluxo de relacionamento entre os atores e os casos de uso do **PG PLAY**:
 | **UC09 — Jogar Quem Sou Eu?** | RF09, RF10, RF11, RF12, RF24, RF28, RF29, RF30, RF31, RF32, RF33, RF34 | RNF02, RNF04, RNF06, RNF07, RNF09 | `GameCard`, `ExpressiveTimer`, `ExpressiveButton`, `ExpressiveChip` |
 | **UC10 — Jogar Complete o Versículo** | RF09, RF10, RF11, RF12, RF24, RF28, RF29, RF30, RF31, RF35, RF36, RF37 | RNF04, RNF06, RNF07, RNF08, RNF09 | `GameCard`, `ExpressiveTextField`, `ExpressiveTimer`, `ExpressiveButton`, `ExpressiveChip` |
 | **UC11 — Conduzir Termômetro de Pedidos** | RF38, RF39, RF40 | RNF03, RNF06, RNF07, RNF08, RNF09, RNF12 | `GameCard`, `ExpressiveTimer` (variante termômetro), `ExpressiveButton`, `ExpressiveChip`, `ExpressiveTextField` |
-| **UC12 — Jogar Desenho Relâmpago** | RF09, RF10, RF11, RF12, RF24, RF28, RF29, RF30, RF31, RF41, RF42, RF43, RF44 | RNF01, RNF02, RNF04, RNF05, RNF06, RNF07, RNF08, RNF09, RNF10 | `DrawingCanvas`, `ExpressiveTimer`, `GameCard`, `ExpressiveButton`, `ExpressiveChip`, `ExpressiveTag`, `ConfirmModal` |
+| **UC12 — Jogar Desenho Relâmpago (Multiplayer)** | RF09, RF10, RF11, RF12, RF28, RF29, RF30, RF41, RF42, RF43, RF44 | RNF01, RNF02, RNF03, RNF04, RNF05, RNF06, RNF07, RNF08, RNF09, RNF10, RNF11 | `DrawingCanvas`, `ExpressiveTextField`, `ExpressiveTimer`, `GameCard`, `ExpressiveButton`, `ExpressiveChip`, `ExpressiveTag`, `ConfirmModal` |

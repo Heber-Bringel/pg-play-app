@@ -1,71 +1,60 @@
-# ✅ Lista de Tarefas (`tasks.md`): UC12 — Desenho Relâmpago
+# ✅ Lista de Tarefas (`tasks.md`): UC12 — Desenho Relâmpago (Multiplayer)
 
 - **Input:** `specs/028-uc12-desenho-relampago/spec.md` e `specs/028-uc12-desenho-relampago/plan.md`
 - **Issue vinculada:** `#83`
-- **Ordem de Execução Obrigatória:** De dentro para fora (`model` → `infra` → `usecase` → `di` → `tests` → `theme/deps` → `viewmodel` → `view` → `app`)
-- **Receitas do Harness:** `/nova-funcionalidade`, `/sincronizar-tema`, `/nova-tela`, `/revisar-arquitetura`, `/commit-e-pr`
+- **Ordem de Execução Obrigatória:** De dentro para fora (`model` → `infra` → `usecase` → `di` → `tests` → `theme` → `viewmodel` → `view` → `app`)
+- **Status:** Concluído (verificado com `npm run check` — 0 violações e 0 erros)
 
 ---
 
 ## Fase 1: Domínio Puro (`src/model/`)
-*Objetivo: Definir entidades (`type`) e contratos (`interface`) sem nenhuma dependência externa.*
+*Objetivo: Evoluir os tipos de desenho para formas geométricas + preenchimento e modelar a sala multiplayer `DesenhoRoom`.*
 
-- [x] **T001** Criar `src/model/entities/drawingChallenge.ts` com os tipos puros `DrawingPenColorId`, `DrawingStrokeWidthId`, `DrawingPoint`, `DrawingStroke`, `DesenhoCategory` e `DesenhoCard`
-- [x] **T002** Atualizar `src/model/entities/minigame.ts` (`MinigameRoute` com `'/desenho'` e `MinigameIconName` com `'palette'`) e `src/model/entities/contentPack.ts` (`ContentPackGameId` com `'desenho'` e `ContentPackCategory` com `DesenhoCategory`)
-- [x] **T003** Atualizar `src/model/entities/matchSettings.ts` adicionando `DesenhoDurationOption` (`60 | 90 | 120`), `DesenhoSettings` e `desenho` em `MatchSettings` e `DEFAULT_MATCH_SETTINGS` (`durationSeconds: 90, totalRounds: 3`)
-- [x] **T004** Atualizar contrato `IGameCatalogDataSource` em `src/model/datasources/iGameCatalogDataSource.ts` adicionando `listDesenhoCards(categories?: DesenhoCategory[]): Promise<DesenhoCard[]>`
-
----
-
-## Fase 2: Infraestrutura Offline/Memória e Persistência (`src/infra/`)
-*Objetivo: Implementar o catálogo de pacotes desenháveis e a persistência retrocompatível de parâmetros.*
-
-- [x] **T005** Atualizar `src/infra/datasources/memoryGameCatalogDataSource.ts` registrando o minigame `'desenho'` no Hub, os 5 `ContentPack` de `'desenho'`, o banco próprio de palavras concretas desenháveis em `listDesenhoCards` e o 6º parâmetro opcional `initialDesenhoCards` no construtor
-- [x] **T006** Atualizar `src/infra/datasources/memoryMatchSettingsDataSource.ts` e `src/infra/datasources/asyncStorageMatchSettingsDataSource.ts` incluindo a seção `desenho` com fallback automático para `DEFAULT_MATCH_SETTINGS.desenho`
+- [x] **T001** Atualizar `src/model/entities/drawingChallenge.ts` adicionando `DrawingToolId` (`'freehand' | 'line' | 'rectangle' | 'circle' | 'triangle'`), `DrawingFillMode` (`'stroke' | 'fill'`) e `DrawingElement` (união discriminada de traço livre + formas geométricas)
+- [x] **T002** Atualizar `src/model/entities/multiplayerSession.ts` adicionando `DesenhoPhase`, `DesenhoConfig`, `DesenhoPlayer`, `DesenhoGuess`, `DesenhoAwards` e `DesenhoRoom`
+- [x] **T003** Atualizar contrato `IMultiplayerRoomService` em `src/model/services/iMultiplayerRoomService.ts` com as operações de sala de desenho (`createDesenhoRoom`, `joinDesenhoRoom`, `leaveDesenhoRoom`, `getDesenhoRoom`, `updateDesenhoConfig`, `startDesenhoMatch`, `addDesenhoElement`, `undoDesenhoElement`, `clearDesenhoCanvas`, `submitDesenhoGuess`, `finishDesenhoTurn`, `advanceDesenhoTurn`, `restartDesenhoLobby`, `subscribeToDesenhoRoom`)
 
 ---
 
-## Fase 3: Caso de Uso e Injeção de Dependências (`src/usecase/` e `src/di/`)
-*Objetivo: Concentrar validações (`ValidationError`), pontuação (`+20` / `-5` com piso `0`) e parâmetros em `PgPlayUseCases`.*
+## Fase 2: Infraestrutura Offline/Memória e Supabase (`src/infra/` e `supabase/`)
+*Objetivo: Registrar o jogo como Sala Multiplayer no Hub e implementar sincronização em memória e Supabase Realtime com isolamento de segredo (`RNF11`).*
 
-- [x] **T007** Atualizar contrato `IPgPlayUseCases` em `src/usecase/iPgPlayUseCases.ts` com `listDesenhoCards`, `scoreDesenhoHit`, `scoreDesenhoSkip` e `updateDesenhoSettings`
-- [x] **T008** Implementar `listDesenhoCards`, `scoreDesenhoHit`, `scoreDesenhoSkip`, `updateDesenhoSettings`, constantes `DEFAULT_DESENHO_HIT_POINTS` / `DEFAULT_DESENHO_SKIP_PENALTY` e saneamento de `desenho` em `src/usecase/pgPlayUseCases.ts` (incluindo `'desenho'` em `VALID_CONTENT_PACK_GAMES`)
-- [x] **T009** Verificar wiring de `pgPlayUseCases` e `gameFeedbackUseCases` em `src/di/container.ts`
-
----
-
-## Fase 4: Testes Unitários de Domínio/UseCase e Atualização de Testes Existentes (`tests/`)
-*Objetivo: Validar isoladamente o UseCase, o armazenamento e atualizar os testes/mocks existentes impactados pelos novos contratos.*
-
-- [x] **T010** Criar `tests/unit/pgPlayUseCases.desenho.test.ts` cobrindo card no Hub, pacotes e cartas por categoria, acerto (`+20 pts`), pulo (`-5 pts` e piso `0`) e casos de `ValidationError`
-- [x] **T011** Atualizar `tests/unit/pgPlayUseCases.matchSettings.test.ts`, `tests/unit/asyncStorageMatchSettingsDataSource.test.ts`, `tests/unit/pgPlayUseCases.hub.test.ts` e os mocks de `IPgPlayUseCases`/`MatchSettings` em `tests/hooks/{useHub,useForca,useMimica,useScoreboard}ViewModel.test.ts`
+- [x] **T004** Atualizar `src/infra/datasources/memoryGameCatalogDataSource.ts` mudando o minigame `'desenho'` para `mode: 'Sala Multiplayer'` e `playersLabel: '2 a 16 jogadores'`
+- [x] **T005** Implementar todos os métodos da sala `DesenhoRoom` em `src/infra/services/memoryMultiplayerRoomService.ts` (com isolamento de `currentSecretWord` por `viewerPlayerId` durante `drawing`)
+- [x] **T006** Criar migração `supabase/migrations/007_desenho_multiplayer.sql` (políticas RLS para palavra secreta + suporte a desenho/palpites) e implementar os métodos correspondentes em `src/infra/services/supabaseMultiplayerRoomService.ts` (Realtime + Broadcast de elementos)
 
 ---
 
-## Fase 5: Dependência Expo, Mocks Jest e Sincronização de Tokens (`/sincronizar-tema`)
-*Objetivo: Instalar `react-native-svg`, preparar os mocks de teste e sincronizar os tokens `canvas.*` aprovados no Design System.*
+## Fase 3: Caso de Uso Dedicado e Injeção de Dependências (`src/usecase/` e `src/di/`)
+*Objetivo: Concentrar regras de negócio multiplayer, normalização de palpites, pontuação e premiação em `DesenhoUseCases`.*
 
-- [x] **T012** Instalar `react-native-svg` via `npx expo install react-native-svg`, adicionar mock em `tests/__mocks__/react-native-svg.tsx` + `jest.config.js` e exportar `PanResponder` em `tests/__mocks__/react-native.tsx`
-- [x] **T013** Sincronizar os tokens semânticos (`color.canvasPaper`, `color.canvasInk`, `color.canvasPurple`, `color.canvasCoral`, `color.canvasGreen`) e de componente (`component.canvas`, incluindo `pen.onPen` e export nomeado `canvas`) em `src/view/theme.ts` conforme `design-system/02-tokens.md`
-- [x] **T014** Atualizar `tests/tokens.test.ts` validando estrutura e razão de contraste WCAG (`>= 4,5:1`) das 4 canetas sobre `canvas.paperBg` e de `canvas.pen.onPen` sobre as 4 canetas nos modos claro e escuro
-
----
-
-## Fase 6: Apresentação — ViewModel, Componente, View e Rota Fina (`src/viewmodel/`, `src/view/`, `src/app/`)
-*Objetivo: Construir a `useDesenhoViewModel`, o `DrawingCanvas`, a tela `desenho.tsx` e a rota fina de 2 linhas na ordem canônica.*
-
-- [x] **T015** Implementar `src/viewmodel/useDesenhoViewModel.ts` retornando `[DesenhoState, DesenhoActions]` (fases `pass-turn`, `drawing`, `turn-summary`, `finished`; estado de traços; ocultar/mostrar palavra; última palavra em andamento no `turn-summary`; sorteio sem repetição; `IGameFeedbackUseCases.notifyTimerTick` com `reduceMotion`; saída segura e navegação `expo-router`)
-- [x] **T016** Implementar `src/view/components/drawingCanvas.tsx` com `Svg`/`Path` + `PanResponder` (ponto único, cancelamento seguro ao bloquear, `onDrawingStart`/`onDrawingEnd`), 4 cores com ícone `check` em `canvas.pen.onPen`, 2 espessuras, *"Desfazer"*, *"Limpar"*, alvos `>= 48 dp`, `useKeyboardFocus` e exclusivamente tokens de `useTheme()`
-- [x] **T017** Implementar `src/view/desenho.tsx` consumindo `useDesenhoViewModel()`, `useReduceMotion` e `useTheme()`, contemplando os estados `loading`, `error`, equipes insuficientes, as 4 fases da partida e bloqueio do `ScrollView` durante o desenho
-- [x] **T018** Criar a rota fina de 2 linhas em `src/app/desenho.tsx` reexportando `@/view/desenho`
+- [x] **T007** Criar contrato `IDesenhoUseCases` em `src/usecase/iDesenhoUseCases.ts` e implementação `DesenhoUseCases` em `src/usecase/desenhoUseCases.ts` (validações de apelido/PIN/pacotes/mínimo de 2 jogadores, sorteio sem repetição, validação normalizada de palpites, pontuação `+20`/`+15`/`+10` e `+10`/`+5`, encerramento antecipado quando todos acertam e cálculo de `DesenhoAwards`)
+- [x] **T008** Registrar e exportar `desenhoUseCases: IDesenhoUseCases` em `src/di/container.ts` (injetando `multiplayerRoomService` e `gameCatalogDataSource`) e revisar métodos/mocks em `IPgPlayUseCases` / `PgPlayUseCases`
 
 ---
 
-## Fase 7: Testes de Interface, Verificação Determinística e Governança Git
-*Objetivo: Atingir cobertura completa por categoria (ES III), 0 violações em `npm run check` e commits convencionais incrementais (sem criar PR para `develop`).*
+## Fase 4: Sincronização de Tokens (`v1.3.0`) e Mocks SVG (`src/view/theme.ts` e `tests/`)
+*Objetivo: Sincronizar o canvas expandido no tema e preparar mocks de `Line`, `Rect`, `Ellipse` e `Polygon` do `react-native-svg`.*
 
-- [x] **T019** Criar teste de componente RNTL em `tests/components/drawingCanvas.test.tsx` validando folha, gestos (`PanResponder`, ponto único, `onDrawingStart`/`onDrawingEnd`), acessibilidade da barra de ferramentas, seleção de cor/espessura e ações de desfazer/limpar
-- [x] **T020** Criar teste de hook em `tests/hooks/useDesenhoViewModel.test.ts` e atualizar `tests/hooks/gameFeedback.viewmodels.test.ts` cobrindo fases, traços, pontuação, reciclagem de pulos, última palavra no resumo, fim do tempo, feedback háptico e saída segura
-- [x] **T021** Criar teste de tela com mock em `tests/mocks/desenhoScreen.mock.test.tsx` (`loading`, `error`, equipes insuficientes, fases e rota fina) e teste de integração real em `tests/integration/desenho.integration.test.tsx`
-- [x] **T022** Executar `npm run check` (`check-arquitetura.mjs`, `check-design-system.mjs`, `tsc --noEmit` e `jest`) garantindo **0 violações e 0 erros**
-- [x] **T023** Realizar commits convencionais incrementais na branch `feat/028-uc12-desenho-relampago` (separando camadas e commits `test(...)` por categoria, referenciando `#83` e `UC12`), **sem abrir Pull Request para `develop`**
+- [x] **T009** Atualizar `src/view/theme.ts` ajustando `canvas.minHeight` (`320 dp` = `space['3xl'] * 5`) e adicionando `canvas.expandedMinHeight` (`384 dp` = `space['3xl'] * 6`) conforme `design-system/02-tokens.md` (`v1.3.0`)
+- [x] **T010** Atualizar `tests/__mocks__/react-native-svg.tsx` para exportar `Line`, `Rect`, `Ellipse` e `Polygon` além de `Svg` e `Path`, e atualizar `tests/tokens.test.ts` validando os novos tokens `canvas.*`
+
+---
+
+## Fase 5: Apresentação — `DrawingCanvas`, `useDesenhoViewModel` e `src/view/desenho.tsx`
+*Objetivo: Entregar formas geométricas com preenchimento, tema temporário de 5s + espiar 3s, canvas expandido e arena multiplayer completa.*
+
+- [x] **T011** Refatorar `src/view/components/drawingCanvas.tsx` para renderizar `DrawingElement` (`Path`, `Line`, `Rect`, `Ellipse`, `Polygon`) com pré-visualização em tempo real, barra de ferramentas com **Pincel + 4 Formas + alternador Contorno/Preenchido + 4 Cores + 2 Espessuras + Desfazer/Limpar**, suporte a `expanded` (`canvas.expandedMinHeight`) e modo `readOnly` para adivinhadores
+- [x] **T012** Refatorar `src/viewmodel/useDesenhoViewModel.ts` para consumir `IDesenhoUseCases` + `IGameFeedbackUseCases`: fluxos de Lobby (criar/entrar PIN, configurar), assinatura Realtime da sala, temporizador automático de **`5 segundos`** do tema no início de cada turno (expandindo o canvas ao zerar), ação `handlePeekWord` (**`3 segundos`**), seleção de ferramenta/forma/preenchimento/cor/espessura, envio de palpites e saída segura
+- [x] **T013** Refatorar `src/view/desenho.tsx` para exibir as 4 fases multiplayer (`lobby`, `drawing` nas visões Desenhista com tema 5s → canvas expandido + botão *"Espiar palavra"* e Adivinhador com canvas `readOnly` + feed + campo de palpite, `turn_summary` revelando palavra/pontuação e `finished` com Pódio e prêmios), mantendo `src/app/desenho.tsx` como rota fina de 2 linhas
+
+---
+
+## Fase 6: Testes Automatizados por Categoria, Verificação e Commits Incrementais
+*Objetivo: Cobrir 100% das novas regras multiplayer e formas geométricas com `npm run check` zerado.*
+
+- [x] **T014** Criar `tests/unit/desenhoUseCases.test.ts` e atualizar `tests/unit/pgPlayUseCases.hub.test.ts` e `tests/hooks/useHubViewModel.test.ts` (3 jogos em `'Sala Multiplayer'`, 6 em `'1 Celular'`)
+- [x] **T015** Atualizar `tests/components/drawingCanvas.test.tsx` cobrindo as 4 formas geométricas, `stroke` vs `fill`, pré-visualização, modo `expanded` e modo `readOnly`
+- [x] **T016** Atualizar `tests/hooks/useDesenhoViewModel.test.ts` e `tests/hooks/gameFeedback.viewmodels.test.ts` cobrindo Lobby, desaparecimento do tema após `5s`, expansão do canvas, espiada de `3s`, palpites e feedback háptico
+- [x] **T017** Atualizar `tests/mocks/desenhoScreen.mock.test.tsx` e `tests/integration/desenho.integration.test.tsx` cobrindo fluxo completo multiplayer entre Desenhista e Adivinhador
+- [x] **T018** Executar `npm run check` (`check-arquitetura.mjs`, `check-design-system.mjs`, `tsc --noEmit` e `jest`) garantindo **0 violações e 0 erros**, e realizar commits convencionais incrementais (sem `git push`)
