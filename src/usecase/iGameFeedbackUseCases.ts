@@ -12,4 +12,5 @@ export interface IGameFeedbackUseCases {
   ): Promise<void>;
   notifyAnswer(outcome: AnswerOutcome): Promise<void>;
   notifyLetterGuess(isInWord: boolean): Promise<void>;
+  notifyPass(): Promise<void>;
 }

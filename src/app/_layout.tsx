@@ -13,6 +13,7 @@ import {
   PlusJakartaSans_800ExtraBold,
 } from '@expo-google-fonts/plus-jakarta-sans';
 import { ThemeProvider, useTheme, type AppTokens } from '@/view/theme';
+import { useSoundPreferenceViewModel } from '@/viewmodel/useSoundPreferenceViewModel';
 import { useThemePreferenceViewModel } from '@/viewmodel/useThemePreferenceViewModel';
 
 const LayoutShell = () => {
@@ -65,12 +66,17 @@ export const RootLayout = () => {
     PlusJakartaSans_800ExtraBold,
   });
   const [themeState, themeActions] = useThemePreferenceViewModel();
+  const [soundState, soundActions] = useSoundPreferenceViewModel();
 
   return (
     <ThemeProvider
       preference={themeState.preference}
       onChangePreference={(next) => {
         void themeActions.handleSetThemePreference(next);
+      }}
+      soundEnabled={soundState.soundEnabled}
+      onChangeSoundEnabled={(next) => {
+        void soundActions.handleSetSoundEnabled(next);
       }}
     >
       <LayoutShell />

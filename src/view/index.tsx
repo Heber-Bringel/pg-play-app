@@ -7,10 +7,12 @@ import { ExpressiveChip } from '@/view/components/expressiveChip';
 import { ExpressiveTag } from '@/view/components/expressiveTag';
 import { GameCard } from '@/view/components/gameCard';
 import {
+  SoundToggleButton,
   ThemeModePanel,
   ThemeModeToggleButton,
 } from '@/view/components/themeModeSwitcher';
 import {
+  useSoundPreference,
   useTheme,
   useThemePreference,
   type AppTokens,
@@ -38,6 +40,7 @@ export const HubScreen = () => {
   const activeTokens = useTheme();
   const { preference: themePreference, setPreference: setThemePreference } =
     useThemePreference();
+  const { soundEnabled, toggleSoundEnabled } = useSoundPreference();
   const [themePanelExpanded, setThemePanelExpanded] = useState<boolean>(false);
   const styles = useMemo(() => createStyles(activeTokens), [activeTokens]);
 
@@ -109,6 +112,10 @@ export const HubScreen = () => {
             <ExpressiveTag
               label={`${state.games.length} de ${state.allGamesCount} jogos`}
               tone="neutral"
+            />
+            <SoundToggleButton
+              soundEnabled={soundEnabled}
+              onPress={toggleSoundEnabled}
             />
             <ThemeModeToggleButton
               preference={themePreference}

@@ -226,6 +226,7 @@ export function useMimicaViewModel(
       setTurnHits((prev) => prev + 1);
       setTurnPointsDelta((prev) => prev + gained);
       setWordVisible(true);
+      void gameFeedback.notifyAnswer('correct');
 
       const nextFresh = freshDeck.length > 0 ? freshDeck.slice(1) : freshDeck;
       const nextSkipped =
@@ -246,7 +247,7 @@ export function useMimicaViewModel(
         setError('Erro ao registrar acerto na rodada.');
       }
     }
-  }, [phase, currentTeam, currentCard, useCases, freshDeck, skippedDeck]);
+  }, [phase, currentTeam, currentCard, useCases, gameFeedback, freshDeck, skippedDeck]);
 
   const handleSkip = useCallback(async () => {
     if (phase !== 'playing' || !currentTeam || !currentCard) {
@@ -263,6 +264,7 @@ export function useMimicaViewModel(
       setTurnSkips((prev) => prev + 1);
       setTurnPointsDelta((prev) => prev + diff);
       setWordVisible(true);
+      void gameFeedback.notifyPass();
 
       if (freshDeck.length > 0) {
         const [skippedCard, ...restFresh] = freshDeck;
@@ -279,7 +281,7 @@ export function useMimicaViewModel(
         setError('Erro ao pular palavra na rodada.');
       }
     }
-  }, [phase, currentTeam, currentCard, useCases, freshDeck, skippedDeck]);
+  }, [phase, currentTeam, currentCard, useCases, gameFeedback, freshDeck, skippedDeck]);
 
   const handleNextTurn = useCallback(() => {
     if (remainingCardsCount === 0) {
