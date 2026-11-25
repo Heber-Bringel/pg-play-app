@@ -7,6 +7,7 @@ import {
 } from '@/di/container';
 import type {
   DesenhoCategory,
+  DrawingElement,
   DrawingElementDraft,
   DrawingFillMode,
   DrawingPenColorId,
@@ -140,6 +141,38 @@ export function useDesenhoViewModel(
   const lastTurnKeyRef = useRef<string | null>(null);
   const timedOutTurnKeyRef = useRef<string | null>(null);
   const lastVersionRef = useRef<number>(-1);
+  const roomRef = useRef<DesenhoRoom | null>(room);
+  roomRef.current = room;
+  const pendingElementsRef = useRef<DrawingElement[]>([]);
+  const optimisticCounterRef = useRef<number>(0);
+
+  const roomId = room?.id ?? null;
+  const roomPhase = room?.phase ?? null;
+  const roomPhaseEndsAt = room?.phaseEndsAt ?? null;
+  const roomTurnDuration = room?.config.turnDurationSeconds ?? 90;
+
+  const mergePendingElements = useCallback(
+    (incoming: DesenhoRoom): DesenhoRoom => {
+      if (
+        incoming.phase !== 'drawing' ||
+        pendingElementsRef.current.length === 0
+      ) {
+        return incoming;
+      }
+      const existingIds = new Set(incoming.elements.map((el) => el.id));
+      const stillPending = pendingElementsRef.current.filter(
+        (el) => !existingIds.has(el.id)
+      );
+      if (stillPending.length === 0) {
+        return incoming;
+      }
+      return {
+        ...incoming,
+        elements: [...incoming.elements, ...stillPending],
+      };
+    },
+    []
+  );
 
   const currentPlayer: DesenhoPlayer | null = useMemo(
     () => room?.players.find((p) => p.id === currentPlayerId) ?? null,
@@ -179,9 +212,10 @@ export function useDesenhoViewModel(
   }, [secondsRemaining, reduceMotion, gameFeedback, room?.phase]);
 
   useEffect(() => {
-    if (!room || room.phase !== 'drawing' || !currentTurnKey) {
+    if (roomPhase !== 'drawing' || !currentTurnKey) {
       lastTurnKeyRef.current = null;
       timedOutTurnKeyRef.current = null;
+      pendingElementsRef.current = [];
       setThemeBannerSecondsLeft(0);
       setIsPeekingTheme(false);
       return;
@@ -190,13 +224,11 @@ export function useDesenhoViewModel(
     if (lastTurnKeyRef.current !== currentTurnKey) {
       lastTurnKeyRef.current = currentTurnKey;
       timedOutTurnKeyRef.current = null;
+      pendingElementsRef.current = [];
       setGuessDraft('');
       setGuessFeedback(null);
       setSecondsRemaining(
-        computeSecondsFromEndsAt(
-          room.phaseEndsAt,
-          room.config.turnDurationSeconds
-        )
+        computeSecondsFromEndsAt(roomPhaseEndsAt, roomTurnDuration)
       );
       if (isCurrentPlayerDrawer) {
         setIsPeekingTheme(false);
@@ -207,7 +239,9 @@ export function useDesenhoViewModel(
       }
     }
   }, [
-    room,
+    roomPhase,
+    roomPhaseEndsAt,
+    roomTurnDuration,
     currentTurnKey,
     isCurrentPlayerDrawer,
   ]);
@@ -232,18 +266,18 @@ export function useDesenhoViewModel(
   }, [hasThemeCountdown]);
 
   useEffect(() => {
-    if (!room?.id) {
+    if (!roomId) {
       return undefined;
     }
-    const unsubscribe = useCase.subscribeToRoom(room.id, (updatedRoom) => {
+    const unsubscribe = useCase.subscribeToRoom(roomId, (updatedRoom) => {
       if (updatedRoom.version < lastVersionRef.current) {
         return;
       }
       lastVersionRef.current = updatedRoom.version;
-      setRoom(updatedRoom);
+      setRoom(mergePendingElements(updatedRoom));
     });
     return unsubscribe;
-  }, [room?.id, useCase]);
+  }, [roomId, useCase, mergePendingElements]);
 
   const applyRoomState = useCallback(
     async (loadedRoom: DesenhoRoom) => {
@@ -434,18 +468,84 @@ export function useDesenhoViewModel(
 
   const handleCompleteElement = useCallback(
     async (draft: DrawingElementDraft) => {
-      if (!room || !currentPlayerId || room.phase !== 'drawing') return;
+      const activeRoom = roomRef.current;
+      if (!activeRoom || !currentPlayerId || activeRoom.phase !== 'drawing') {
+        return;
+      }
       if (!isCurrentPlayerDrawer || confirmingExit) return;
+
+      const isRenderableDraft =
+        draft.tool === 'freehand'
+          ? draft.points.length > 0
+          : Math.abs(draft.end.x - draft.start.x) >= 2 ||
+            Math.abs(draft.end.y - draft.start.y) >= 2;
+
+      let optimisticId: string | null = null;
+      if (isRenderableDraft) {
+        optimisticCounterRef.current += 1;
+        optimisticId = `optimistic-${Date.now()}-${optimisticCounterRef.current}`;
+        const optimisticElement: DrawingElement =
+          draft.tool === 'freehand'
+            ? {
+                id: optimisticId,
+                tool: 'freehand',
+                points: draft.points.map((p) => ({ x: p.x, y: p.y })),
+                colorId: draft.colorId,
+                widthId: draft.widthId,
+              }
+            : {
+                id: optimisticId,
+                tool: draft.tool,
+                start: { x: draft.start.x, y: draft.start.y },
+                end: { x: draft.end.x, y: draft.end.y },
+                fillMode: draft.tool === 'line' ? 'stroke' : draft.fillMode,
+                colorId: draft.colorId,
+                widthId: draft.widthId,
+              };
+
+        pendingElementsRef.current = [
+          ...pendingElementsRef.current,
+          optimisticElement,
+        ];
+        setRoom((prev) =>
+          prev && prev.id === activeRoom.id && prev.phase === 'drawing'
+            ? { ...prev, elements: [...prev.elements, optimisticElement] }
+            : prev
+        );
+      }
+
       try {
         setError(null);
         const updated = await useCase.addElement(
-          room.id,
+          activeRoom.id,
           currentPlayerId,
           draft
         );
-        lastVersionRef.current = updated.version;
-        setRoom(updated);
+        if (optimisticId) {
+          pendingElementsRef.current = pendingElementsRef.current.filter(
+            (el) => el.id !== optimisticId
+          );
+        }
+        lastVersionRef.current = Math.max(
+          lastVersionRef.current,
+          updated.version
+        );
+        setRoom(mergePendingElements(updated));
       } catch (err: unknown) {
+        if (optimisticId) {
+          const rollbackId = optimisticId;
+          pendingElementsRef.current = pendingElementsRef.current.filter(
+            (el) => el.id !== rollbackId
+          );
+          setRoom((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  elements: prev.elements.filter((el) => el.id !== rollbackId),
+                }
+              : prev
+          );
+        }
         if (err instanceof DomainError) {
           setError(err.message);
         } else {
@@ -453,34 +553,73 @@ export function useDesenhoViewModel(
         }
       }
     },
-    [room, currentPlayerId, isCurrentPlayerDrawer, confirmingExit, useCase]
+    [
+      currentPlayerId,
+      isCurrentPlayerDrawer,
+      confirmingExit,
+      useCase,
+      mergePendingElements,
+    ]
   );
 
   const handleUndoElement = useCallback(async () => {
-    if (!room || !currentPlayerId || !isCurrentPlayerDrawer) return;
+    const activeRoom = roomRef.current;
+    if (!activeRoom || !currentPlayerId || !isCurrentPlayerDrawer) return;
+    const previousElements = activeRoom.elements;
+    if (previousElements.length > 0) {
+      setRoom((prev) =>
+        prev && prev.id === activeRoom.id && prev.elements.length > 0
+          ? { ...prev, elements: prev.elements.slice(0, -1) }
+          : prev
+      );
+    }
     try {
-      const updated = await useCase.undoElement(room.id, currentPlayerId);
-      lastVersionRef.current = updated.version;
-      setRoom(updated);
+      const updated = await useCase.undoElement(activeRoom.id, currentPlayerId);
+      lastVersionRef.current = Math.max(
+        lastVersionRef.current,
+        updated.version
+      );
+      setRoom(mergePendingElements(updated));
     } catch (err: unknown) {
+      setRoom((prev) =>
+        prev && prev.id === activeRoom.id
+          ? { ...prev, elements: previousElements }
+          : prev
+      );
       if (err instanceof DomainError) {
         setError(err.message);
       }
     }
-  }, [room, currentPlayerId, isCurrentPlayerDrawer, useCase]);
+  }, [currentPlayerId, isCurrentPlayerDrawer, useCase, mergePendingElements]);
 
   const handleClearCanvas = useCallback(async () => {
-    if (!room || !currentPlayerId || !isCurrentPlayerDrawer) return;
+    const activeRoom = roomRef.current;
+    if (!activeRoom || !currentPlayerId || !isCurrentPlayerDrawer) return;
+    const previousElements = activeRoom.elements;
+    const previousPending = pendingElementsRef.current;
+    pendingElementsRef.current = [];
+    setRoom((prev) =>
+      prev && prev.id === activeRoom.id ? { ...prev, elements: [] } : prev
+    );
     try {
-      const updated = await useCase.clearCanvas(room.id, currentPlayerId);
-      lastVersionRef.current = updated.version;
-      setRoom(updated);
+      const updated = await useCase.clearCanvas(activeRoom.id, currentPlayerId);
+      lastVersionRef.current = Math.max(
+        lastVersionRef.current,
+        updated.version
+      );
+      setRoom(mergePendingElements(updated));
     } catch (err: unknown) {
+      pendingElementsRef.current = previousPending;
+      setRoom((prev) =>
+        prev && prev.id === activeRoom.id
+          ? { ...prev, elements: previousElements }
+          : prev
+      );
       if (err instanceof DomainError) {
         setError(err.message);
       }
     }
-  }, [room, currentPlayerId, isCurrentPlayerDrawer, useCase]);
+  }, [currentPlayerId, isCurrentPlayerDrawer, useCase, mergePendingElements]);
 
   const handlePeekWord = useCallback(() => {
     if (!room || room.phase !== 'drawing' || !isCurrentPlayerDrawer) return;
@@ -521,9 +660,9 @@ export function useDesenhoViewModel(
   }, [room, currentPlayerId, guessDraft, useCase]);
 
   const handleFinishTurn = useCallback(async () => {
-    if (!room || room.phase !== 'drawing') return;
+    if (!roomId || roomPhase !== 'drawing') return;
     try {
-      const updated = await useCase.finishTurn(room.id, 'timeout');
+      const updated = await useCase.finishTurn(roomId, 'timeout');
       lastVersionRef.current = updated.version;
       setRoom(updated);
     } catch (err: unknown) {
@@ -531,7 +670,7 @@ export function useDesenhoViewModel(
         setError(err.message);
       }
     }
-  }, [room, useCase]);
+  }, [roomId, roomPhase, useCase]);
 
   const handleTick = useCallback(() => {
     setSecondsRemaining((prev) => {
@@ -547,14 +686,14 @@ export function useDesenhoViewModel(
   }, [currentTurnKey, handleFinishTurn]);
 
   useEffect(() => {
-    if (room?.phase !== 'drawing' || confirmingExit) {
+    if (roomPhase !== 'drawing' || confirmingExit) {
       return undefined;
     }
     const timerId = setInterval(() => {
       handleTick();
     }, 1000);
     return () => clearInterval(timerId);
-  }, [room?.phase, confirmingExit, handleTick]);
+  }, [roomPhase, confirmingExit, handleTick]);
 
   const handleAdvanceTurn = useCallback(async () => {
     if (!room) return;
