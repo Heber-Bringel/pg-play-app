@@ -74,3 +74,22 @@ export const useWindowDimensions = () => ({
 });
 
 export const useColorScheme = jest.fn((): 'light' | 'dark' | null | undefined => 'light');
+
+export const PanResponder = {
+  create: (config: Record<string, any>) => ({
+    panHandlers: {
+      onStartShouldSetResponder: config.onStartShouldSetPanResponder,
+      onMoveShouldSetResponder: config.onMoveShouldSetPanResponder,
+      onResponderGrant: (event: any) =>
+        config.onPanResponderGrant?.(event, { dx: 0, dy: 0 }),
+      onResponderMove: (event: any) =>
+        config.onPanResponderMove?.(event, { dx: 0, dy: 0 }),
+      onResponderRelease: (event: any) =>
+        config.onPanResponderRelease?.(event, { dx: 0, dy: 0 }),
+      onResponderTerminate: (event: any) =>
+        config.onPanResponderTerminate?.(event, { dx: 0, dy: 0 }),
+      onResponderTerminationRequest: (event: any) =>
+        config.onPanResponderTerminationRequest?.(event, { dx: 0, dy: 0 }) ?? true,
+    },
+  }),
+};
