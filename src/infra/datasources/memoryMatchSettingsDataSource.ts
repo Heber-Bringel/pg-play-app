@@ -9,6 +9,7 @@ function cloneSettings(settings: MatchSettings): MatchSettings {
     mimica: { ...settings.mimica },
     quiz: { ...settings.quiz },
     forca: { ...settings.forca },
+    desenho: { ...settings.desenho },
   };
 }
 

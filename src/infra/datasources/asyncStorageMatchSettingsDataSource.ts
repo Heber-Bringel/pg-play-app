@@ -23,6 +23,7 @@ function mergeWithDefaults(parsed: unknown): MatchSettings {
     mimica: { ...DEFAULT_MATCH_SETTINGS.mimica, ...section('mimica') },
     quiz: { ...DEFAULT_MATCH_SETTINGS.quiz, ...section('quiz') },
     forca: { ...DEFAULT_MATCH_SETTINGS.forca, ...section('forca') },
+    desenho: { ...DEFAULT_MATCH_SETTINGS.desenho, ...section('desenho') },
   };
 }
 
