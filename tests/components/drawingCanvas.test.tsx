@@ -230,4 +230,45 @@ describe('DrawingCanvas — Formas Geométricas, Preenchimento, Expansão e Read
     expect(screen.getByText('Arca de Noé')).toBeTruthy();
     expect(screen.getByText('Some em 3s')).toBeTruthy();
   });
+
+  it('deve filtrar pontos muito próximos (< 3px) no pincel livre para reduzir o payload do traço', async () => {
+    const onElementComplete = jest.fn();
+
+    const screen = await render(
+      <DrawingCanvas
+        elements={[]}
+        selectedTool="freehand"
+        selectedColor="ink"
+        selectedWidth="thin"
+        onElementComplete={onElementComplete}
+      />
+    );
+
+    const paper = screen.getByTestId('drawing-canvas-paper');
+    await act(async () => {
+      paper.props.onResponderGrant({ nativeEvent: { locationX: 10, locationY: 10 } });
+      // Pontos a 1px e 2px de distância (devem ser ignorados)
+      paper.props.onResponderMove({ nativeEvent: { locationX: 11, locationY: 10 } });
+      paper.props.onResponderMove({ nativeEvent: { locationX: 12, locationY: 11 } });
+      // Ponto a >= 3px de distância (deve ser aceito)
+      paper.props.onResponderMove({ nativeEvent: { locationX: 14, locationY: 10 } });
+      // Ponto repetido (ignorado)
+      paper.props.onResponderMove({ nativeEvent: { locationX: 15, locationY: 11 } });
+      // Novo ponto distante (aceito)
+      paper.props.onResponderMove({ nativeEvent: { locationX: 25, locationY: 20 } });
+      paper.props.onResponderRelease();
+    });
+
+    expect(onElementComplete).toHaveBeenCalledTimes(1);
+    expect(onElementComplete).toHaveBeenCalledWith({
+      tool: 'freehand',
+      points: [
+        { x: 10, y: 10 },
+        { x: 14, y: 10 },
+        { x: 25, y: 20 },
+      ],
+      colorId: 'ink',
+      widthId: 'thin',
+    });
+  });
 });
