@@ -4,6 +4,15 @@ Versões no formato `MAIOR.MENOR.CORREÇÃO` (Semantic Versioning). Mudanças qu
 
 ---
 
+## 1.3.0 · 25/11/2026
+
+- Evolução do componente `DrawingCanvas` e dos tokens `canvas.*` para a refatoração multiplayer do **Desenho Relâmpago** (`UC12`, Issue `#83`):
+  - **Canvas expandido (`02-tokens.md`):** atualização de `canvas.minHeight` para `320 dp` (`space.3xl * 5`) e criação do token `canvas.expandedMinHeight` (`384 dp` = `space.3xl * 6`) para ocupar a área liberada quando o tema temporário de `5s` desaparece.
+  - **Formas geométricas e preenchimento (`04-componentes/tela-de-desenho.md`):** adição das ferramentas `Pincel Livre`, `Linha`, `Retângulo`, `Círculo` e `Triângulo` com alternador `Contorno` / `Preenchido` e pré-visualização em tempo real durante o gesto.
+  - **Modo somente leitura (`readOnly`):** suporte à visualização em tempo real pelos adivinhadores da sala multiplayer sem exibir barra de ferramentas nem opacidade de bloqueio.
+
+---
+
 ## 1.2.0 · 25/11/2026
 
 - Adição do componente `DrawingCanvas` e dos tokens de desenho para o minigame **Desenho Relâmpago** (`UC12`, Issue `#83`).

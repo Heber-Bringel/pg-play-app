@@ -1,6 +1,6 @@
 # PG Play Expressive · Sistema de design do app PG PLAY
 
-> Versão: 1.2.0 · Grupo: Heber Bringel e equipe ([pg-play-app](https://github.com/Heber-Bringel/pg-play-app.git)) · Disciplinas: IHC e PDM · IFPI Piripiri
+> Versão: 1.3.0 · Grupo: Heber Bringel e equipe ([pg-play-app](https://github.com/Heber-Bringel/pg-play-app.git)) · Disciplinas: IHC e PDM · IFPI Piripiri
 
 ## 1. Visão geral
 
@@ -20,12 +20,12 @@ O **PG PLAY** é um aplicativo móvel de minigames presenciais (Mímica, Quiz, F
 | Plataforma | Nativo na linguagem visual do Android, familiar no iOS e responsivo na Web com tema claro/escuro automático via `useColorScheme()`. |
 | Tecnologia | Os tokens em três níveis mapeiam diretamente para `src/view/theme.ts` (`ThemeProvider` + `useTheme()`) sem duplicatas nem valores literais. |
 
-## 3. Mapa dos arquivos (11 componentes documentados na v1.2.0)
+## 3. Mapa dos arquivos (11 componentes documentados na v1.3.0)
 
 | Arquivo | Conteúdo |
 | --- | --- |
 | [01-principios.md](01-principios.md) | Valores que guiam as decisões do sistema |
-| [02-tokens.md](02-tokens.md) | Tokens primitivos, semânticos e de componente (claro, escuro e JSON W3C — v1.2.0) |
+| [02-tokens.md](02-tokens.md) | Tokens primitivos, semânticos e de componente (claro, escuro e JSON W3C — v1.3.0) |
 | [03-fundamentos.md](03-fundamentos.md) | Regras de cor, bordas por estado, tipografia (`Plus Jakarta Sans`), espaço, ícones, elevação e movimento |
 | [04-componentes/botao.md](04-componentes/botao.md) | `ExpressiveButton` com *shape morphing*, Jumbo e variantes `text` e `icon` |
 | [04-componentes/campo-de-texto.md](04-componentes/campo-de-texto.md) | `ExpressiveTextField` para busca, cadastro de equipes e entradas de jogo |
@@ -37,11 +37,11 @@ O **PG PLAY** é um aplicativo móvel de minigames presenciais (Mímica, Quiz, F
 | [04-componentes/tag.md](04-componentes/tag.md) | `ExpressiveTag` para metadados e badges em 6 tons legíveis (`14 dp`, ≥ 3:1) |
 | [04-componentes/modal-confirmacao.md](04-componentes/modal-confirmacao.md) | `ConfirmModal` com suporte a 1 botão (encerramento) ou 2 botões (confirmação) |
 | [04-componentes/item-selecionavel.md](04-componentes/item-selecionavel.md) | `SelectableOptionItem` para listas de seleção exclusiva (Noite/Dia) |
-| [04-componentes/tela-de-desenho.md](04-componentes/tela-de-desenho.md) | `DrawingCanvas` para desenho à mão livre com 4 cores, 2 espessuras e barra acessível (`UC12`) |
+| [04-componentes/tela-de-desenho.md](04-componentes/tela-de-desenho.md) | `DrawingCanvas` expandido com pincel livre, 4 formas geométricas (contorno/preenchido), 4 cores, 2 espessuras e modo `readOnly` (`UC12`) |
 | [05-padroes.md](05-padroes.md) | Fluxos completos: Configuração de Equipes, Rodada com Tempo e Busca no Hub |
 | [06-acessibilidade.md](06-acessibilidade.md) | Contraste de textos (≥ 4,5:1) e componentes (≥ 3:1), alvos, foco `:focus-visible`, leitor de tela e movimento reduzido |
 | [07-teste-com-ia.md](07-teste-com-ia.md) | Validação do sistema com assistente de IA |
-| [CHANGELOG.md](CHANGELOG.md) | Histórico de versões (`1.0.0` → `1.2.0`) |
+| [CHANGELOG.md](CHANGELOG.md) | Histórico de versões (`1.0.0` → `1.3.0`) |
 
 ## 4. Instruções para assistentes de IA
 

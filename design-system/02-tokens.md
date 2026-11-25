@@ -1,6 +1,6 @@
 # Tokens
 
-Os tokens do **PG Play Expressive (v1.2.0)** organizam todas as decisões visuais em três níveis: **Primitivo** (o valor bruto), **Semântico** (o propósito no tema claro e escuro) e **Componente** (onde o token é aplicado). Os componentes de código em React Native nunca referenciam valores literais ou tokens primitivos diretamente — apenas tokens semânticos e de componente, consumidos via `useTheme()` de `@/view/theme`.
+Os tokens do **PG Play Expressive (v1.3.0)** organizam todas as decisões visuais em três níveis: **Primitivo** (o valor bruto), **Semântico** (o propósito no tema claro e escuro) e **Componente** (onde o token é aplicado). Os componentes de código em React Native nunca referenciam valores literais ou tokens primitivos diretamente — apenas tokens semânticos e de componente, consumidos via `useTheme()` de `@/view/theme`.
 
 ---
 
@@ -234,7 +234,8 @@ Todas as escalas utilizam a família **Plus Jakarta Sans** mapeada por peso expl
 | `canvas.paperBg` | `color.canvas-paper` | Novo (v1.2.0 — fundo fixo de papel claro na Tela de Desenho) |
 | `canvas.border` | `color.outline` | Novo (v1.2.0 — contorno da folha de desenho ≥ 4,35:1) |
 | `canvas.radius` | `radius.lg` (`20 dp`) | Novo (v1.2.0 — cantos arredondados da folha de desenho) |
-| `canvas.minHeight` | `space.3xl * 4` (`256 dp`) | Novo (v1.2.0 — altura mínima da folha de desenho) |
+| `canvas.minHeight` | `space.3xl * 5` (`320 dp`) | Atualizado (v1.3.0 — altura mínima da folha no modo padrão / visualização de adivinhadores) |
+| `canvas.expandedMinHeight` | `space.3xl * 6` (`384 dp`) | Novo (v1.3.0 — altura expandida da folha quando o tema temporário de 5s desaparece e o canvas ocupa a área do tema) |
 | `canvas.pen.ink` | `color.canvas-ink` | Novo (v1.2.0 — caneta Grafite 16,42:1 sobre `canvas.paperBg`) |
 | `canvas.pen.purple` | `color.canvas-purple` | Novo (v1.2.0 — caneta Roxo 8,84:1 sobre `canvas.paperBg`) |
 | `canvas.pen.coral` | `color.canvas-coral` | Novo (v1.2.0 — caneta Coral 4,90:1 sobre `canvas.paperBg`) |
