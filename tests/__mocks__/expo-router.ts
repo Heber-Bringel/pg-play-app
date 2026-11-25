@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+
 export const mockPush = jest.fn();
 export const mockReplace = jest.fn();
 export const mockBack = jest.fn();
@@ -18,3 +20,7 @@ export const router = {
 };
 
 export const useLocalSearchParams = () => ({});
+
+export const useFocusEffect = (callback: () => void | (() => void)) => {
+  useEffect(() => callback(), [callback]);
+};

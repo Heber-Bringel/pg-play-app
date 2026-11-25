@@ -1,22 +1,13 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { GameModalityFilter } from '@/model/entities/minigame';
+import { AppHeader } from '@/view/components/appHeader';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
 import { ExpressiveChip } from '@/view/components/expressiveChip';
-import { ExpressiveTag } from '@/view/components/expressiveTag';
 import { GameCard } from '@/view/components/gameCard';
-import {
-  SoundToggleButton,
-  ThemeModePanel,
-  ThemeModeToggleButton,
-} from '@/view/components/themeModeSwitcher';
-import {
-  useSoundPreference,
-  useTheme,
-  useThemePreference,
-  type AppTokens,
-} from '@/view/theme';
+import { ShortNavigationBar } from '@/view/components/shortNavigationBar';
+import { useTheme, type AppTokens } from '@/view/theme';
 import { useHubViewModel } from '@/viewmodel/useHubViewModel';
 
 type ModalityOption = {
@@ -38,10 +29,6 @@ const MODALITY_OPTIONS: ModalityOption[] = [
 export const HubScreen = () => {
   const [state, actions] = useHubViewModel();
   const activeTokens = useTheme();
-  const { preference: themePreference, setPreference: setThemePreference } =
-    useThemePreference();
-  const { soundEnabled, toggleSoundEnabled } = useSoundPreference();
-  const [themePanelExpanded, setThemePanelExpanded] = useState<boolean>(false);
   const styles = useMemo(() => createStyles(activeTokens), [activeTokens]);
 
   if (state.loading) {
@@ -80,103 +67,20 @@ export const HubScreen = () => {
     );
   }
 
-  const leaderDescription =
-    state.leaderTeam && state.leaderTeam.score > 0
-      ? `${state.leaderTeam.name} lidera o encontro com ${state.leaderTeam.score} pts!`
-      : state.leaderTeam
-        ? `${state.totalTeams} equipes prontas para começar. Toque para ver o placar do PG.`
-        : 'Nenhuma equipe cadastrada ainda. Configure as equipes do encontro!';
-
-  const leaderTag =
-    state.leaderTeam && state.leaderTeam.score > 0
-      ? `${state.leaderTeam.score} pts · Líder`
-      : 'Placar do PG';
-
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={styles.scrollContent}
-      showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
-    >
-      <View style={styles.header}>
-        <View style={styles.brandRow}>
-          <View style={styles.brandBadge}>
-            <MaterialCommunityIcons
-              name="gamepad-variant"
-              size={activeTokens.semantic.icon.md}
-              color={activeTokens.semantic.color.onActionContainer}
-            />
-          </View>
-          <View style={styles.brandActions}>
-            <ExpressiveTag
-              label={`${state.games.length} de ${state.allGamesCount} jogos`}
-              tone="neutral"
-            />
-            <SoundToggleButton
-              soundEnabled={soundEnabled}
-              onPress={toggleSoundEnabled}
-            />
-            <ThemeModeToggleButton
-              preference={themePreference}
-              expanded={themePanelExpanded}
-              onPress={() => setThemePanelExpanded((prev) => !prev)}
-            />
-          </View>
-        </View>
+    <View style={styles.screen}>
+      <ScrollView
+        style={styles.screen}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        <AppHeader />
 
-        {themePanelExpanded && (
-          <ThemeModePanel
-            preference={themePreference}
-            onSelectPreference={setThemePreference}
-            onMinimize={() => setThemePanelExpanded(false)}
-          />
-        )}
-
-        <Text allowFontScaling style={styles.title}>
-          PG PLAY
+        <Text allowFontScaling style={styles.pageTitle}>
+          Jogos do Encontro
         </Text>
-        <Text allowFontScaling style={styles.subtitle}>
-          Minigames presenciais para animar o seu Pequeno Grupo.
-        </Text>
-      </View>
 
-      <GameCard
-        title={
-          state.leaderTeam && state.leaderTeam.score > 0
-            ? `Líder: ${state.leaderTeam.name}`
-            : 'Placar do Encontro'
-        }
-        description={leaderDescription}
-        playersTag={leaderTag}
-        icon="trophy"
-        highlightLeader={Boolean(state.leaderTeam && state.leaderTeam.score > 0)}
-        onPress={actions.handleOpenScoreboard}
-      />
-
-      <View style={styles.shortcutsRow}>
-        <View style={styles.shortcutItem}>
-          <ExpressiveButton
-            label={`Equipes (${state.totalTeams})`}
-            variant="tonal"
-            icon="account-group"
-            onPress={actions.handleOpenTeams}
-          />
-        </View>
-        <View style={styles.shortcutItem}>
-          <ExpressiveButton
-            label="Ver Placar"
-            variant="outlined"
-            icon="podium-gold"
-            onPress={actions.handleOpenScoreboard}
-          />
-        </View>
-      </View>
-
-      <View style={styles.filterSection}>
-        <Text allowFontScaling style={styles.sectionTitle}>
-          Modalidade
-        </Text>
         <View style={styles.chipsRow}>
           {MODALITY_OPTIONS.map((option) => {
             const selected = state.selectedModality === option.value;
@@ -194,12 +98,6 @@ export const HubScreen = () => {
             );
           })}
         </View>
-      </View>
-
-      <View style={styles.catalogSection}>
-        <Text allowFontScaling style={styles.sectionTitle}>
-          Catálogo de Dinâmicas
-        </Text>
 
         {state.games.length === 0 ? (
           <View style={styles.emptyCard}>
@@ -242,8 +140,13 @@ export const HubScreen = () => {
             ))}
           </View>
         )}
-      </View>
-    </ScrollView>
+      </ScrollView>
+
+      <ShortNavigationBar
+        activeKey="games"
+        onSelect={actions.handleSelectNav}
+      />
+    </View>
   );
 };
 
@@ -255,7 +158,8 @@ const createStyles = (activeTokens: AppTokens) => {
       backgroundColor: color.surface,
     },
     scrollContent: {
-      padding: space.lg,
+      paddingHorizontal: space.lg,
+      paddingTop: space.md,
       paddingBottom: space.xl,
       gap: space.md,
     },
@@ -274,68 +178,16 @@ const createStyles = (activeTokens: AppTokens) => {
       color: color.onSurface,
       textAlign: 'center',
     },
-    header: {
-      gap: space.xs,
-    },
-    brandRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      flexWrap: 'wrap',
-      gap: space.sm,
-      marginBottom: space.xs,
-    },
-    brandActions: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      flexWrap: 'wrap',
-      gap: space.sm,
-    },
-    brandBadge: {
-      width: space['2xl'],
-      height: space['2xl'],
-      borderRadius: radius.lg,
-      backgroundColor: color.actionContainer,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    title: {
-      fontFamily: font.display.family,
-      fontSize: font.display.size,
-      fontWeight: font.display.weight,
-      lineHeight: font.display.lineHeight,
-      color: color.onSurface,
-    },
-    subtitle: {
-      fontFamily: font.body.family,
-      fontSize: font.body.size,
-      fontWeight: font.body.weight,
-      lineHeight: font.body.lineHeight,
-      color: color.onSurfaceMuted,
-    },
-    shortcutsRow: {
-      flexDirection: 'row',
-      gap: space.sm,
-    },
-    shortcutItem: {
-      flex: 1,
-    },
-    filterSection: {
-      gap: space.sm,
-    },
-    sectionTitle: {
-      fontFamily: font.subtitle.family,
-      fontSize: font.subtitle.size,
-      fontWeight: font.subtitle.weight,
-      lineHeight: font.subtitle.lineHeight,
+    pageTitle: {
+      fontFamily: font.title.family,
+      fontSize: font.title.size,
+      fontWeight: font.title.weight,
+      lineHeight: font.title.lineHeight,
       color: color.onSurface,
     },
     chipsRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      gap: space.sm,
-    },
-    catalogSection: {
       gap: space.sm,
     },
     gamesList: {

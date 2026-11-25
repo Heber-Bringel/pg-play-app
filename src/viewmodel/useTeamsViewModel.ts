@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
-import { useRouter } from 'expo-router';
+import { useCallback, useRef, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { pgPlayUseCases } from '@/di/container';
 import type { Team } from '@/model/entities/team';
 import { DomainError } from '@/model/errors';
 import type { IPgPlayUseCases } from '@/usecase/iPgPlayUseCases';
+
+export type TeamsNavKey = 'welcome' | 'games' | 'teams';
 
 export type TeamsState = {
   teams: Team[];
@@ -19,6 +21,7 @@ export type TeamsActions = {
   handleRemoveTeam: (id: string) => Promise<void>;
   handleStartRound: () => void;
   handleBack: () => void;
+  handleSelectNav: (key: TeamsNavKey) => void;
   clearError: () => void;
   handleRetry: () => Promise<void>;
 };
@@ -32,27 +35,36 @@ export function useTeamsViewModel(
   const [newTeamName, setNewTeamNameState] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const hasLoadedRef = useRef<boolean>(false);
 
-  const loadTeams = useCallback(async () => {
-    setLoading(true);
-    setErrorMessage(null);
-    try {
-      const list = await useCase.listTeams();
-      setTeams(list);
-    } catch (err: unknown) {
-      if (err instanceof DomainError) {
-        setErrorMessage(err.message);
-      } else {
-        setErrorMessage('Não foi possível carregar as equipes.');
+  const loadTeams = useCallback(
+    async (showLoading = false) => {
+      if (showLoading || !hasLoadedRef.current) {
+        setLoading(true);
       }
-    } finally {
-      setLoading(false);
-    }
-  }, [useCase]);
+      setErrorMessage(null);
+      try {
+        const list = await useCase.listTeams();
+        hasLoadedRef.current = true;
+        setTeams(list);
+      } catch (err: unknown) {
+        if (err instanceof DomainError) {
+          setErrorMessage(err.message);
+        } else {
+          setErrorMessage('Não foi possível carregar as equipes.');
+        }
+      } finally {
+        setLoading(false);
+      }
+    },
+    [useCase]
+  );
 
-  useEffect(() => {
-    void loadTeams();
-  }, [loadTeams]);
+  useFocusEffect(
+    useCallback(() => {
+      void loadTeams(false);
+    }, [loadTeams])
+  );
 
   const setNewTeamName = useCallback((name: string) => {
     setNewTeamNameState(name);
@@ -100,12 +112,29 @@ export function useTeamsViewModel(
       setErrorMessage('Adicione pelo menos 2 equipes para começar a rodada.');
       return;
     }
-    router.push('/mimica');
+    router.replace('/');
   }, [router, teams.length]);
 
   const handleBack = useCallback(() => {
     router.back();
   }, [router]);
+
+  const handleSelectNav = useCallback(
+    (key: TeamsNavKey) => {
+      if (key === 'welcome') {
+        router.replace('/welcome');
+        return;
+      }
+      if (key === 'games') {
+        router.replace('/');
+      }
+    },
+    [router]
+  );
+
+  const handleRetry = useCallback(async () => {
+    await loadTeams(true);
+  }, [loadTeams]);
 
   const state: TeamsState = {
     teams,
@@ -121,8 +150,9 @@ export function useTeamsViewModel(
     handleRemoveTeam,
     handleStartRound,
     handleBack,
+    handleSelectNav,
     clearError,
-    handleRetry: loadTeams,
+    handleRetry,
   };
 
   return [state, actions];

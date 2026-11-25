@@ -98,8 +98,15 @@ export const ForcaScreen = () => {
           icon="account-multiple-plus"
         />
         <ExpressiveButton
-          label="Voltar ao Início"
+          label="Cadastrar Equipes"
+          variant="primaryJumbo"
+          icon="account-group"
+          onPress={actions.handleGoToTeams}
+        />
+        <ExpressiveButton
+          label="Voltar aos Jogos"
           variant="outlined"
+          icon="arrow-left"
           onPress={actions.handleConfirmExit}
         />
       </View>

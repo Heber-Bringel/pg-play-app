@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { useRouter } from 'expo-router';
+import { useCallback, useRef, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { pgPlayUseCases } from '@/di/container';
 import type { Team } from '@/model/entities/team';
 import { DomainError } from '@/model/errors';
@@ -19,6 +19,7 @@ export type ScoreboardActions = {
   handleCancelReset: () => void;
   handleResetScoreboard: () => Promise<void>;
   handleChooseAnotherGame: () => void;
+  handleBack: () => void;
   handleRetry: () => Promise<void>;
 };
 
@@ -31,27 +32,36 @@ export function useScoreboardViewModel(
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [confirmingReset, setConfirmingReset] = useState<boolean>(false);
+  const hasLoadedRef = useRef<boolean>(false);
 
-  const loadScoreboard = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const rankedTeams = await useCase.getScoreboard();
-      setTeams(rankedTeams);
-    } catch (err: unknown) {
-      if (err instanceof DomainError) {
-        setError(err.message);
-      } else {
-        setError('Não foi possível carregar o placar do encontro.');
+  const loadScoreboard = useCallback(
+    async (showLoading = false) => {
+      if (showLoading || !hasLoadedRef.current) {
+        setLoading(true);
       }
-    } finally {
-      setLoading(false);
-    }
-  }, [useCase]);
+      setError(null);
+      try {
+        const rankedTeams = await useCase.getScoreboard();
+        hasLoadedRef.current = true;
+        setTeams(rankedTeams);
+      } catch (err: unknown) {
+        if (err instanceof DomainError) {
+          setError(err.message);
+        } else {
+          setError('Não foi possível carregar o placar do encontro.');
+        }
+      } finally {
+        setLoading(false);
+      }
+    },
+    [useCase]
+  );
 
-  useEffect(() => {
-    void loadScoreboard();
-  }, [loadScoreboard]);
+  useFocusEffect(
+    useCallback(() => {
+      void loadScoreboard(false);
+    }, [loadScoreboard])
+  );
 
   const handleRequestReset = useCallback(() => {
     setConfirmingReset(true);
@@ -77,18 +87,24 @@ export function useScoreboardViewModel(
   }, [useCase]);
 
   const handleChooseAnotherGame = useCallback(() => {
-    router.push('/');
+    router.replace('/');
+  }, [router]);
+
+  const handleBack = useCallback(() => {
+    router.back();
   }, [router]);
 
   const handleRetry = useCallback(async () => {
-    await loadScoreboard();
+    await loadScoreboard(true);
   }, [loadScoreboard]);
 
   // Só existe líder quando a 1ª equipe tem pontos e não está empatada com a 2ª.
   const firstTeam = teams.length > 0 ? teams[0] : null;
   const secondTeam = teams.length > 1 ? teams[1] : null;
   const leaderTeam: Team | null =
-    firstTeam && firstTeam.score > 0 && (!secondTeam || firstTeam.score > secondTeam.score)
+    firstTeam &&
+    firstTeam.score > 0 &&
+    (!secondTeam || firstTeam.score > secondTeam.score)
       ? firstTeam
       : null;
   const totalPoints = teams.reduce((sum, team) => sum + team.score, 0);
@@ -107,6 +123,7 @@ export function useScoreboardViewModel(
     handleCancelReset,
     handleResetScoreboard,
     handleChooseAnotherGame,
+    handleBack,
     handleRetry,
   };
 

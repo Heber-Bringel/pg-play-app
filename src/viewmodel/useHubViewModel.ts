@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useRouter } from 'expo-router';
+import { useCallback, useRef, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { pgPlayUseCases } from '@/di/container';
 import type { GameModalityFilter, Minigame } from '@/model/entities/minigame';
 import type { Team } from '@/model/entities/team';
 import { DomainError } from '@/model/errors';
 import type { IPgPlayUseCases } from '@/usecase/iPgPlayUseCases';
+
+export type HubNavKey = 'welcome' | 'games' | 'teams';
 
 export type HubState = {
   games: Minigame[];
@@ -24,6 +26,8 @@ export type HubActions = {
   handleSelectGame: (game: Minigame) => void;
   handleOpenTeams: () => void;
   handleOpenScoreboard: () => void;
+  handleOpenWelcome: () => void;
+  handleSelectNav: (key: HubNavKey) => void;
   handleRetry: () => Promise<void>;
 };
 
@@ -31,45 +35,62 @@ export function useHubViewModel(
   useCase: IPgPlayUseCases = pgPlayUseCases
 ): [HubState, HubActions] {
   const router = useRouter();
+  const params = useLocalSearchParams<{ modality?: string }>();
+  const initialModality: GameModalityFilter =
+    params.modality === 'Multi-Celular' || params.modality === '1 Celular'
+      ? params.modality
+      : 'Todos';
 
   const [games, setGames] = useState<Minigame[]>([]);
   const [allGamesCount, setAllGamesCount] = useState<number>(0);
   const [searchQuery, setSearchQueryState] = useState<string>('');
   const [selectedModality, setSelectedModalityState] =
-    useState<GameModalityFilter>('Todos');
+    useState<GameModalityFilter>(initialModality);
   const [leaderTeam, setLeaderTeam] = useState<Team | null>(null);
   const [totalTeams, setTotalTeams] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   const filterRequestRef = useRef<number>(0);
+  const hasLoadedRef = useRef<boolean>(false);
 
-  const loadHub = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [catalog, scoreboard] = await Promise.all([
-        useCase.listMinigames('', 'Todos'),
-        useCase.getScoreboard(),
-      ]);
-      setGames(catalog);
-      setAllGamesCount(catalog.length);
-      setTotalTeams(scoreboard.length);
-      setLeaderTeam(scoreboard.length > 0 ? scoreboard[0] : null);
-    } catch (err: unknown) {
-      if (err instanceof DomainError) {
-        setError(err.message);
-      } else {
-        setError('Não foi possível carregar o catálogo de jogos do PG.');
+  const loadHub = useCallback(
+    async (showLoading = false) => {
+      if (showLoading || !hasLoadedRef.current) {
+        setLoading(true);
       }
-    } finally {
-      setLoading(false);
-    }
-  }, [useCase]);
+      setError(null);
+      try {
+        const [allCatalog, filteredCatalog, scoreboard] = await Promise.all([
+          useCase.listMinigames('', 'Todos'),
+          initialModality === 'Todos'
+            ? Promise.resolve(null)
+            : useCase.listMinigames('', initialModality),
+          useCase.getScoreboard(),
+        ]);
+        hasLoadedRef.current = true;
+        setGames(filteredCatalog ?? allCatalog);
+        setAllGamesCount(allCatalog.length);
+        setTotalTeams(scoreboard.length);
+        setLeaderTeam(scoreboard.length > 0 ? scoreboard[0] : null);
+      } catch (err: unknown) {
+        if (err instanceof DomainError) {
+          setError(err.message);
+        } else {
+          setError('Não foi possível carregar o catálogo de jogos do PG.');
+        }
+      } finally {
+        setLoading(false);
+      }
+    },
+    [initialModality, useCase]
+  );
 
-  useEffect(() => {
-    void loadHub();
-  }, [loadHub]);
+  useFocusEffect(
+    useCallback(() => {
+      void loadHub(false);
+    }, [loadHub])
+  );
 
   const applyFilters = useCallback(
     async (query: string, modality: GameModalityFilter) => {
@@ -133,6 +154,27 @@ export function useHubViewModel(
     router.push('/scoreboard');
   }, [router]);
 
+  const handleOpenWelcome = useCallback(() => {
+    router.push('/welcome');
+  }, [router]);
+
+  const handleSelectNav = useCallback(
+    (key: HubNavKey) => {
+      if (key === 'welcome') {
+        router.replace('/welcome');
+        return;
+      }
+      if (key === 'teams') {
+        router.replace('/teams');
+      }
+    },
+    [router]
+  );
+
+  const handleRetry = useCallback(async () => {
+    await loadHub(true);
+  }, [loadHub]);
+
   const state: HubState = {
     games,
     allGamesCount,
@@ -151,7 +193,9 @@ export function useHubViewModel(
     handleSelectGame,
     handleOpenTeams,
     handleOpenScoreboard,
-    handleRetry: loadHub,
+    handleOpenWelcome,
+    handleSelectNav,
+    handleRetry,
   };
 
   return [state, actions];

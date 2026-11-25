@@ -40,6 +40,8 @@ const createMockActions = (): HubActions => ({
   handleSelectGame: jest.fn(),
   handleOpenTeams: jest.fn(),
   handleOpenScoreboard: jest.fn(),
+  handleOpenWelcome: jest.fn(),
+  handleSelectNav: jest.fn(),
   handleRetry: jest.fn(async () => {}),
 });
 
@@ -85,7 +87,10 @@ describe('HubScreen — Testes de Tela com Mocks de ViewModel (UC01)', () => {
     const actions = createMockActions();
     jest
       .spyOn(hubVmModule, 'useHubViewModel')
-      .mockReturnValue([{ ...baseState, error: 'Erro simulado no Hub' }, actions]);
+      .mockReturnValue([
+        { ...baseState, error: 'Erro simulado no Hub' },
+        actions,
+      ]);
 
     let tree!: renderer.ReactTestRenderer;
     act(() => {
@@ -93,7 +98,9 @@ describe('HubScreen — Testes de Tela com Mocks de ViewModel (UC01)', () => {
     });
 
     const texts = tree.root.findAllByType('Text' as any);
-    expect(texts.some((t) => t.props.children === 'Erro simulado no Hub')).toBe(true);
+    expect(
+      texts.some((t) => t.props.children === 'Erro simulado no Hub')
+    ).toBe(true);
 
     const retryBtn = tree.root.findByProps({
       accessibilityLabel: 'Tentar Novamente',
@@ -108,10 +115,7 @@ describe('HubScreen — Testes de Tela com Mocks de ViewModel (UC01)', () => {
     const actions = createMockActions();
     jest
       .spyOn(hubVmModule, 'useHubViewModel')
-      .mockReturnValue([
-        { ...baseState, games: [] },
-        actions,
-      ]);
+      .mockReturnValue([{ ...baseState, games: [] }, actions]);
 
     let tree!: renderer.ReactTestRenderer;
     act(() => {
@@ -132,7 +136,7 @@ describe('HubScreen — Testes de Tela com Mocks de ViewModel (UC01)', () => {
     expect(actions.handleClearFilters).toHaveBeenCalledTimes(1);
   });
 
-  it('deve renderizar líder, chips de modalidade e cards acionando as ações corretas (RF01–RF03)', () => {
+  it('deve renderizar catálogo limpo, chips de modalidade, cards e barra inferior de 3 abas (RF01–RF03)', () => {
     const actions = createMockActions();
     jest
       .spyOn(hubVmModule, 'useHubViewModel')
@@ -144,9 +148,10 @@ describe('HubScreen — Testes de Tela com Mocks de ViewModel (UC01)', () => {
     });
 
     const texts = tree.root.findAllByType('Text' as any);
-    expect(
-      texts.some((t) => t.props.children === 'Líder: Tribo de Judá')
-    ).toBe(true);
+    expect(texts.some((t) => t.props.children === 'Jogos do Encontro')).toBe(
+      true
+    );
+    expect(texts.some((t) => t.props.children === '2 de 5 jogos')).toBe(false);
 
     const onePhoneChip = tree.root.findByProps({
       accessibilityLabel: 'Filtrar por 1 Celular',
@@ -171,16 +176,21 @@ describe('HubScreen — Testes de Tela com Mocks de ViewModel (UC01)', () => {
     });
     expect(disabledCard.props.disabled).toBe(true);
 
-    const teamsButton = tree.root.findByProps({
-      accessibilityLabel: 'Equipes (2)',
+    const welcomeTab = tree.root.findByProps({
+      accessibilityLabel: 'Ir para Início',
+    });
+    const teamsTab = tree.root.findByProps({
+      accessibilityLabel: 'Ir para Equipes',
     });
     act(() => {
-      teamsButton.props.onPress();
+      welcomeTab.props.onPress();
+      teamsTab.props.onPress();
     });
-    expect(actions.handleOpenTeams).toHaveBeenCalledTimes(1);
+    expect(actions.handleSelectNav).toHaveBeenNthCalledWith(1, 'welcome');
+    expect(actions.handleSelectNav).toHaveBeenNthCalledWith(2, 'teams');
   });
 
-  it('inicia seletor de tema minimizado, permite expandir/minimizar e alternar entre Automático, Claro e Escuro', () => {
+  it('alterna tema claro e escuro com 1 toque pelo botão do cabeçalho', () => {
     const actions = createMockActions();
     jest
       .spyOn(hubVmModule, 'useHubViewModel')
@@ -196,115 +206,32 @@ describe('HubScreen — Testes de Tela com Mocks de ViewModel (UC01)', () => {
       );
     });
 
-    // Inicia minimizado: chips e botão de minimizar ausentes
-    expect(
-      tree.root.findAllByProps({ accessibilityLabel: 'Selecionar tema Automático' })
-    ).toHaveLength(0);
-    expect(
-      tree.root.findAllByProps({ accessibilityLabel: 'Minimizar opções de tema' })
-    ).toHaveLength(0);
-
     const scroll = tree.root.findByType('ScrollView' as any);
     expect(StyleSheet.flatten(scroll.props.style).backgroundColor).toBe(
       tokens.semantic.color.surface
     );
 
-    // Expande o painel ao tocar no botão compacto do cabeçalho
-    const toggleBtn = tree.root.findByProps({
-      accessibilityLabel: 'Tema: Automático. Expandir opções de tema',
-    });
-    const togglePressable = toggleBtn.findByType('Pressable' as any);
-    expect(togglePressable.props.accessibilityState).toEqual({
-      disabled: false,
-      expanded: false,
+    const toDarkBtn = tree.root.findByProps({
+      accessibilityLabel: 'Alternar para tema escuro',
     });
     act(() => {
-      toggleBtn.props.onPress();
-    });
-
-    expect(
-      tree.root.findByProps({ accessibilityLabel: 'Selecionar tema Automático' })
-    ).toBeTruthy();
-    expect(
-      tree.root.findByProps({ accessibilityLabel: 'Selecionar tema Claro' })
-    ).toBeTruthy();
-    const darkChip = tree.root.findByProps({
-      accessibilityLabel: 'Selecionar tema Escuro',
-    });
-
-    // Alterna para Escuro mesmo com sistema em light
-    act(() => {
-      darkChip.props.onPress();
+      toDarkBtn.props.onPress();
     });
     expect(
       StyleSheet.flatten(tree.root.findByType('ScrollView' as any).props.style)
         .backgroundColor
     ).toBe(darkTokens.semantic.color.surface);
 
-    // Sistema em dark, alterna para Claro e depois volta para Automático
-    (useColorScheme as jest.Mock).mockReturnValue('dark');
-    const lightChip = tree.root.findByProps({
-      accessibilityLabel: 'Selecionar tema Claro',
+    const toLightBtn = tree.root.findByProps({
+      accessibilityLabel: 'Alternar para tema claro',
     });
     act(() => {
-      lightChip.props.onPress();
+      toLightBtn.props.onPress();
     });
     expect(
       StyleSheet.flatten(tree.root.findByType('ScrollView' as any).props.style)
         .backgroundColor
     ).toBe(tokens.semantic.color.surface);
-
-    const autoChip = tree.root.findByProps({
-      accessibilityLabel: 'Selecionar tema Automático',
-    });
-    act(() => {
-      autoChip.props.onPress();
-    });
-    expect(
-      StyleSheet.flatten(tree.root.findByType('ScrollView' as any).props.style)
-        .backgroundColor
-    ).toBe(darkTokens.semantic.color.surface);
-
-    // Minimiza pelo botão interno do painel
-    const minimizeBtn = tree.root.findByProps({
-      accessibilityLabel: 'Minimizar opções de tema',
-    });
-    act(() => {
-      minimizeBtn.props.onPress();
-    });
-    expect(
-      tree.root.findAllByProps({ accessibilityLabel: 'Selecionar tema Automático' })
-    ).toHaveLength(0);
-
-    // Reabre e minimiza novamente pelo botão compacto do cabeçalho
-    const toggleBtnReopen = tree.root.findByProps({
-      accessibilityLabel: 'Tema: Automático. Expandir opções de tema',
-    });
-    act(() => {
-      toggleBtnReopen.props.onPress();
-    });
-    expect(
-      tree.root.findAllByProps({
-        accessibilityLabel: 'Selecionar tema Automático',
-      }).length
-    ).toBeGreaterThan(0);
-
-    const toggleBtnCollapse = tree.root.findByProps({
-      accessibilityLabel: 'Tema: Automático. Minimizar opções de tema',
-    });
-    const toggleCollapsePressable = toggleBtnCollapse.findByType(
-      'Pressable' as any
-    );
-    expect(toggleCollapsePressable.props.accessibilityState).toEqual({
-      disabled: false,
-      expanded: true,
-    });
-    act(() => {
-      toggleBtnCollapse.props.onPress();
-    });
-    expect(
-      tree.root.findAllByProps({ accessibilityLabel: 'Selecionar tema Automático' })
-    ).toHaveLength(0);
   });
 
   it('exibe botão de som ligado por padrão no cabeçalho e permite alternar entre ligado e desligado (#84)', () => {

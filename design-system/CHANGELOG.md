@@ -4,6 +4,13 @@ Versões no formato `MAIOR.MENOR.CORREÇÃO` (Semantic Versioning). Mudanças qu
 
 ---
 
+## 1.2.0 · 25/11/2026
+
+- Adição do 11º componente oficial do sistema **PG Play Expressive**: **`ShortNavigationBar`** ([barra-de-navegacao.md](04-componentes/barra-de-navegacao.md)), seguindo as diretrizes oficiais do **Material 3 Expressive (2025)** (*edge-to-edge*, pílula indicadora `56 × 32 dp` em `color.actionContainer`, ícone + rótulo visíveis em todos os 4 destinos).
+- Adição dos tokens de componente `navBar`, `podium` (Pódio do Encontro em 3 colunas sem bordas amarelas duplicadas) e `splash` (abertura animada com `motion.spring.spatial` em modos Claro e Escuro) em `src/view/theme.ts` e [02-tokens.md](02-tokens.md) (Issue `#80`).
+
+---
+
 ## 1.1.0 · 21/11/2026
 
 - Revisão abrangente de acessibilidade, foco, contraste de componentes, consistência de tags/bordas, tema escuro automático e tipografia (Issue `#55`, relacionadas `#50`, `#51`, `#53`, `#54`).

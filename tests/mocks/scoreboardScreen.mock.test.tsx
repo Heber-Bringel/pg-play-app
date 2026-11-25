@@ -10,6 +10,7 @@ const createMockActions = (): ScoreboardActions => ({
   handleCancelReset: jest.fn(),
   handleResetScoreboard: jest.fn(async () => {}),
   handleChooseAnotherGame: jest.fn(),
+  handleBack: jest.fn(),
   handleRetry: jest.fn(async () => {}),
 });
 
@@ -110,6 +111,9 @@ describe('ScoreboardScreen — Testes de Tela com Mocks de ViewModel (UC06)', ()
     );
     expect(bonusButtons).toHaveLength(0);
 
+    const backBtn = tree.root.findByProps({
+      accessibilityLabel: 'Voltar',
+    } as any);
     const chooseBtn = tree.root.findByProps({
       accessibilityLabel: 'Escolher Outro Jogo',
     } as any);
@@ -118,10 +122,12 @@ describe('ScoreboardScreen — Testes de Tela com Mocks de ViewModel (UC06)', ()
     } as any);
 
     act(() => {
+      backBtn.props.onPress();
       chooseBtn.props.onPress();
       resetBtn.props.onPress();
     });
 
+    expect(actions.handleBack).toHaveBeenCalledTimes(1);
     expect(actions.handleChooseAnotherGame).toHaveBeenCalledTimes(1);
     expect(actions.handleRequestReset).toHaveBeenCalledTimes(1);
     expect(actions.handleResetScoreboard).not.toHaveBeenCalled();

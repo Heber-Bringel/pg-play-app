@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ConfirmModal } from '@/view/components/confirmModal';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
+import { ExpressiveTag } from '@/view/components/expressiveTag';
 import { GameCard } from '@/view/components/gameCard';
 import { useTheme, type AppTokens } from '@/view/theme';
 import { useScoreboardViewModel } from '@/viewmodel/useScoreboardViewModel';
@@ -50,7 +51,20 @@ export const ScoreboardScreen = () => {
 
   if (state.teams.length === 0) {
     return (
-      <View style={styles.screen}>
+      <ScrollView
+        style={styles.screen}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.topBar}>
+          <ExpressiveButton
+            label="Voltar"
+            variant="outlined"
+            icon="arrow-left"
+            onPress={actions.handleBack}
+          />
+          <ExpressiveTag label="0 equipes" tone="neutral" />
+        </View>
         <GameCard
           title="Nenhuma Equipe no Placar"
           description="Cadastre equipes e jogue uma rodada para visualizar o ranking do PG."
@@ -63,7 +77,7 @@ export const ScoreboardScreen = () => {
           icon="gamepad-variant"
           onPress={actions.handleChooseAnotherGame}
         />
-      </View>
+      </ScrollView>
     );
   }
 
@@ -82,6 +96,19 @@ export const ScoreboardScreen = () => {
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.topSection}>
+        <View style={styles.topBar}>
+          <ExpressiveButton
+            label="Voltar"
+            variant="outlined"
+            icon="arrow-left"
+            onPress={actions.handleBack}
+          />
+          <ExpressiveTag
+            label={`${teamsCountLabel} · ${state.totalPoints} pts`}
+            tone="neutral"
+          />
+        </View>
+
         <View style={styles.header}>
           <View style={styles.trophyBadge}>
             <MaterialCommunityIcons
@@ -175,6 +202,12 @@ const createStyles = (activeTokens: AppTokens) => {
     },
     topSection: {
       gap: space.lg,
+    },
+    topBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: space.sm,
     },
     header: {
       alignItems: 'center',
