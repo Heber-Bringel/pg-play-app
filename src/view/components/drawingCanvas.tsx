@@ -104,6 +104,8 @@ const STROKE_WIDTH_OPTIONS: readonly StrokeWidthOption[] = [
   { id: 'thick', label: 'Traço Grosso' },
 ];
 
+const MIN_FREEHAND_POINT_DISTANCE_SQ = 9;
+
 const isFillableTool = (tool: DrawingToolId): boolean =>
   tool === 'rectangle' || tool === 'circle' || tool === 'triangle';
 
@@ -557,6 +559,19 @@ export const DrawingCanvas = ({
           const x = Math.round(event.nativeEvent.locationX ?? 0);
           const y = Math.round(event.nativeEvent.locationY ?? 0);
 
+          if (current.tool === 'freehand') {
+            const lastPoint = current.points[current.points.length - 1];
+            if (lastPoint) {
+              const dx = x - lastPoint.x;
+              const dy = y - lastPoint.y;
+              if (dx * dx + dy * dy < MIN_FREEHAND_POINT_DISTANCE_SQ) {
+                return;
+              }
+            }
+          } else if (current.end.x === x && current.end.y === y) {
+            return;
+          }
+
           const next: DrawingElementDraft =
             current.tool === 'freehand'
               ? {
@@ -576,23 +591,23 @@ export const DrawingCanvas = ({
           const finished = activeDraftRef.current;
           isDrawingRef.current = false;
           activeDraftRef.current = null;
-          setActiveDraft(null);
           callbacksRef.current.onDrawingEnd?.();
 
-          if (blockedRef.current || !finished) return;
-
-          if (finished.tool === 'freehand') {
-            if (finished.points.length > 0) {
-              callbacksRef.current.onElementComplete?.(finished);
+          if (!blockedRef.current && finished) {
+            if (finished.tool === 'freehand') {
+              if (finished.points.length > 0) {
+                callbacksRef.current.onElementComplete?.(finished);
+              }
+            } else {
+              const dx = Math.abs(finished.end.x - finished.start.x);
+              const dy = Math.abs(finished.end.y - finished.start.y);
+              if (dx >= 2 || dy >= 2) {
+                callbacksRef.current.onElementComplete?.(finished);
+              }
             }
-            return;
           }
 
-          const dx = Math.abs(finished.end.x - finished.start.x);
-          const dy = Math.abs(finished.end.y - finished.start.y);
-          if (dx >= 2 || dy >= 2) {
-            callbacksRef.current.onElementComplete?.(finished);
-          }
+          setActiveDraft(null);
         },
         onPanResponderTerminate: () => {
           if (!isDrawingRef.current) return;
@@ -603,6 +618,11 @@ export const DrawingCanvas = ({
         },
       }),
     []
+  );
+
+  const renderedElements = useMemo(
+    () => elements.map((element) => renderSvgElement(element, activeTokens)),
+    [elements, activeTokens]
   );
 
   const canvasTokens = activeTokens.component.canvas;
@@ -635,7 +655,7 @@ export const DrawingCanvas = ({
           {...(interactiveBlocked ? {} : panResponder.panHandlers)}
         >
           <Svg style={styles.svgSurface} width="100%" height="100%">
-            {elements.map((element) => renderSvgElement(element, activeTokens))}
+            {renderedElements}
             {activeDraft !== null &&
               renderSvgElement(
                 { ...activeDraft, id: 'active-preview' },
