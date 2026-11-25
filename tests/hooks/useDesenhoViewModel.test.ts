@@ -225,4 +225,149 @@ describe('useDesenhoViewModel — Sala Multiplayer, Tema 5s, Espiar 3s e Formas 
 
     harness.unmount();
   });
+
+  it('deve aplicar atualização otimista imediata ao concluir traço, preservar traços concorrentes e fazer rollback se falhar', async () => {
+    const roomService = new MemoryMultiplayerRoomService();
+    const realUseCases = new DesenhoUseCases(
+      roomService,
+      new MemoryGameCatalogDataSource()
+    );
+
+    let resolveFirst!: (room: Awaited<ReturnType<IDesenhoUseCases['addElement']>>) => void;
+    let rejectSecond!: (err: Error) => void;
+    let callCount = 0;
+
+    const controlledUseCases: IDesenhoUseCases = {
+      getLocalPlayerId: (id) => realUseCases.getLocalPlayerId(id),
+      getRoom: (id, viewer) => realUseCases.getRoom(id, viewer),
+      createRoom: (nick, cats) => realUseCases.createRoom(nick, cats),
+      joinRoom: (code, nick) => realUseCases.joinRoom(code, nick),
+      leaveRoom: (id, pid) => realUseCases.leaveRoom(id, pid),
+      subscribeToRoom: (id, cb) => realUseCases.subscribeToRoom(id, cb),
+      updateConfig: (id, cfg) => realUseCases.updateConfig(id, cfg),
+      startMatch: (id) => realUseCases.startMatch(id),
+      addElement: (roomId, drawerId, draft) => {
+        callCount += 1;
+        if (callCount === 1) {
+          return new Promise((resolve) => {
+            resolveFirst = resolve;
+          });
+        }
+        return new Promise((_resolve, reject) => {
+          rejectSecond = reject;
+        });
+      },
+      undoElement: (id, drawer) => realUseCases.undoElement(id, drawer),
+      clearCanvas: (id, drawer) => realUseCases.clearCanvas(id, drawer),
+      submitGuess: (id, pid, txt) => realUseCases.submitGuess(id, pid, txt),
+      finishTurn: (id, reason) => realUseCases.finishTurn(id, reason),
+      advanceTurn: (id) => realUseCases.advanceTurn(id),
+      restartLobby: (id) => realUseCases.restartLobby(id),
+      getRankedPlayers: (r) => realUseCases.getRankedPlayers(r),
+      getAwards: (r) => realUseCases.getAwards(r),
+    };
+
+    const harness = createHookHarness(controlledUseCases);
+    await harness.mount();
+
+    await act(async () => {
+      await harness.getActions().handleJoinDemoRoom();
+    });
+    await act(async () => {
+      await harness.getActions().handleStartMatch();
+    });
+
+    const stroke1 = {
+      tool: 'freehand' as const,
+      points: [
+        { x: 10, y: 10 },
+        { x: 40, y: 40 },
+      ],
+      colorId: 'ink' as const,
+      widthId: 'thin' as const,
+    };
+    const stroke2 = {
+      tool: 'line' as const,
+      start: { x: 20, y: 20 },
+      end: { x: 80, y: 80 },
+      fillMode: 'stroke' as const,
+      colorId: 'purple' as const,
+      widthId: 'thick' as const,
+    };
+
+    // Dispara 2 traços em sequência antes de qualquer resposta remota
+    let p1!: Promise<void>;
+    let p2!: Promise<void>;
+    act(() => {
+      p1 = harness.getActions().handleCompleteElement(stroke1);
+      p2 = harness.getActions().handleCompleteElement(stroke2);
+    });
+
+    // Ambos já aparecem imediatamente via atualização otimista
+    expect(harness.getState().room?.elements).toHaveLength(2);
+
+    // 1º traço confirma no servidor; o 2º ainda pendente deve ser preservado
+    const persisted1 = await realUseCases.addElement(
+      harness.getState().room!.id,
+      harness.getState().currentPlayerId!,
+      stroke1
+    );
+    await act(async () => {
+      resolveFirst(persisted1);
+      await p1;
+    });
+    expect(harness.getState().room?.elements).toHaveLength(2);
+
+    // 2º traço falha no servidor -> rollback apenas do 2º elemento otimista
+    await act(async () => {
+      rejectSecond(new Error('Falha de rede simulada'));
+      await p2;
+    });
+    expect(harness.getState().room?.elements).toHaveLength(1);
+    expect(harness.getState().error).toBe('Não foi possível sincronizar o desenho.');
+
+    harness.unmount();
+  });
+
+  it('não deve reiniciar o cronômetro de 1s quando novos traços são adicionados', async () => {
+    const roomService = new MemoryMultiplayerRoomService();
+    const useCases = new DesenhoUseCases(
+      roomService,
+      new MemoryGameCatalogDataSource()
+    );
+    const harness = createHookHarness(useCases);
+    await harness.mount();
+
+    await act(async () => {
+      await harness.getActions().handleJoinDemoRoom();
+    });
+    await act(async () => {
+      await harness.getActions().handleStartMatch();
+    });
+
+    const initialSeconds = harness.getState().secondsRemaining;
+
+    // Avança 500ms, conclui um traço, avança mais 500ms (total 1000ms) -> deve ter decrementado 1s!
+    act(() => {
+      jest.advanceTimersByTime(500);
+    });
+    await act(async () => {
+      await harness.getActions().handleCompleteElement({
+        tool: 'freehand',
+        points: [
+          { x: 10, y: 10 },
+          { x: 30, y: 30 },
+        ],
+        colorId: 'ink',
+        widthId: 'thin',
+      });
+    });
+    act(() => {
+      jest.advanceTimersByTime(500);
+    });
+
+    expect(harness.getState().secondsRemaining).toBe(initialSeconds - 1);
+
+    harness.unmount();
+  });
 });
