@@ -9,7 +9,7 @@ Referências: `UC05` e `RF09`, `RF11`, `RF12`, `RF15` em [`requisitos-e-casos-de
 ## 1. Visão Geral no Domínio PG PLAY
 
 - **Formato:** 1 celular compartilhado; a **equipe da vez** discute e escolhe as letras de sua palavra.
-- **Conteúdo:** banco local de palavras com **dica/tema** **misto** (bíblico e geral), organizado em pacotes de temas: *Bíblico* (ex.: tema *Personagem*, palavra `ESTER`; tema *Livro da Bíblia*, palavra `SALMOS`), *Animais*, *Países e Cidades*, *Frutas e Comidas*, *Filmes*, *Profissões* e *Esportes*. O grupo pode combinar vários pacotes.
+- **Conteúdo:** banco local de palavras com **dica/tema** **misto** (bíblico e geral), organizado em pacotes de temas: *Bíblico* (ex.: tema *Personagem*, palavra `ESTER`; tema *Livro da Bíblia*, palavra `SALMOS`), *Animais*, *Países e Cidades* (capitais brasileiras e países do mundo em português — **Fonte: IBGE**), *Frutas e Comidas*, *Filmes*, *Profissões* e *Esportes*. O grupo pode combinar vários pacotes.
 - **Sem cadastro e offline** (**RNF02**, **RNF03**).
 
 ---
