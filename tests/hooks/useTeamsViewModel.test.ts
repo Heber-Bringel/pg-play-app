@@ -9,7 +9,7 @@ import {
   type TeamsActions,
   type TeamsState,
 } from '@/viewmodel/useTeamsViewModel';
-import { mockBack, mockPush } from '../__mocks__/expo-router';
+import { mockBack, mockPush, mockReplace } from '../__mocks__/expo-router';
 import { MemoryMatchSettingsDataSource } from '@/infra/datasources/memoryMatchSettingsDataSource';
 
 function createHookHarness(useCases: IPgPlayUseCases) {
@@ -44,6 +44,7 @@ describe('useTeamsViewModel — Hook de Configuração e Gestão de Equipes (UC0
   beforeEach(() => {
     mockPush.mockClear();
     mockBack.mockClear();
+    mockReplace.mockClear();
   });
 
   it('deve carregar as 2 equipes padrão ao montar e definir canStartRound = true (RF05, RF08)', async () => {
@@ -166,7 +167,7 @@ describe('useTeamsViewModel — Hook de Configuração e Gestão de Equipes (UC0
     harness.unmount();
   });
 
-  it('deve navegar para a arena ao iniciar rodada com pelo menos 2 equipes (RF08)', async () => {
+  it('deve navegar para a aba de jogos ao escolher jogo com pelo menos 2 equipes (RF08)', async () => {
     const useCases = new PgPlayUseCases(
       new MemoryTeamDataSource(),
       new MemoryGameCatalogDataSource(),
@@ -179,7 +180,15 @@ describe('useTeamsViewModel — Hook de Configuração e Gestão de Equipes (UC0
       harness.getActions().handleStartRound();
     });
 
-    expect(mockPush).toHaveBeenCalledWith('/mimica');
+    expect(mockReplace).toHaveBeenCalledWith('/');
+
+    mockReplace.mockClear();
+    act(() => {
+      harness.getActions().handleSelectNav('welcome');
+      harness.getActions().handleSelectNav('games');
+    });
+    expect(mockReplace).toHaveBeenNthCalledWith(1, '/welcome');
+    expect(mockReplace).toHaveBeenNthCalledWith(2, '/');
 
     harness.unmount();
   });
