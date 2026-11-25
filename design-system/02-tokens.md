@@ -226,6 +226,15 @@ Todas as escalas utilizam a família **Plus Jakarta Sans** mapeada por peso expl
 | `key.radius` | `radius.md` (`16 dp`) | Novo (Raio padrão da tecla da Forca) |
 | `key.hit.bg` | `color.success` | Novo (Fundo de letra certa na Forca) |
 | `key.miss.bg` | `color.error-container` | Novo (Fundo de letra errada na Forca) |
+| `navBar.bg` | `color.surface-container` | Herdado M3 Expressive (`ShortNavigationBar` *edge-to-edge*) |
+| `navBar.indicatorBg` | `color.action-container` | Herdado M3 Expressive (Pílula ativa `56 × 32 dp`) |
+| `podium.firstBg` | `color.highlight-container` | Novo (Destaque do 1º colocado no Pódio sem borda) |
+| `podium.secondBg` | `color.action-container` | Novo (Coluna do 2º colocado no Pódio) |
+| `podium.thirdBg` | `color.secondary-container` | Novo (Coluna do 3º colocado no Pódio) |
+| `splash.bg` | `color.action` (claro) / `color.surface` (escuro) | Novo (Fundo da tela de abertura animada) |
+| `splash.ambientTop*`, `splash.ambientBottom*`, `splash.haloSize` | Formas orgânicas (`260`/`280 dp`) + halo (`210 dp`) | Novo (v1.2.0 — composição ambiente do storyboard Figma) |
+| `splash.stageWidth`, `splash.stageHeight`, `splash.orbital*`, `splash.titleSize` | Palco (`260×192 dp`), orbitais (`52`/`48`/`34 dp`) e título (`40 dp`) | Novo (v1.2.0 — orbitais com rotação e escala M3 Spring) |
+| `splash.displayDuration`, `splash.orbitDelay`, `splash.subtitleDelay`, `splash.fadeOutStart` | `2000 ms` total, orbitais em `350 ms`, subtítulo em `800 ms`, esmaecimento a partir de `1700 ms` | Novo (v1.2.0 — abertura animada de 2 segundos) |
 
 ---
 
