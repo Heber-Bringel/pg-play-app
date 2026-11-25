@@ -145,7 +145,8 @@ describe('Sistema de Design PG Play Expressive v1.1.0 - Tokens (02-tokens.md)', 
     expect(key.size).toBe(48);
     expect(key.hit.bg).toBe('#15803D');
     expect(canvas.paperBg).toBe('#FDF8FF');
-    expect(canvas.minHeight).toBe(256);
+    expect(canvas.minHeight).toBe(320);
+    expect(canvas.expandedMinHeight).toBe(384);
     expect(canvas.radius).toBe(20);
     expect(canvas.pen.ink).toBe('#1D1B20');
     expect(canvas.pen.purple).toBe('#5B21B6');
@@ -191,6 +192,8 @@ describe('Sistema de Design PG Play Expressive v1.1.0 - Tokens (02-tokens.md)', 
 
       const canvasPalette = theme.component.canvas;
       expect(canvasPalette.paperBg).toBe('#FDF8FF');
+      expect(canvasPalette.minHeight).toBe(320);
+      expect(canvasPalette.expandedMinHeight).toBe(384);
       expect(contrastRatio(canvasPalette.border, canvasPalette.paperBg)).toBeGreaterThanOrEqual(3);
       for (const penColor of [
         canvasPalette.pen.ink,
