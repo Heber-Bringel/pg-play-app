@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PG PLAY · Minigames para Pequenos Grupos</title>
+  <meta name="description" content="PG PLAY: minigames e dinâmicas interativas para Pequenos Grupos. Mímica, Quiz, Forca, Quem Sou Eu, Complete o Versículo, Cidade Dorme, Adedonha Bíblica e Termômetro de Pedidos. Gratuito e sem anúncios.">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="assets/fonts/plus-jakarta-sans-800.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+
+  <header class="site-header">
+    <div class="container">
+      <div class="header-bar">
+        <a class="brand" href="index.html" aria-current="page">
+          <img src="assets/logo.svg" alt="" width="40" height="40">
+          <span class="brand-text">
+            <span class="brand-name">PG PLAY</span>
+            <span class="brand-tagline">Minigames para Pequenos Grupos</span>
+          </span>
+        </a>
+        <nav class="site-nav" aria-label="Principal">
+          <ul>
+            <li><a class="nav-link" href="#como-funciona">Como funciona</a></li>
+            <li><a class="nav-link" href="#jogos">Jogos</a></li>
+            <li><a class="nav-link" href="#acessibilidade">Acessibilidade</a></li>
+            <li><a class="nav-link" href="privacidade.html">Privacidade</a></li>
+          </ul>
+        </nav>
+        <a class="button button-primary header-cta" href="https://play.google.com/store/apps/details?id=br.edu.ifpi.pgplay"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M6 3.5v17a1 1 0 0 0 1.5.9l14-8.5a1 1 0 0 0 0-1.8l-14-8.5A1 1 0 0 0 6 3.5Z"/></svg>Baixar</a>
+        <details class="menu">
+          <summary aria-label="Menu"><svg class="icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h10"/></svg><svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18"/></svg></summary>
+          <nav class="menu-panel" aria-label="Menu">
+            <ul>
+              <li><a class="nav-link" href="#como-funciona"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 6h4v4H4zM10 14h4v4h-4zM16 6h4v4h-4zM8 8h8M12 10v4"/></svg>Como funciona</a></li>
+              <li><a class="nav-link" href="#jogos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="7" width="18" height="11" rx="5"/><path d="M8 10.5v4M6 12.5h4M15.5 11.5h.01M17.5 13.5h.01"/></svg>Jogos</a></li>
+              <li><a class="nav-link" href="#acessibilidade"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="4.5" r="1.5"/><path d="M5 8.5 12 10l7-1.5M12 10v4l-3 6M12 14l3 6"/></svg>Acessibilidade</a></li>
+              <li><a class="nav-link" href="privacidade.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4 6v6c0 4.5 3.4 8 8 9 4.6-1 8-4.5 8-9V6l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg>Privacidade</a></li>
+              <li><a class="nav-link" href="termos.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4M10 12h5M10 16h5"/></svg>Termos de Uso</a></li>
+            </ul>
+            <a class="button button-primary" href="https://play.google.com/store/apps/details?id=br.edu.ifpi.pgplay"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M6 3.5v17a1 1 0 0 0 1.5.9l14-8.5a1 1 0 0 0 0-1.8l-14-8.5A1 1 0 0 0 6 3.5Z"/></svg>Baixar no Google Play</a>
+          </nav>
+        </details>
+      </div>
+    </div>
+  </header>
+
+  <main id="conteudo">
+    <section class="hero" aria-labelledby="titulo">
+      <div class="container">
+        <div class="hero-text">
+          <span class="tag tag-highlight">Gratuito · Sem anúncios · Funciona offline</span>
+          <h1 id="titulo">Minigames e dinâmicas interativas para <span class="shine">Pequenos Grupos</span></h1>
+          <p class="lead">O PG PLAY junta 8 jogos para animar o encontro da sua célula, do grupo de jovens ou da família: do quebra-gelo ao momento de oração, com um celular passando de mão em mão ou com todo mundo na mesma sala.</p>
+          <div class="actions">
+            <a class="button button-primary button-jumbo" href="https://play.google.com/store/apps/details?id=br.edu.ifpi.pgplay">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M6 3.5v17a1 1 0 0 0 1.5.9l14-8.5a1 1 0 0 0 0-1.8l-14-8.5A1 1 0 0 0 6 3.5Z"/></svg>
+              Baixar no Google Play
+            </a>
+            <a class="button button-tonal button-jumbo" href="#jogos">Ver os jogos</a>
+          </div>
+          <p class="note">Para Android. O app está em fase de publicação na loja.</p>
+          <ul class="stats">
+            <li><strong>8</strong> <span>jogos e dinâmicas</span></li>
+            <li><strong>2</strong> <span>jeitos de jogar</span></li>
+            <li><strong>0</strong> <span>anúncios e cadastros</span></li>
+          </ul>
+        </div>
+
+        <div class="hero-stage">
+          <div class="shape shape-main morph" aria-hidden="true"><svg viewBox="0 0 200 200" focusable="false"><path class="fill-action" d="M100.0 12.0L107.5 14.2L114.1 19.8L119.9 25.7L125.6 29.6L132.5 30.3L140.7 29.4L149.4 29.5L156.6 32.6L160.9 39.1L162.4 47.6L163.0 55.9L164.9 62.5L169.7 67.5L176.6 72.1L183.2 77.7L186.7 84.7L185.8 92.5L181.5 100.0L176.6 106.7L173.8 113.0L174.3 119.9L176.6 127.9L178.0 136.4L176.2 144.0L170.5 149.4L162.4 152.4L154.4 154.4L148.2 157.4L144.1 163.0L140.7 170.6L136.4 178.0L130.1 182.7L122.3 183.2L114.1 180.2L106.7 176.6L100.0 175.0L93.3 176.6L85.9 180.2L77.7 183.2L69.9 182.7L63.6 178.0L59.3 170.6L55.9 163.0L51.8 157.4L45.6 154.4L37.6 152.4L29.5 149.4L23.8 144.0L22.0 136.4L23.4 127.9L25.7 119.9L26.2 113.0L23.4 106.7L18.5 100.0L14.2 92.5L13.3 84.7L16.8 77.7L23.4 72.1L30.3 67.5L35.1 62.5L37.0 55.9L37.6 47.6L39.1 39.1L43.4 32.6L50.6 29.5L59.3 29.4L67.5 30.3L74.4 29.6L80.1 25.7L85.9 19.8L92.5 14.2Z"/></svg></div>
+          <div class="shape shape-accent" aria-hidden="true"><svg viewBox="0 0 200 200" focusable="false"><path class="fill-highlight" d="M100.0 12.0L107.5 14.4L114.2 19.5L120.6 23.1L127.9 23.2L136.3 22.1L144.0 23.8L149.3 29.6L152.5 37.4L156.3 43.7L162.6 47.5L170.4 50.7L176.2 56.0L177.9 63.7L176.8 72.1L176.9 79.4L180.5 85.8L185.6 92.5L188.0 100.0L185.6 107.5L180.5 114.2L176.9 120.6L176.8 127.9L177.9 136.3L176.2 144.0L170.4 149.3L162.6 152.5L156.3 156.3L152.5 162.6L149.3 170.4L144.0 176.2L136.3 177.9L127.9 176.8L120.6 176.9L114.2 180.5L107.5 185.6L100.0 188.0L92.5 185.6L85.8 180.5L79.4 176.9L72.1 176.8L63.7 177.9L56.0 176.2L50.7 170.4L47.5 162.6L43.7 156.3L37.4 152.5L29.6 149.3L23.8 144.0L22.1 136.3L23.2 127.9L23.1 120.6L19.5 114.2L14.4 107.5L12.0 100.0L14.4 92.5L19.5 85.8L23.1 79.4L23.2 72.1L22.1 63.7L23.8 56.0L29.6 50.7L37.4 47.5L43.7 43.7L47.5 37.4L50.7 29.6L56.0 23.8L63.7 22.1L72.1 23.2L79.4 23.1L85.8 19.5L92.5 14.4Z"/></svg></div>
+          <div class="shape shape-dot" aria-hidden="true"><svg viewBox="0 0 200 200" focusable="false"><path class="fill-secondary" d="M100.0 12.0L107.6 13.2L114.7 16.7L120.9 22.1L126.0 28.7L129.9 35.8L133.0 42.8L135.6 49.1L138.3 54.4L141.5 58.5L145.6 61.7L150.9 64.4L157.2 67.0L164.2 70.1L171.3 74.0L177.9 79.1L183.3 85.3L186.8 92.4L188.0 100.0L186.8 107.6L183.3 114.7L177.9 120.9L171.3 126.0L164.2 129.9L157.2 133.0L150.9 135.6L145.6 138.3L141.5 141.5L138.3 145.6L135.6 150.9L133.0 157.2L129.9 164.2L126.0 171.3L120.9 177.9L114.7 183.3L107.6 186.8L100.0 188.0L92.4 186.8L85.3 183.3L79.1 177.9L74.0 171.3L70.1 164.2L67.0 157.2L64.4 150.9L61.7 145.6L58.5 141.5L54.4 138.3L49.1 135.6L42.8 133.0L35.8 129.9L28.7 126.0L22.1 120.9L16.7 114.7L13.2 107.6L12.0 100.0L13.2 92.4L16.7 85.3L22.1 79.1L28.7 74.0L35.8 70.1L42.8 67.0L49.1 64.4L54.4 61.7L58.5 58.5L61.7 54.4L64.4 49.1L67.0 42.8L70.1 35.8L74.0 28.7L79.1 22.1L85.3 16.7L92.4 13.2Z"/></svg></div>
+          <figure class="phone">
+            <picture>
+              <source srcset="assets/screens/hub-dark.webp" media="(prefers-color-scheme: dark)">
+              <img src="assets/screens/hub.webp" alt="Tela inicial do PG PLAY: a equipe Leões de Judá lidera com 40 pontos, com filtros por modalidade e o catálogo de dinâmicas começando pela Mímica Expressiva." width="540" height="1169" fetchpriority="high">
+            </picture>
+          </figure>
+          <span class="float float-timer" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/></svg>00:59</span>
+          <span class="float float-tag" aria-hidden="true">Bíblico · +10 pts</span>
+          <span class="float float-hit" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>Acertaram! +20 pts</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="marquee" aria-hidden="true">
+      <div class="marquee-track">
+        <span>Mímica Expressiva</span><span>Quiz Relâmpago</span><span>Jogo da Forca</span><span>Quem Sou Eu?</span><span>Complete o Versículo</span><span>Termômetro de Pedidos</span><span>Cidade Dorme</span><span>Adedonha Bíblica</span>
+        <span>Mímica Expressiva</span><span>Quiz Relâmpago</span><span>Jogo da Forca</span><span>Quem Sou Eu?</span><span>Complete o Versículo</span><span>Termômetro de Pedidos</span><span>Cidade Dorme</span><span>Adedonha Bíblica</span>
+      </div>
+    </div>
+
+    <section id="como-funciona" class="section" aria-labelledby="titulo-como">
+      <div class="container">
+        <div class="section-head">
+          <span class="eyebrow">Como funciona</span>
+          <h2 id="titulo-como">Do cadastro ao pódio em três toques</h2>
+          <p>Sem login e sem configuração demorada: o líder prepara tudo em poucos toques.</p>
+        </div>
+        <ol class="steps">
+          <li class="step">
+            <span class="step-number"><span class="shape" aria-hidden="true"><svg viewBox="0 0 200 200" focusable="false"><path class="fill-action" d="M100.0 12.0L107.5 14.4L114.2 19.5L120.6 23.1L127.9 23.2L136.3 22.1L144.0 23.8L149.3 29.6L152.5 37.4L156.3 43.7L162.6 47.5L170.4 50.7L176.2 56.0L177.9 63.7L176.8 72.1L176.9 79.4L180.5 85.8L185.6 92.5L188.0 100.0L185.6 107.5L180.5 114.2L176.9 120.6L176.8 127.9L177.9 136.3L176.2 144.0L170.4 149.3L162.6 152.5L156.3 156.3L152.5 162.6L149.3 170.4L144.0 176.2L136.3 177.9L127.9 176.8L120.6 176.9L114.2 180.5L107.5 185.6L100.0 188.0L92.5 185.6L85.8 180.5L79.4 176.9L72.1 176.8L63.7 177.9L56.0 176.2L50.7 170.4L47.5 162.6L43.7 156.3L37.4 152.5L29.6 149.3L23.8 144.0L22.1 136.3L23.2 127.9L23.1 120.6L19.5 114.2L14.4 107.5L12.0 100.0L14.4 92.5L19.5 85.8L23.1 79.4L23.2 72.1L22.1 63.7L23.8 56.0L29.6 50.7L37.4 47.5L43.7 43.7L47.5 37.4L50.7 29.6L56.0 23.8L63.7 22.1L72.1 23.2L79.4 23.1L85.8 19.5L92.5 14.4Z"/></svg></span>1</span>
+            <figure class="phone">
+              <img src="assets/screens/teams.webp" alt="Tela de configuração de equipes com Leões de Judá, Luz do Mundo e Sal da Terra cadastradas e o botão Começar Rodada." width="540" height="1169" loading="lazy" decoding="async">
+            </figure>
+            <div>
+              <h3>Cadastre as equipes</h3>
+              <p>De 2 a 6 equipes, com nomes livres. Tudo fica salvo no próprio celular.</p>
+            </div>
+          </li>
+          <li class="step">
+            <span class="step-number"><span class="shape" aria-hidden="true"><svg viewBox="0 0 200 200" focusable="false"><path class="fill-secondary" d="M100.0 12.0L107.5 14.2L114.1 19.8L119.9 25.7L125.6 29.6L132.5 30.3L140.7 29.4L149.4 29.5L156.6 32.6L160.9 39.1L162.4 47.6L163.0 55.9L164.9 62.5L169.7 67.5L176.6 72.1L183.2 77.7L186.7 84.7L185.8 92.5L181.5 100.0L176.6 106.7L173.8 113.0L174.3 119.9L176.6 127.9L178.0 136.4L176.2 144.0L170.5 149.4L162.4 152.4L154.4 154.4L148.2 157.4L144.1 163.0L140.7 170.6L136.4 178.0L130.1 182.7L122.3 183.2L114.1 180.2L106.7 176.6L100.0 175.0L93.3 176.6L85.9 180.2L77.7 183.2L69.9 182.7L63.6 178.0L59.3 170.6L55.9 163.0L51.8 157.4L45.6 154.4L37.6 152.4L29.5 149.4L23.8 144.0L22.0 136.4L23.4 127.9L25.7 119.9L26.2 113.0L23.4 106.7L18.5 100.0L14.2 92.5L13.3 84.7L16.8 77.7L23.4 72.1L30.3 67.5L35.1 62.5L37.0 55.9L37.6 47.6L39.1 39.1L43.4 32.6L50.6 29.5L59.3 29.4L67.5 30.3L74.4 29.6L80.1 25.7L85.9 19.8L92.5 14.2Z"/></svg></span>2</span>
+            <figure class="phone">
+              <img src="assets/screens/hub-dark.webp" alt="Catálogo de dinâmicas no tema escuro, com filtros Todos, 1 Celular e Multi-Celular." width="540" height="1169" loading="lazy" decoding="async">
+            </figure>
+            <div>
+              <h3>Escolha a dinâmica</h3>
+              <p>Filtre por jogos de 1 celular ou de sala multiplayer e toque para começar.</p>
+            </div>
+          </li>
+          <li class="step">
+            <span class="step-number"><span class="shape" aria-hidden="true"><svg viewBox="0 0 200 200" focusable="false"><path class="fill-highlight" d="M100.0 12.0L107.5 14.5L113.9 21.0L119.1 28.7L123.8 34.5L129.5 36.8L136.9 36.0L146.0 34.3L155.1 34.3L162.2 37.8L165.7 44.9L165.7 54.0L164.0 63.1L163.2 70.5L165.5 76.2L171.3 80.9L179.0 86.1L185.5 92.5L188.0 100.0L185.5 107.5L179.0 113.9L171.3 119.1L165.5 123.8L163.2 129.5L164.0 136.9L165.7 146.0L165.7 155.1L162.2 162.2L155.1 165.7L146.0 165.7L136.9 164.0L129.5 163.2L123.8 165.5L119.1 171.3L113.9 179.0L107.5 185.5L100.0 188.0L92.5 185.5L86.1 179.0L80.9 171.3L76.2 165.5L70.5 163.2L63.1 164.0L54.0 165.7L44.9 165.7L37.8 162.2L34.3 155.1L34.3 146.0L36.0 136.9L36.8 129.5L34.5 123.8L28.7 119.1L21.0 113.9L14.5 107.5L12.0 100.0L14.5 92.5L21.0 86.1L28.7 80.9L34.5 76.2L36.8 70.5L36.0 63.1L34.3 54.0L34.3 44.9L37.8 37.8L44.9 34.3L54.0 34.3L63.1 36.0L70.5 36.8L76.2 34.5L80.9 28.7L86.1 21.0L92.5 14.5Z"/></svg></span>3</span>
+            <figure class="phone">
+              <img src="assets/screens/scoreboard.webp" alt="Ranking do Encontro: 1º lugar Leões de Judá com 40 pontos, 2º Luz do Mundo com 30 e 3º Sal da Terra com 20." width="540" height="1169" loading="lazy" decoding="async">
+            </figure>
+            <div>
+              <h3>Comemore no placar</h3>
+              <p>Os pontos de todos os jogos somam no Ranking do Encontro.</p>
+            </div>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section id="jogos" class="section section-alt" aria-labelledby="titulo-jogos">
+      <div class="container">
+        <div class="section-head">
+          <span class="eyebrow">Os jogos</span>
+          <h2 id="titulo-jogos">8 jogos, dois jeitos de jogar</h2>
+          <p>Escolha pelo momento do encontro. As imagens são telas reais do aplicativo.</p>
+        </div>
+
+        <nav aria-label="Ir para um jogo">
+          <ul class="chip-row">
+            <li><a class="chip" href="#jogo-mimica">Mímica</a></li>
+            <li><a class="chip" href="#jogo-quiz">Quiz</a></li>
+            <li><a class="chip" href="#jogo-forca">Forca</a></li>
+            <li><a class="chip" href="#jogo-quem-sou-eu">Quem Sou Eu?</a></li>
+            <li><a class="chip" href="#jogo-versiculo">Versículo</a></li>
+            <li><a class="chip" href="#jogo-termometro">Termômetro</a></li>
+            <li><a class="chip" href="#jogo-cidade-dorme">Cidade Dorme</a></li>
+            <li><a class="chip" href="#jogo-adedonha">Adedonha</a></li>
+          </ul>
+        </nav>
+
+        <div class="games">
+          <div class="mode-divider">
+            <h3>Modo 1 Celular</h3>
+            <span class="tag">Passa-celular · 2+ equipes</span>
+          </div>
+
+          <article class="game" id="jogo-mimica" aria-labelledby="t-mimica">
+            <div class="game-media">
+              <div class="shape" aria-hidden="true"><svg viewBox="0 0 200 200" focusable="false"><path class="fill-action" d="M100.0 12.0L107.5 14.2L114.1 19.8L119.9 25.7L125.6 29.6L132.5 30.3L140.7 29.4L149.4 29.5L156.6 32.6L160.9 39.1L162.4 47.6L163.0 55.9L164.9 62.5L169.7 67.5L176.6 72.1L183.2 77.7L186.7 84.7L185.8 92.5L181.5 100.0L176.6 106.7L173.8 113.0L174.3 119.9L176.6 127.9L178.0 136.4L176.2 144.0L170.5 149.4L162.4 152.4L154.4 154.4L148.2 157.4L144.1 163.0L140.7 170.6L136.4 178.0L130.1 182.7L122.3 183.2L114.1 180.2L106.7 176.6L100.0 175.0L93.3 176.6L85.9 180.2L77.7 183.2L69.9 182.7L63.6 178.0L59.3 170.6L55.9 163.0L51.8 157.4L45.6 154.4L37.6 152.4L29.5 149.4L23.8 144.0L22.0 136.4L23.4 127.9L25.7 119.9L26.2 113.0L23.4 106.7L18.5 100.0L14.2 92.5L13.3 84.7L16.8 77.7L23.4 72.1L30.3 67.5L35.1 62.5L37.0 55.9L37.6 47.6L39.1 39.1L43.4 32.6L50.6 29.5L59.3 29.4L67.5 30.3L74.4 29.6L80.1 25.7L85.9 19.8L92.5 14.2Z"/></svg></div>
+              <figure class="phone">
+                <img src="assets/screens/mimica.webp" alt="Tela da Mímica Expressiva: vez da equipe Leões de Judá, cronômetro em 00:59, palavra Davi e Golias e os botões Acertaram (+20 pts) e Pular (-5 pts)." width="540" height="1169" loading="lazy" decoding="async">
+              </figure>
+            </div>
+            <div class="game-text">
+              <div class="tag-row"><span class="tag">1 Celular</span><span class="tag tag-outline">45, 60 ou 90 s</span><span class="tag tag-highlight">+20 pts por acerto</span></div>
+              <h3 id="t-mimica">Mímica Expressiva</h3>
+              <p>Um representante encena a palavra secreta sem falar, e a equipe corre para adivinhar antes de o cronômetro zerar.</p>
+              <ol class="how">
+                <li>A equipe da vez escolhe quem vai encenar e toca em <strong>Estou Pronto!</strong></li>
+                <li>A palavra aparece na tela; um toque a esconde do resto do grupo.</li>
+                <li>Acertou, +20 pts. Pulou, -5 pts, sem deixar o placar negativo.</li>
+              </ol>
+            </div>
+          </article>
+
+          <article class="game" id="jogo-quiz" aria-labelledby="t-quiz">
+            <div class="game-media">
+              <div class="shape" aria-hidden="true"><svg viewBox="0 0 200 200" focusable="false"><path class="fill-success" d="M100.0 12.0L107.5 14.5L113.9 21.0L119.1 28.7L123.8 34.5L129.5 36.8L136.9 36.0L146.0 34.3L155.1 34.3L162.2 37.8L165.7 44.9L165.7 54.0L164.0 63.1L163.2 70.5L165.5 76.2L171.3 80.9L179.0 86.1L185.5 92.5L188.0 100.0L185.5 107.5L179.0 113.9L171.3 119.1L165.5 123.8L163.2 129.5L164.0 136.9L165.7 146.0L165.7 155.1L162.2 162.2L155.1 165.7L146.0 165.7L136.9 164.0L129.5 163.2L123.8 165.5L119.1 171.3L113.9 179.0L107.5 185.5L100.0 188.0L92.5 185.5L86.1 179.0L80.9 171.3L76.2 165.5L70.5 163.2L63.1 164.0L54.0 165.7L44.9 165.7L37.8 162.2L34.3 155.1L34.3 146.0L36.0 136.9L36.8 129.5L34.5 123.8L28.7 119.1L21.0 113.9L14.5 107.5L12.0 100.0L14.5 92.5L21.0 86.1L28.7 80.9L34.5 76.2L36.8 70.5L36.0 63.1L34.3 54.0L34.3 44.9L37.8 37.8L44.9 34.3L54.0 34.3L63.1 36.0L70.5 36.8L76.2 34.5L80.9 28.7L86.1 21.0L92.5 14.5Z"/></svg></div>
+              <figure class="phone">
+                <img src="assets/screens/quiz.webp" alt="Tela do Quiz Relâmpago: pergunta sobre quem construiu a arca, com a alternativa B, Noé, marcada como correta e a explicação Resposta Correta (+10 pts)." width="540" height="1169" loading="lazy" decoding="async">
+              </figure>
+            </div>
+            <div class="game-text">
+              <div class="tag-row"><span class="tag">1 Celular</span><span class="tag tag-outline">15, 20 ou 30 s</span><span class="tag tag-highlight">+10 pts por acerto</span></div>
+              <h3 id="t-quiz">Quiz Relâmpago</h3>
+              <p>Perguntas bíblicas e de conhecimentos gerais com 4 alternativas e a explicação logo depois da resposta.</p>
+              <ol class="how">
+                <li>A equipe da vez conversa e escolhe uma alternativa antes de o tempo acabar.</li>
+                <li>Acerto vale +10 pts; erro ou tempo esgotado, 0.</li>
+                <li>A explicação aparece na hora, e o celular vibra diferente no acerto e no erro.</li>
+              </ol>
+            </div>
+          </article>
+
+          <article class="game" id="jogo-forca" aria-labelledby="t-forca">
+            <div class="game-media">
+              <div class="shape" aria-hidden="true"><svg viewBox="0 0 200 200" focusable="false"><path class="fill-secondary" d="M100.0 12.0L107.6 13.2L114.7 16.7L120.9 22.1L126.0 28.7L129.9 35.8L133.0 42.8L135.6 49.1L138.3 54.4L141.5 58.5L145.6 61.7L150.9 64.4L157.2 67.0L164.2 70.1L171.3 74.0L177.9 79.1L183.3 85.3L186.8 92.4L188.0 100.0L186.8 107.6L183.3 114.7L177.9 120.9L171.3 126.0L164.2 129.9L157.2 133.0L150.9 135.6L145.6 138.3L141.5 141.5L138.3 145.6L135.6 150.9L133.0 157.2L129.9 164.2L126.0 171.3L120.9 177.9L114.7 183.3L107.6 186.8L100.0 188.0L92.4 186.8L85.3 183.3L79.1 177.9L74.0 171.3L70.1 164.2L67.0 157.2L64.4 150.9L61.7 145.6L58.5 141.5L54.4 138.3L49.1 135.6L42.8 133.0L35.8 129.9L28.7 126.0L22.1 120.9L16.7 114.7L13.2 107.6L12.0 100.0L13.2 92.4L16.7 85.3L22.1 79.1L28.7 74.0L35.8 70.1L42.8 67.0L49.1 64.4L54.4 61.7L58.5 58.5L61.7 54.4L64.4 49.1L67.0 42.8L70.1 35.8L74.0 28.7L79.1 22.1L85.3 16.7L92.4 13.2Z"/></svg></div>
+              <figure class="phone">
+                <img src="assets/screens/forca.webp" alt="Tela do Jogo da Forca: dica Propósito essencial de um Pequeno Grupo, palavra com O, Ã e O revelados, teclado com acertos em verde e erros em vermelho e 3 tentativas restantes." width="540" height="1169" loading="lazy" decoding="async">
+              </figure>
+            </div>
+            <div class="game-text">
+              <div class="tag-row"><span class="tag">1 Celular</span><span class="tag tag-outline">5, 6 ou 8 tentativas</span><span class="tag tag-highlight">+30 pts por palavra</span></div>
+              <h3 id="t-forca">Jogo da Forca</h3>
+              <p>A equipe descobre a palavra secreta escolhendo letras de A a Z, com uma dica temática para ajudar.</p>
+              <ol class="how">
+                <li>A dica aparece no topo e a equipe discute qual letra tentar.</li>
+                <li>Letras certas ficam verdes; cada letra errada fica vermelha e gasta uma tentativa.</li>
+                <li>Palavra descoberta vale +30 pts, mais 2 pts por tentativa que sobrou.</li>
+              </ol>
+            </div>
+          </article>
+
+          <article class="game game-wide" id="jogo-quem-sou-eu" aria-labelledby="t-quem-sou-eu">
+            <div class="game-media game-media-wide">
+              <div class="shape" aria-hidden="true"><svg viewBox="0 0 200 200" focusable="false"><path class="fill-action" d="M100.0 12.0L107.5 13.8L114.3 18.7L120.0 25.4L124.6 32.5L128.7 38.5L133.2 42.5L138.9 44.4L146.1 45.0L154.6 45.4L163.3 46.9L170.9 50.4L176.2 56.0L178.4 63.4L177.6 71.8L174.6 80.0L170.7 87.5L167.6 94.1L166.4 100.0L167.6 105.9L170.7 112.5L174.6 120.0L177.6 128.2L178.4 136.6L176.2 144.0L170.9 149.6L163.3 153.1L154.6 154.6L146.1 155.0L138.9 155.6L133.2 157.5L128.7 161.5L124.6 167.5L120.0 174.6L114.3 181.3L107.5 186.2L100.0 188.0L92.5 186.2L85.7 181.3L80.0 174.6L75.4 167.5L71.3 161.5L66.8 157.5L61.1 155.6L53.9 155.0L45.4 154.6L36.7 153.1L29.1 149.6L23.8 144.0L21.6 136.6L22.4 128.2L25.4 120.0L29.3 112.5L32.4 105.9L33.6 100.0L32.4 94.1L29.3 87.5L25.4 80.0L22.4 71.8L21.6 63.4L23.8 56.0L29.1 50.4L36.7 46.9L45.4 45.4L53.9 45.0L61.1 44.4L66.8 42.5L71.3 38.5L75.4 32.5L80.0 25.4L85.7 18.7L92.5 13.8Z"/></svg></div>
+              <figure class="phone phone-landscape">
+                <img src="assets/screens/quem-sou-eu.webp" alt="Tela do Quem Sou Eu? na horizontal: carta Estátua da Liberdade do pacote Lugares do Mundo, cronômetro em 00:58 e os botões Passar e Acertou (+10 pts)." width="1000" height="462" loading="lazy" decoding="async">
+              </figure>
+            </div>
+            <div class="game-text">
+              <div class="tag-row"><span class="tag">1 Celular</span><span class="tag tag-outline">Celular na testa</span><span class="tag tag-highlight">+10 pts por acerto</span></div>
+              <h3 id="t-quem-sou-eu">Quem Sou Eu?</h3>
+              <p>Quem segura o celular na testa não vê a carta; a própria equipe dá as dicas, sem dizer o nome.</p>
+              <ol class="how">
+                <li>Segure o celular deitado na testa, com a tela virada para o grupo.</li>
+                <li>Incline para baixo para marcar acerto (+10 pts) e para cima para passar, sem penalidade.</li>
+                <li>Prefere sem movimento? Dá para jogar só com os botões da tela.</li>
+              </ol>
+            </div>
+          </article>
+
+          <article class="game" id="jogo-versiculo" aria-labelledby="t-versiculo">
+            <div class="game-media">
+              <div class="shape" aria-hidden="true"><svg viewBox="0 0 200 200" focusable="false"><path class="fill-highlight" d="M100.0 12.0L107.5 14.4L114.2 19.5L120.6 23.1L127.9 23.2L136.3 22.1L144.0 23.8L149.3 29.6L152.5 37.4L156.3 43.7L162.6 47.5L170.4 50.7L176.2 56.0L177.9 63.7L176.8 72.1L176.9 79.4L180.5 85.8L185.6 92.5L188.0 100.0L185.6 107.5L180.5 114.2L176.9 120.6L176.8 127.9L177.9 136.3L176.2 144.0L170.4 149.3L162.6 152.5L156.3 156.3L152.5 162.6L149.3 170.4L144.0 176.2L136.3 177.9L127.9 176.8L120.6 176.9L114.2 180.5L107.5 185.6L100.0 188.0L92.5 185.6L85.8 180.5L79.4 176.9L72.1 176.8L63.7 177.9L56.0 176.2L50.7 170.4L47.5 162.6L43.7 156.3L37.4 152.5L29.6 149.3L23.8 144.0L22.1 136.3L23.2 127.9L23.1 120.6L19.5 114.2L14.4 107.5L12.0 100.0L14.4 92.5L19.5 85.8L23.1 79.4L23.2 72.1L22.1 63.7L23.8 56.0L29.6 50.7L37.4 47.5L43.7 43.7L47.5 37.4L50.7 29.6L56.0 23.8L63.7 22.1L72.1 23.2L79.4 23.1L85.8 19.5L92.5 14.4Z"/></svg></div>
+              <figure class="phone">
+                <img src="assets/screens/versiculo.webp" alt="Tela do Complete o Versículo: passagem O SENHOR é meu pastor, nada me ______, com quatro opções de palavra, Dica 50/50 e Conferir, cronômetro em 00:42." width="540" height="1169" loading="lazy" decoding="async">
+              </figure>
+            </div>
+            <div class="game-text">
+              <div class="tag-row"><span class="tag">1 Celular</span><span class="tag tag-outline">30, 45 ou 60 s</span><span class="tag tag-highlight">+10 pts por lacuna</span></div>
+              <h3 id="t-versiculo">Complete o Versículo</h3>
+              <p>Uma passagem bíblica famosa aparece com lacunas, e a equipe completa as palavras-chave.</p>
+              <ol class="how">
+                <li>A equipe lê a passagem em voz alta antes de o tempo acabar.</li>
+                <li>Para cada lacuna, escolhe a palavra certa; a Dica 50/50 elimina duas opções.</li>
+                <li>Cada lacuna vale +10 pts (+5 com dica), e a referência é revelada no final.</li>
+              </ol>
+            </div>
+          </article>
+
+          <article class="game" id="jogo-termometro" aria-labelledby="t-termometro">
+            <div class="game-media">
+              <div class="shape" aria-hidden="true"><svg viewBox="0 0 200 200" focusable="false"><path class="fill-surface" d="M100.0 12.0L107.5 14.2L114.1 19.8L119.9 25.7L125.6 29.6L132.5 30.3L140.7 29.4L149.4 29.5L156.6 32.6L160.9 39.1L162.4 47.6L163.0 55.9L164.9 62.5L169.7 67.5L176.6 72.1L183.2 77.7L186.7 84.7L185.8 92.5L181.5 100.0L176.6 106.7L173.8 113.0L174.3 119.9L176.6 127.9L178.0 136.4L176.2 144.0L170.5 149.4L162.4 152.4L154.4 154.4L148.2 157.4L144.1 163.0L140.7 170.6L136.4 178.0L130.1 182.7L122.3 183.2L114.1 180.2L106.7 176.6L100.0 175.0L93.3 176.6L85.9 180.2L77.7 183.2L69.9 182.7L63.6 178.0L59.3 170.6L55.9 163.0L51.8 157.4L45.6 154.4L37.6 152.4L29.5 149.4L23.8 144.0L22.0 136.4L23.4 127.9L25.7 119.9L26.2 113.0L23.4 106.7L18.5 100.0L14.2 92.5L13.3 84.7L16.8 77.7L23.4 72.1L30.3 67.5L35.1 62.5L37.0 55.9L37.6 47.6L39.1 39.1L43.4 32.6L50.6 29.5L59.3 29.4L67.5 30.3L74.4 29.6L80.1 25.7L85.9 19.8L92.5 14.2Z"/></svg></div>
+              <figure class="phone">
+                <img src="assets/screens/termometro.webp" alt="Tela do Termômetro de Pedidos: vez de Ana, termômetro em Tempo tranquilo marcando 00:56 e o botão Próximo." width="540" height="1169" loading="lazy" decoding="async">
+              </figure>
+            </div>
+            <div class="game-text">
+              <div class="tag-row"><span class="tag">1 Celular · Encerramento</span><span class="tag tag-outline">1, 2 ou 3 min por pessoa</span><span class="tag tag-highlight">Nada é gravado</span></div>
+              <h3 id="t-termometro">Termômetro de Pedidos</h3>
+              <p>O momento de pedidos de oração que fecha o encontro, com um tempo de fala acolhedor para cada pessoa.</p>
+              <ol class="how">
+                <li>O líder adiciona os participantes (ou usa o modo livre) e escolhe o tempo.</li>
+                <li>O termômetro vai enchendo do frio ao quente, sem a pressão de um relógio.</li>
+                <li>O app não grava áudio nem texto: ele só organiza a vez e o tempo.</li>
+              </ol>
+            </div>
+          </article>
+
+          <div class="mode-divider">
+            <h3>Modo Salas Multiplayer</h3>
+            <span class="tag tag-secondary">Vários celulares · PIN da sala</span>
+          </div>
+
+          <article class="game game-multi" id="jogo-cidade-dorme" aria-labelledby="t-cidade-dorme">
+            <div class="game-media">
+              <div class="shape" aria-hidden="true"><svg viewBox="0 0 200 200" focusable="false"><path class="fill-action" d="M100.0 12.0L107.6 13.2L114.7 16.7L120.9 22.1L126.0 28.7L129.9 35.8L133.0 42.8L135.6 49.1L138.3 54.4L141.5 58.5L145.6 61.7L150.9 64.4L157.2 67.0L164.2 70.1L171.3 74.0L177.9 79.1L183.3 85.3L186.8 92.4L188.0 100.0L186.8 107.6L183.3 114.7L177.9 120.9L171.3 126.0L164.2 129.9L157.2 133.0L150.9 135.6L145.6 138.3L141.5 141.5L138.3 145.6L135.6 150.9L133.0 157.2L129.9 164.2L126.0 171.3L120.9 177.9L114.7 183.3L107.6 186.8L100.0 188.0L92.4 186.8L85.3 183.3L79.1 177.9L74.0 171.3L70.1 164.2L67.0 157.2L64.4 150.9L61.7 145.6L58.5 141.5L54.4 138.3L49.1 135.6L42.8 133.0L35.8 129.9L28.7 126.0L22.1 120.9L16.7 114.7L13.2 107.6L12.0 100.0L13.2 92.4L16.7 85.3L22.1 79.1L28.7 74.0L35.8 70.1L42.8 67.0L49.1 64.4L54.4 61.7L58.5 58.5L61.7 54.4L64.4 49.1L67.0 42.8L70.1 35.8L74.0 28.7L79.1 22.1L85.3 16.7L92.4 13.2Z"/></svg></div>
+              <figure class="phone">
+                <img src="assets/screens/cidade-dorme.webp" alt="Tela do Cidade Dorme na revelação secreta do papel: o jogador é Cidadão, do time do Bem, com o botão Esconder e Estou Pronto." width="540" height="1169" loading="lazy" decoding="async">
+              </figure>
+            </div>
+            <div class="game-text">
+              <div class="tag-row"><span class="tag tag-secondary">Multi-Celular</span><span class="tag tag-outline">5 a 16 jogadores</span><span class="tag tag-highlight">Narrador por voz</span></div>
+              <h3 id="t-cidade-dorme">Cidade Dorme</h3>
+              <p>Dedução social com papéis secretos (Assassino, Anjo, Detetive e Cidadãos) e narração no celular do anfitrião.</p>
+              <ol class="how">
+                <li>O anfitrião cria a sala e compartilha o PIN; cada pessoa entra pelo próprio celular.</li>
+                <li>Cada jogador vê o próprio papel em segredo, só no seu aparelho.</li>
+                <li>À noite os papéis agem; de dia o grupo debate e vota para achar o Assassino.</li>
+              </ol>
+            </div>
+          </article>
+
+          <article class="game game-multi" id="jogo-adedonha" aria-labelledby="t-adedonha">
+            <div class="game-media">
+              <div class="shape" aria-hidden="true"><svg viewBox="0 0 200 200" focusable="false"><path class="fill-secondary" d="M100.0 12.0L107.5 14.5L113.9 21.0L119.1 28.7L123.8 34.5L129.5 36.8L136.9 36.0L146.0 34.3L155.1 34.3L162.2 37.8L165.7 44.9L165.7 54.0L164.0 63.1L163.2 70.5L165.5 76.2L171.3 80.9L179.0 86.1L185.5 92.5L188.0 100.0L185.5 107.5L179.0 113.9L171.3 119.1L165.5 123.8L163.2 129.5L164.0 136.9L165.7 146.0L165.7 155.1L162.2 162.2L155.1 165.7L146.0 165.7L136.9 164.0L129.5 163.2L123.8 165.5L119.1 171.3L113.9 179.0L107.5 185.5L100.0 188.0L92.5 185.5L86.1 179.0L80.9 171.3L76.2 165.5L70.5 163.2L63.1 164.0L54.0 165.7L44.9 165.7L37.8 162.2L34.3 155.1L34.3 146.0L36.0 136.9L36.8 129.5L34.5 123.8L28.7 119.1L21.0 113.9L14.5 107.5L12.0 100.0L14.5 92.5L21.0 86.1L28.7 80.9L34.5 76.2L36.8 70.5L36.0 63.1L34.3 54.0L34.3 44.9L37.8 37.8L44.9 34.3L54.0 34.3L63.1 36.0L70.5 36.8L76.2 34.5L80.9 28.7L86.1 21.0L92.5 14.5Z"/></svg></div>
+              <figure class="phone">
+                <img src="assets/screens/adedonha.webp" alt="Tela da Adedonha Bíblica: letra A sorteada, cronômetro em 01:25 e os campos Personagem Bíblico, Livro da Bíblia e Cidade, Monte ou Rio Bíblico." width="540" height="1169" loading="lazy" decoding="async">
+              </figure>
+            </div>
+            <div class="game-text">
+              <div class="tag-row"><span class="tag tag-secondary">Multi-Celular</span><span class="tag tag-outline">2 a 12 jogadores</span><span class="tag tag-highlight">Roleta de letras</span></div>
+              <h3 id="t-adedonha">Adedonha Bíblica</h3>
+              <p>A roleta sorteia uma letra e todo mundo corre para preencher as categorias bíblicas no próprio celular.</p>
+              <ol class="how">
+                <li>O moderador cria a sala e as colunas: personagem, livro, cidade e o que o estudo pedir.</li>
+                <li>A roleta gira e sorteia a letra da rodada.</li>
+                <li>Quem terminar primeiro aperta <strong>ADEDONHA!</strong> e a rodada para na hora da apuração.</li>
+              </ol>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="temas" class="section" aria-labelledby="titulo-temas">
+      <div class="container">
+        <div class="section-head">
+          <span class="eyebrow">Claro ou escuro</span>
+          <h2 id="titulo-temas">Confortável de dia e na sala com a luz apagada</h2>
+          <p>O app segue o tema do celular ou deixa você escolher. Os dois temas passaram por testes de contraste do sistema de design.</p>
+        </div>
+        <div class="themes">
+          <figure class="phone">
+            <img src="assets/screens/hub.webp" alt="Tela inicial no tema claro." width="540" height="1169" loading="lazy" decoding="async">
+          </figure>
+          <figure class="phone">
+            <img src="assets/screens/hub-dark.webp" alt="A mesma tela inicial no tema escuro." width="540" height="1169" loading="lazy" decoding="async">
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section id="acessibilidade" class="section section-alt" aria-labelledby="titulo-ihc">
+      <div class="container">
+        <div class="section-head">
+          <span class="eyebrow">Feito para todo mundo</span>
+          <h2 id="titulo-ihc">Pensado para quem conduz e para quem joga</h2>
+          <p>O PG PLAY nasceu na disciplina de Interação Humano-Computador, com o sistema de design PG Play Expressive.</p>
+        </div>
+        <ul class="card-grid">
+          <li>
+            <article class="card">
+              <span class="badge" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg></span>
+              <h3>Fácil de conduzir</h3>
+              <p>Botões grandes, regras curtas na tela e um passo de cada vez, para o líder conduzir sem tutorial.</p>
+            </article>
+          </li>
+          <li>
+            <article class="card">
+              <span class="badge badge-secondary" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h9"/></svg></span>
+              <h3>Alto contraste</h3>
+              <p>Cores testadas nos temas claro e escuro, e avisos que combinam cor, forma e ícone.</p>
+            </article>
+          </li>
+          <li>
+            <article class="card">
+              <span class="badge badge-success" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="3"/><path d="M3 8v8M21 8v8"/></svg></span>
+              <h3>Vibração que avisa</h3>
+              <p>O celular vibra nos 10 segundos finais e no acerto ou erro, para quem não está olhando a tela.</p>
+            </article>
+          </li>
+          <li>
+            <article class="card">
+              <span class="badge badge-highlight" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h4l3-8 2 16 3-8h4"/></svg></span>
+              <h3>Respeita o seu ritmo</h3>
+              <p>Com "Reduzir movimento" ligado no celular, as animações e as vibrações repetidas se desligam.</p>
+            </article>
+          </li>
+          <li>
+            <article class="card">
+              <span class="badge" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6v6c0 4.5 3.4 8 8 9 4.6-1 8-4.5 8-9V6l-8-3Z"/></svg></span>
+              <h3>Sem anúncios</h3>
+              <p>Nada de propaganda, cadastro ou rastreamento interrompendo o encontro. Veja a <a href="privacidade.html">Política de Privacidade</a>.</p>
+            </article>
+          </li>
+          <li>
+            <article class="card">
+              <span class="badge badge-secondary" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18M8.5 8.6A5 5 0 0 0 12 17a5 5 0 0 0 3.4-1.3M5 12.5a10 10 0 0 1 2.2-3.3M12 7a5 5 0 0 1 4.9 4"/></svg></span>
+              <h3>Funciona offline</h3>
+              <p>Os jogos de 1 celular rodam sem internet. Equipes e placar ficam salvos no próprio aparelho.</p>
+            </article>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="titulo-cta">
+      <div class="container">
+        <div class="cta">
+          <div class="shape shape-a" aria-hidden="true"><svg viewBox="0 0 200 200" focusable="false"><path d="M100.0 12.0L107.5 14.2L114.1 19.8L119.9 25.7L125.6 29.6L132.5 30.3L140.7 29.4L149.4 29.5L156.6 32.6L160.9 39.1L162.4 47.6L163.0 55.9L164.9 62.5L169.7 67.5L176.6 72.1L183.2 77.7L186.7 84.7L185.8 92.5L181.5 100.0L176.6 106.7L173.8 113.0L174.3 119.9L176.6 127.9L178.0 136.4L176.2 144.0L170.5 149.4L162.4 152.4L154.4 154.4L148.2 157.4L144.1 163.0L140.7 170.6L136.4 178.0L130.1 182.7L122.3 183.2L114.1 180.2L106.7 176.6L100.0 175.0L93.3 176.6L85.9 180.2L77.7 183.2L69.9 182.7L63.6 178.0L59.3 170.6L55.9 163.0L51.8 157.4L45.6 154.4L37.6 152.4L29.5 149.4L23.8 144.0L22.0 136.4L23.4 127.9L25.7 119.9L26.2 113.0L23.4 106.7L18.5 100.0L14.2 92.5L13.3 84.7L16.8 77.7L23.4 72.1L30.3 67.5L35.1 62.5L37.0 55.9L37.6 47.6L39.1 39.1L43.4 32.6L50.6 29.5L59.3 29.4L67.5 30.3L74.4 29.6L80.1 25.7L85.9 19.8L92.5 14.2Z"/></svg></div>
+          <div class="shape shape-b" aria-hidden="true"><svg viewBox="0 0 200 200" focusable="false"><path d="M100.0 12.0L107.6 13.2L114.7 16.7L120.9 22.1L126.0 28.7L129.9 35.8L133.0 42.8L135.6 49.1L138.3 54.4L141.5 58.5L145.6 61.7L150.9 64.4L157.2 67.0L164.2 70.1L171.3 74.0L177.9 79.1L183.3 85.3L186.8 92.4L188.0 100.0L186.8 107.6L183.3 114.7L177.9 120.9L171.3 126.0L164.2 129.9L157.2 133.0L150.9 135.6L145.6 138.3L141.5 141.5L138.3 145.6L135.6 150.9L133.0 157.2L129.9 164.2L126.0 171.3L120.9 177.9L114.7 183.3L107.6 186.8L100.0 188.0L92.4 186.8L85.3 183.3L79.1 177.9L74.0 171.3L70.1 164.2L67.0 157.2L64.4 150.9L61.7 145.6L58.5 141.5L54.4 138.3L49.1 135.6L42.8 133.0L35.8 129.9L28.7 126.0L22.1 120.9L16.7 114.7L13.2 107.6L12.0 100.0L13.2 92.4L16.7 85.3L22.1 79.1L28.7 74.0L35.8 70.1L42.8 67.0L49.1 64.4L54.4 61.7L58.5 58.5L61.7 54.4L64.4 49.1L67.0 42.8L70.1 35.8L74.0 28.7L79.1 22.1L85.3 16.7L92.4 13.2Z"/></svg></div>
+          <h2 id="titulo-cta">Leve o PG PLAY para o seu próximo encontro</h2>
+          <p>Gratuito, sem anúncios e pronto para jogar com o grupo em poucos toques.</p>
+          <div class="actions">
+            <a class="button button-highlight button-jumbo" href="https://play.google.com/store/apps/details?id=br.edu.ifpi.pgplay">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M6 3.5v17a1 1 0 0 0 1.5.9l14-8.5a1 1 0 0 0 0-1.8l-14-8.5A1 1 0 0 0 6 3.5Z"/></svg>
+              Baixar no Google Play
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>PG PLAY · Projeto acadêmico de ADS do IFPI Campus Piripiri · Gratuito e sem anúncios</p>
+      <ul>
+        <li><a href="privacidade.html">Política de Privacidade</a></li>
+        <li><a href="termos.html">Termos de Uso</a></li>
+        <li><a href="privacidade.html#contato">Contato e suporte</a></li>
+      </ul>
+    </div>
+  </footer>
+</body>
+</html>
