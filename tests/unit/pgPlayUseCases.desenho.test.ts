@@ -29,7 +29,7 @@ describe('PgPlayUseCases — Regras de Negócio do Desenho Relâmpago (UC12)', (
       title: 'Desenho Relâmpago',
       route: '/desenho',
       icon: 'palette',
-      modality: '1 Celular',
+      modality: 'Multi-Celular',
       available: true,
     });
 

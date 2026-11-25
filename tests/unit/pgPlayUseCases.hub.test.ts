@@ -66,12 +66,13 @@ describe('PgPlayUseCases — Catálogo e Hub de Jogos (UC01)', () => {
     );
 
     const onePhone = await useCases.listMinigames('', '1 Celular');
-    expect(onePhone).toHaveLength(7);
+    expect(onePhone).toHaveLength(6);
     expect(onePhone.every((g) => g.modality === '1 Celular')).toBe(true);
 
     const multiplayer = await useCases.listMinigames('', 'Multi-Celular');
-    expect(multiplayer).toHaveLength(2);
+    expect(multiplayer).toHaveLength(3);
     expect(multiplayer.every((g) => g.modality === 'Multi-Celular')).toBe(true);
+    expect(multiplayer.some((g) => g.id === 'desenho')).toBe(true);
   });
 
   it('deve combinar busca textual com filtro de modalidade e retornar vazio sem correspondência (RF03, RF04)', async () => {
@@ -87,7 +88,6 @@ describe('PgPlayUseCases — Catálogo e Hub de Jogos (UC01)', () => {
       'quiz',
       'forca',
       'versiculo',
-      'desenho',
     ]);
 
     const emptyResult = await useCases.listMinigames('xadrez', 'Todos');
