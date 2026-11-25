@@ -2411,9 +2411,10 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
 
     const { data: playerRows, error: playersError } = await client
       .from('room_players')
-      .select('*')
+      .select('id, room_id, user_id, nickname, is_host, score')
       .eq('room_id', roomId)
-      .order('joined_at', { ascending: true });
+      .order('is_host', { ascending: false })
+      .order('id', { ascending: true });
 
     if (playersError) {
       throw new DataSourceError(
@@ -2587,7 +2588,7 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
     try {
       const client = this.getClient();
       const userId = await this.ensureAuthenticatedUserId();
-      const code = `DR${Math.floor(1000 + Math.random() * 9000)}`;
+      const code = generatePinCode();
       const categories =
         initialCategories && initialCategories.length > 0
           ? [...initialCategories]
@@ -2599,7 +2600,7 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
           code,
           game_type: 'desenho',
           host_id: userId,
-          status: 'waiting',
+          status: 'lobby',
           phase: 'lobby',
           current_round: 1,
           config: {
@@ -2990,7 +2991,7 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
         .from('rooms')
         .update({
           phase: 'lobby',
-          status: 'waiting',
+          status: 'lobby',
           current_round: 1,
           phase_ends_at: null,
           config: {

@@ -1,5 +1,12 @@
 -- Migração 007: Sala Multiplayer do Desenho Relâmpago (UC12, RF41–RF44, RNF11)
--- Cria tabelas de segredo do turno e palpites com RLS + RPCs atômicas server-side.
+-- Libera game_type = 'desenho' em public.rooms, cria tabelas de segredo e palpites com RLS + Realtime + RPCs atômicas.
+
+alter table public.rooms
+  drop constraint if exists rooms_game_type_check;
+
+alter table public.rooms
+  add constraint rooms_game_type_check
+  check (game_type in ('cidade-dorme', 'adedonha', 'desenho'));
 
 create table if not exists public.desenho_secrets (
   room_id uuid primary key references public.rooms(id) on delete cascade,
@@ -37,6 +44,7 @@ drop policy if exists "Desenhista lê palavra secreta no turno e sala lê após 
 create policy "Desenhista lê palavra secreta no turno e sala lê após encerrar"
   on public.desenho_secrets
   for select
+  to authenticated
   using (
     (select auth.uid()) = drawer_id
     or exists (
@@ -50,6 +58,7 @@ drop policy if exists "Jogadores da sala leem palpites do Desenho Relâmpago"
 create policy "Jogadores da sala leem palpites do Desenho Relâmpago"
   on public.desenho_guesses
   for select
+  to authenticated
   using (
     exists (
       select 1 from public.room_players rp
@@ -57,6 +66,20 @@ create policy "Jogadores da sala leem palpites do Desenho Relâmpago"
         and rp.user_id = (select auth.uid())
     )
   );
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'desenho_guesses'
+  ) then
+    alter publication supabase_realtime add table public.desenho_guesses;
+  end if;
+end
+$$;
 
 create or replace function public.desenho_normalize_guess(p_input text)
 returns text
