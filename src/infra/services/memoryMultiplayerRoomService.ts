@@ -1,4 +1,8 @@
 import type {
+  DesenhoCategory,
+  DrawingElement,
+} from '@/model/entities/drawingChallenge';
+import type {
   AdedonhaConfig,
   AdedonhaPhase,
   AdedonhaPlayer,
@@ -15,9 +19,17 @@ import type {
   CidadeDormeRole,
   CidadeDormeRoom,
   CidadeDormeVoteReport,
+  DesenhoConfig,
+  DesenhoGuess,
+  DesenhoPlayer,
+  DesenhoRoom,
 } from '@/model/entities/multiplayerSession';
 import { ConflictError, DataSourceError, ValidationError } from '@/model/errors';
-import type { IMultiplayerRoomService } from '@/model/services/iMultiplayerRoomService';
+import type {
+  IMultiplayerRoomService,
+  StartDesenhoTurnInput,
+  SubmitDesenhoGuessResult,
+} from '@/model/services/iMultiplayerRoomService';
 
 export const DEFAULT_ADEDONHA_COLUMNS: string[] = [
   'Personagem Bíblico',
@@ -248,6 +260,107 @@ function cloneCidadeDormeRoom(room: CidadeDormeRoom): CidadeDormeRoom {
   };
 }
 
+const DEFAULT_DESENHO_CATEGORIES: DesenhoCategory[] = [
+  'Bíblico',
+  'Animais',
+  'Objetos',
+  'Comidas',
+  'Lugares e Natureza',
+];
+
+function normalizeDesenhoText(text: string): string {
+  return text
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .toLowerCase();
+}
+
+function cloneDrawingElement(element: DrawingElement): DrawingElement {
+  if (element.tool === 'freehand') {
+    return {
+      ...element,
+      points: element.points.map((p) => ({ x: p.x, y: p.y })),
+    };
+  }
+  return {
+    ...element,
+    start: { x: element.start.x, y: element.start.y },
+    end: { x: element.end.x, y: element.end.y },
+  };
+}
+
+function createDefaultDesenhoRoom(): DesenhoRoom {
+  return {
+    id: 'room-desenho-1',
+    code: 'DR2026',
+    gameType: 'desenho',
+    hostId: 'desenho-player-1',
+    phase: 'lobby',
+    version: 0,
+    phaseEndsAt: null,
+    config: {
+      turnDurationSeconds: 90,
+      totalRounds: 2,
+      categories: [...DEFAULT_DESENHO_CATEGORIES],
+    },
+    currentRound: 1,
+    drawerOrder: [],
+    currentDrawerIndex: 0,
+    currentDrawerId: null,
+    currentCardCategory: null,
+    currentSecretWord: null,
+    usedCardIds: [],
+    elements: [],
+    guesses: [],
+    players: [
+      {
+        id: 'desenho-player-1',
+        nickname: 'Líder do PG',
+        isHost: true,
+        score: 0,
+        drawingScore: 0,
+        firstGuessCount: 0,
+        hasGuessedCurrentTurn: false,
+      },
+      {
+        id: 'desenho-player-2',
+        nickname: 'Ana',
+        isHost: false,
+        score: 0,
+        drawingScore: 0,
+        firstGuessCount: 0,
+        hasGuessedCurrentTurn: false,
+      },
+      {
+        id: 'desenho-player-3',
+        nickname: 'Lucas',
+        isHost: false,
+        score: 0,
+        drawingScore: 0,
+        firstGuessCount: 0,
+        hasGuessedCurrentTurn: false,
+      },
+    ],
+  };
+}
+
+function cloneDesenhoRoom(room: DesenhoRoom): DesenhoRoom {
+  return {
+    ...room,
+    config: {
+      ...room.config,
+      categories: [...room.config.categories],
+    },
+    drawerOrder: [...room.drawerOrder],
+    usedCardIds: [...room.usedCardIds],
+    elements: room.elements.map(cloneDrawingElement),
+    guesses: room.guesses.map((g) => ({ ...g })),
+    players: room.players.map((p) => ({ ...p })),
+  };
+}
+
 export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
   private rooms: Map<string, AdedonhaRoom> = new Map();
   private activeRoomId: string;
@@ -271,11 +384,18 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
   > = new Map();
   private cidadeDormeLocks: Map<string, Promise<void>> = new Map();
   private cidadeDormeActionCounter = 0;
+  private desenhoRooms: Map<string, DesenhoRoom> = new Map();
+  private activeDesenhoRoomId: string;
+  private desenhoSecretsByRoom: Map<string, string | null> = new Map();
+  private desenhoListeners: Map<string, Set<(room: DesenhoRoom) => void>> =
+    new Map();
+  private desenhoGuessCounter = 0;
   private playerIdCounter = 100;
 
   constructor(
     initialRoom?: AdedonhaRoom,
-    initialCidadeDormeRoom?: CidadeDormeRoom
+    initialCidadeDormeRoom?: CidadeDormeRoom,
+    initialDesenhoRoom?: DesenhoRoom
   ) {
     const seedRoom = initialRoom ? cloneRoom(initialRoom) : createDefaultRoom();
     this.rooms.set(seedRoom.id, seedRoom);
@@ -295,6 +415,17 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
       }
     }
     this.cidadeDormeRolesByRoom.set(seedCidadeDorme.id, seedRoles);
+
+    const seedDesenho = initialDesenhoRoom
+      ? cloneDesenhoRoom(initialDesenhoRoom)
+      : createDefaultDesenhoRoom();
+    this.desenhoRooms.set(seedDesenho.id, seedDesenho);
+    this.activeDesenhoRoomId = seedDesenho.id;
+    this.localPlayerIdByRoom.set(seedDesenho.id, seedDesenho.hostId);
+    this.desenhoSecretsByRoom.set(
+      seedDesenho.id,
+      seedDesenho.currentSecretWord
+    );
   }
 
   private resolveRoom(roomId?: string): AdedonhaRoom {
@@ -1571,6 +1702,487 @@ export class MemoryMultiplayerRoomService implements IMultiplayerRoomService {
       current.delete(onRoomUpdated);
       if (current.size === 0) {
         this.cidadeDormeListeners.delete(roomId);
+      }
+    };
+  }
+
+  private resolveDesenhoRoom(roomId?: string): DesenhoRoom {
+    const id = roomId ?? this.activeDesenhoRoomId;
+    const room = this.desenhoRooms.get(id);
+    if (!room) {
+      throw new DataSourceError('Sala de Desenho Relâmpago não encontrada.');
+    }
+    return room;
+  }
+
+  private projectDesenhoRoomForViewer(
+    room: DesenhoRoom,
+    viewerPlayerId?: string
+  ): DesenhoRoom {
+    const cloned = cloneDesenhoRoom(room);
+    const secretWord =
+      this.desenhoSecretsByRoom.get(room.id) ?? room.currentSecretWord;
+    const effectiveViewerId =
+      viewerPlayerId ?? this.localPlayerIdByRoom.get(room.id) ?? room.hostId;
+
+    if (room.phase === 'drawing') {
+      cloned.currentSecretWord =
+        effectiveViewerId === room.currentDrawerId ? secretWord : null;
+    } else if (room.phase === 'turn_summary' || room.phase === 'finished') {
+      cloned.currentSecretWord = secretWord;
+    } else {
+      cloned.currentSecretWord = null;
+    }
+    return cloned;
+  }
+
+  private saveAndNotifyDesenho(
+    room: DesenhoRoom,
+    viewerPlayerId?: string
+  ): DesenhoRoom {
+    const next: DesenhoRoom = {
+      ...cloneDesenhoRoom(room),
+      version: room.version + 1,
+    };
+    this.desenhoRooms.set(next.id, next);
+    const listeners = this.desenhoListeners.get(next.id);
+    if (listeners) {
+      const localViewer = this.localPlayerIdByRoom.get(next.id) ?? next.hostId;
+      for (const listener of listeners) {
+        listener(this.projectDesenhoRoomForViewer(next, localViewer));
+      }
+    }
+    return this.projectDesenhoRoomForViewer(next, viewerPlayerId);
+  }
+
+  async getDesenhoRoom(
+    roomId?: string,
+    viewerPlayerId?: string
+  ): Promise<DesenhoRoom> {
+    const room = this.resolveDesenhoRoom(roomId);
+    return this.projectDesenhoRoomForViewer(room, viewerPlayerId);
+  }
+
+  async createDesenhoRoom(
+    hostNickname: string,
+    initialCategories?: DesenhoCategory[]
+  ): Promise<DesenhoRoom> {
+    this.playerIdCounter += 1;
+    const roomId = `room-desenho-${this.playerIdCounter}`;
+    const hostId = `desenho-host-${this.playerIdCounter}`;
+    const code = `DR${String(this.playerIdCounter).slice(-4).padStart(4, '0')}`;
+    const categories =
+      initialCategories && initialCategories.length > 0
+        ? [...initialCategories]
+        : [...DEFAULT_DESENHO_CATEGORIES];
+
+    const created: DesenhoRoom = {
+      id: roomId,
+      code,
+      gameType: 'desenho',
+      hostId,
+      phase: 'lobby',
+      version: 0,
+      phaseEndsAt: null,
+      config: {
+        turnDurationSeconds: 90,
+        totalRounds: 2,
+        categories,
+      },
+      currentRound: 1,
+      drawerOrder: [],
+      currentDrawerIndex: 0,
+      currentDrawerId: null,
+      currentCardCategory: null,
+      currentSecretWord: null,
+      usedCardIds: [],
+      elements: [],
+      guesses: [],
+      players: [
+        {
+          id: hostId,
+          nickname: hostNickname.trim(),
+          isHost: true,
+          score: 0,
+          drawingScore: 0,
+          firstGuessCount: 0,
+          hasGuessedCurrentTurn: false,
+        },
+      ],
+    };
+
+    this.desenhoRooms.set(roomId, created);
+    this.activeDesenhoRoomId = roomId;
+    this.localPlayerIdByRoom.set(roomId, hostId);
+    this.desenhoSecretsByRoom.set(roomId, null);
+    return this.projectDesenhoRoomForViewer(created, hostId);
+  }
+
+  async joinDesenhoRoom(code: string, nickname: string): Promise<DesenhoRoom> {
+    const cleanCode = code.trim().toUpperCase();
+    const cleanNick = nickname.trim();
+    const room = Array.from(this.desenhoRooms.values()).find(
+      (item) => item.code.toUpperCase() === cleanCode
+    );
+    if (!room) {
+      throw new ValidationError(
+        `Nenhuma sala de Desenho Relâmpago encontrada com o código "${cleanCode}".`
+      );
+    }
+    if (room.phase !== 'lobby') {
+      throw new ValidationError(
+        'Esta sala já iniciou a partida. Aguarde a próxima rodada no Lobby.'
+      );
+    }
+    if (room.players.length >= 16) {
+      throw new ValidationError(
+        'A sala atingiu o limite máximo de 16 jogadores.'
+      );
+    }
+
+    const duplicate = room.players.some(
+      (p) => normalizeDesenhoText(p.nickname) === normalizeDesenhoText(cleanNick)
+    );
+    if (duplicate) {
+      throw new ValidationError(
+        'Já existe um jogador com esse apelido nesta sala.'
+      );
+    }
+
+    this.playerIdCounter += 1;
+    const playerId = `desenho-player-${this.playerIdCounter}`;
+    const newPlayer: DesenhoPlayer = {
+      id: playerId,
+      nickname: cleanNick,
+      isHost: false,
+      score: 0,
+      drawingScore: 0,
+      firstGuessCount: 0,
+      hasGuessedCurrentTurn: false,
+    };
+
+    const updated: DesenhoRoom = {
+      ...room,
+      players: [...room.players, newPlayer],
+    };
+    this.activeDesenhoRoomId = room.id;
+    this.localPlayerIdByRoom.set(room.id, playerId);
+    return this.saveAndNotifyDesenho(updated, playerId);
+  }
+
+  async leaveDesenhoRoom(roomId: string, playerId: string): Promise<void> {
+    const room = this.desenhoRooms.get(roomId);
+    if (!room) return;
+    const remaining = room.players.filter((p) => p.id !== playerId);
+    if (remaining.length === 0) {
+      this.desenhoRooms.delete(roomId);
+      this.desenhoSecretsByRoom.delete(roomId);
+      this.desenhoListeners.delete(roomId);
+      return;
+    }
+
+    let nextHostId = room.hostId;
+    const updatedPlayers = remaining.map((p, index) => {
+      if (room.hostId === playerId && index === 0) {
+        nextHostId = p.id;
+        return { ...p, isHost: true };
+      }
+      return { ...p };
+    });
+
+    const drawerLeft =
+      room.phase === 'drawing' && room.currentDrawerId === playerId;
+    const nextPhase =
+      room.phase !== 'lobby' && updatedPlayers.length < 2
+        ? 'finished'
+        : drawerLeft
+          ? 'turn_summary'
+          : room.phase;
+
+    const updated: DesenhoRoom = {
+      ...room,
+      hostId: nextHostId,
+      phase: nextPhase,
+      phaseEndsAt: nextPhase === 'drawing' ? room.phaseEndsAt : null,
+      drawerOrder: room.drawerOrder.filter((id) => id !== playerId),
+      players: updatedPlayers,
+    };
+    this.saveAndNotifyDesenho(updated);
+  }
+
+  async updateDesenhoConfig(
+    roomId: string,
+    partialConfig: Partial<DesenhoConfig>
+  ): Promise<DesenhoRoom> {
+    const room = this.resolveDesenhoRoom(roomId);
+    const updated: DesenhoRoom = {
+      ...room,
+      config: {
+        turnDurationSeconds:
+          partialConfig.turnDurationSeconds ?? room.config.turnDurationSeconds,
+        totalRounds: partialConfig.totalRounds ?? room.config.totalRounds,
+        categories: partialConfig.categories
+          ? [...partialConfig.categories]
+          : [...room.config.categories],
+      },
+    };
+    return this.saveAndNotifyDesenho(updated);
+  }
+
+  async startDesenhoTurn(
+    roomId: string,
+    input: StartDesenhoTurnInput
+  ): Promise<DesenhoRoom> {
+    const room = this.resolveDesenhoRoom(roomId);
+    this.desenhoSecretsByRoom.set(room.id, input.secretWord);
+
+    const updated: DesenhoRoom = {
+      ...room,
+      phase: 'drawing',
+      phaseEndsAt: input.phaseEndsAt,
+      currentRound: input.currentRound,
+      drawerOrder: [...input.drawerOrder],
+      currentDrawerIndex: input.currentDrawerIndex,
+      currentDrawerId: input.drawerId,
+      currentCardCategory: input.category,
+      currentSecretWord: input.secretWord,
+      usedCardIds: [...input.usedCardIds],
+      elements: [],
+      guesses: [],
+      players: room.players.map((p) => ({
+        ...p,
+        hasGuessedCurrentTurn: false,
+      })),
+    };
+    return this.saveAndNotifyDesenho(updated);
+  }
+
+  async addDesenhoElement(
+    roomId: string,
+    drawerId: string,
+    element: DrawingElement
+  ): Promise<DesenhoRoom> {
+    const room = this.resolveDesenhoRoom(roomId);
+    if (room.phase !== 'drawing') {
+      throw new ConflictError('Não é possível desenhar fora da fase ativa.');
+    }
+    if (room.currentDrawerId !== drawerId) {
+      throw new ValidationError('Apenas o desenhista da vez pode desenhar.');
+    }
+    const updated: DesenhoRoom = {
+      ...room,
+      elements: [...room.elements, cloneDrawingElement(element)],
+    };
+    return this.saveAndNotifyDesenho(updated, drawerId);
+  }
+
+  async undoDesenhoElement(
+    roomId: string,
+    drawerId: string
+  ): Promise<DesenhoRoom> {
+    const room = this.resolveDesenhoRoom(roomId);
+    if (room.phase !== 'drawing') {
+      return this.projectDesenhoRoomForViewer(room, drawerId);
+    }
+    if (room.currentDrawerId !== drawerId) {
+      throw new ValidationError(
+        'Apenas o desenhista da vez pode desfazer traços.'
+      );
+    }
+    if (room.elements.length === 0) {
+      return this.projectDesenhoRoomForViewer(room, drawerId);
+    }
+    const updated: DesenhoRoom = {
+      ...room,
+      elements: room.elements.slice(0, -1),
+    };
+    return this.saveAndNotifyDesenho(updated, drawerId);
+  }
+
+  async clearDesenhoCanvas(
+    roomId: string,
+    drawerId: string
+  ): Promise<DesenhoRoom> {
+    const room = this.resolveDesenhoRoom(roomId);
+    if (room.phase !== 'drawing') {
+      return this.projectDesenhoRoomForViewer(room, drawerId);
+    }
+    if (room.currentDrawerId !== drawerId) {
+      throw new ValidationError(
+        'Apenas o desenhista da vez pode limpar a folha.'
+      );
+    }
+    const updated: DesenhoRoom = {
+      ...room,
+      elements: [],
+    };
+    return this.saveAndNotifyDesenho(updated, drawerId);
+  }
+
+  async submitDesenhoGuess(
+    roomId: string,
+    playerId: string,
+    text: string
+  ): Promise<SubmitDesenhoGuessResult> {
+    const room = this.resolveDesenhoRoom(roomId);
+    if (room.phase !== 'drawing') {
+      throw new ValidationError(
+        'A sala não está aceitando palpites neste momento.'
+      );
+    }
+    if (room.currentDrawerId === playerId) {
+      throw new ValidationError('O desenhista da vez não pode enviar palpites.');
+    }
+    const player = room.players.find((p) => p.id === playerId);
+    if (!player) {
+      throw new ValidationError('Jogador não encontrado nesta sala.');
+    }
+    if (player.hasGuessedCurrentTurn) {
+      throw new ValidationError('Você já acertou a palavra deste turno.');
+    }
+    const cleanText = text.trim();
+    if (!cleanText) {
+      throw new ValidationError('Digite um palpite antes de enviar.');
+    }
+
+    const secretWord =
+      this.desenhoSecretsByRoom.get(room.id) ?? room.currentSecretWord ?? '';
+    const isCorrect =
+      normalizeDesenhoText(cleanText) === normalizeDesenhoText(secretWord);
+
+    this.desenhoGuessCounter += 1;
+    let pointsAwarded = 0;
+    let drawerPoints = 0;
+    let isFirstCorrect = false;
+
+    if (isCorrect) {
+      const priorCorrect = room.guesses.filter((g) => g.isCorrect).length;
+      if (priorCorrect === 0) {
+        pointsAwarded = 20;
+        drawerPoints = 10;
+        isFirstCorrect = true;
+      } else if (priorCorrect === 1) {
+        pointsAwarded = 15;
+        drawerPoints = 5;
+      } else {
+        pointsAwarded = 10;
+        drawerPoints = 5;
+      }
+    }
+
+    const guessRecord: DesenhoGuess = {
+      id: `guess-${this.desenhoGuessCounter}`,
+      playerId: player.id,
+      playerNickname: player.nickname,
+      text: isCorrect ? 'Acertou a palavra!' : cleanText,
+      isCorrect,
+      pointsAwarded,
+      createdAt: new Date().toISOString(),
+    };
+
+    const updatedPlayers = room.players.map((p) => {
+      if (isCorrect && p.id === player.id) {
+        return {
+          ...p,
+          score: p.score + pointsAwarded,
+          firstGuessCount: p.firstGuessCount + (isFirstCorrect ? 1 : 0),
+          hasGuessedCurrentTurn: true,
+        };
+      }
+      if (isCorrect && p.id === room.currentDrawerId) {
+        return {
+          ...p,
+          score: p.score + drawerPoints,
+          drawingScore: p.drawingScore + drawerPoints,
+        };
+      }
+      return { ...p };
+    });
+
+    const guessers = updatedPlayers.filter((p) => p.id !== room.currentDrawerId);
+    const allGuessed =
+      guessers.length > 0 && guessers.every((p) => p.hasGuessedCurrentTurn);
+
+    const updated: DesenhoRoom = {
+      ...room,
+      phase: allGuessed ? 'turn_summary' : room.phase,
+      phaseEndsAt: allGuessed ? null : room.phaseEndsAt,
+      guesses: [...room.guesses, guessRecord],
+      players: updatedPlayers,
+    };
+
+    const saved = this.saveAndNotifyDesenho(updated, playerId);
+    return {
+      room: saved,
+      isCorrect,
+      pointsAwarded,
+    };
+  }
+
+  async finishDesenhoTurn(roomId: string): Promise<DesenhoRoom> {
+    const room = this.resolveDesenhoRoom(roomId);
+    if (room.phase !== 'drawing') {
+      return this.projectDesenhoRoomForViewer(room);
+    }
+    const updated: DesenhoRoom = {
+      ...room,
+      phase: 'turn_summary',
+      phaseEndsAt: null,
+    };
+    return this.saveAndNotifyDesenho(updated);
+  }
+
+  async finishDesenhoMatch(roomId: string): Promise<DesenhoRoom> {
+    const room = this.resolveDesenhoRoom(roomId);
+    const updated: DesenhoRoom = {
+      ...room,
+      phase: 'finished',
+      phaseEndsAt: null,
+    };
+    return this.saveAndNotifyDesenho(updated);
+  }
+
+  async restartDesenhoLobby(roomId: string): Promise<DesenhoRoom> {
+    const room = this.resolveDesenhoRoom(roomId);
+    this.desenhoSecretsByRoom.set(room.id, null);
+    const updated: DesenhoRoom = {
+      ...room,
+      phase: 'lobby',
+      phaseEndsAt: null,
+      currentRound: 1,
+      drawerOrder: [],
+      currentDrawerIndex: 0,
+      currentDrawerId: null,
+      currentCardCategory: null,
+      currentSecretWord: null,
+      usedCardIds: [],
+      elements: [],
+      guesses: [],
+      players: room.players.map((p) => ({
+        ...p,
+        score: 0,
+        drawingScore: 0,
+        firstGuessCount: 0,
+        hasGuessedCurrentTurn: false,
+      })),
+    };
+    return this.saveAndNotifyDesenho(updated);
+  }
+
+  subscribeToDesenhoRoom(
+    roomId: string,
+    onRoomUpdated: (room: DesenhoRoom) => void
+  ): () => void {
+    const listeners = this.desenhoListeners.get(roomId) ?? new Set();
+    listeners.add(onRoomUpdated);
+    this.desenhoListeners.set(roomId, listeners);
+
+    return () => {
+      const current = this.desenhoListeners.get(roomId);
+      if (!current) return;
+      current.delete(onRoomUpdated);
+      if (current.size === 0) {
+        this.desenhoListeners.delete(roomId);
       }
     };
   }

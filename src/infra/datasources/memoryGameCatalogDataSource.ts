@@ -113,12 +113,12 @@ const DEFAULT_MINIGAMES: Minigame[] = [
     id: 'desenho',
     title: 'Desenho Relâmpago',
     description:
-      'Esconda a palavra secreta e desenhe com o dedo na tela para sua equipe adivinhar antes do tempo acabar.',
-    modality: '1 Celular',
-    playersTag: '1 Celular · 2+ equipes',
+      'Desenhe em tempo real com pincel e formas geométricas enquanto a sala tenta adivinhar no próprio celular.',
+    modality: 'Multi-Celular',
+    playersTag: 'Multi-Celular · 2–16 jogadores',
     route: '/desenho',
     icon: 'palette',
-    themes: ['desenho', 'criatividade', 'biblico', 'animais', 'equipes', 'passa-celular'],
+    themes: ['desenho', 'criatividade', 'biblico', 'animais', 'multiplayer', 'sala'],
     available: true,
   },
 ];
