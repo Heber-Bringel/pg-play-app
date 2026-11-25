@@ -37,6 +37,7 @@ O **PG PLAY** é um aplicativo móvel de minigames presenciais (Mímica, Quiz, F
 | [04-componentes/tag.md](04-componentes/tag.md) | `ExpressiveTag` para metadados e badges em 6 tons legíveis (`14 dp`, ≥ 3:1) |
 | [04-componentes/modal-confirmacao.md](04-componentes/modal-confirmacao.md) | `ConfirmModal` com suporte a 1 botão (encerramento) ou 2 botões (confirmação) |
 | [04-componentes/item-selecionavel.md](04-componentes/item-selecionavel.md) | `SelectableOptionItem` para listas de seleção exclusiva (Noite/Dia) |
+| [04-componentes/tela-de-desenho.md](04-componentes/tela-de-desenho.md) | `DrawingCanvas` para desenho à mão livre com 4 cores, 2 espessuras e barra acessível (`UC12`) |
 | [05-padroes.md](05-padroes.md) | Fluxos completos: Configuração de Equipes, Rodada com Tempo e Busca no Hub |
 | [06-acessibilidade.md](06-acessibilidade.md) | Contraste de textos (≥ 4,5:1) e componentes (≥ 3:1), alvos, foco `:focus-visible`, leitor de tela e movimento reduzido |
 | [07-teste-com-ia.md](07-teste-com-ia.md) | Validação do sistema com assistente de IA |

@@ -4,6 +4,16 @@ Versões no formato `MAIOR.MENOR.CORREÇÃO` (Semantic Versioning). Mudanças qu
 
 ---
 
+## 1.2.0 · 25/11/2026
+
+- Adição do componente `DrawingCanvas` e dos tokens de desenho para o minigame **Desenho Relâmpago** (`UC12`, Issue `#83`).
+- **Mudanças incluídas nesta versão:**
+  - **Superfície de papel e 4 canetas acessíveis (`02-tokens.md`):** criação dos tokens semânticos `color.canvas-paper` (`neutral-50` `#FDF8FF`, fixo nos dois temas) e `color.canvas-ink` (`#1D1B20`, **16,42:1**), `color.canvas-purple` (`#5B21B6`, **8,84:1**), `color.canvas-coral` (`#C2410C`, **4,90:1**) e `color.canvas-green` (`#15803D`, **4,88:1**), reaproveitando 100% os primitivos existentes.
+  - **Tokens de componente `canvas.*`:** definição de `canvas.paperBg`, `canvas.border`, `canvas.radius`, `canvas.minHeight`, `canvas.pen.*`, `canvas.stroke.{thin,thick}` (`4 dp` / `8 dp`) e `canvas.tool.*` (`48 dp`, *shape morphing* `radius.full` → `radius.md`).
+  - **Novo componente `DrawingCanvas` ([04-componentes/tela-de-desenho.md](04-componentes/tela-de-desenho.md)):** especificação da área `Svg` + `PanResponder` e barra de ferramentas acessível com confirmação múltipla (cor + forma + ícone `check` + borda ativa).
+
+---
+
 ## 1.1.0 · 21/11/2026
 
 - Revisão abrangente de acessibilidade, foco, contraste de componentes, consistência de tags/bordas, tema escuro automático e tipografia (Issue `#55`, relacionadas `#50`, `#51`, `#53`, `#54`).
