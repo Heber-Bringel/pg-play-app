@@ -18,8 +18,10 @@ import type { IScreenOrientationService } from '@/model/services/iScreenOrientat
 import type { ITiltSensorService } from '@/model/services/iTiltSensorService';
 import { AdedonhaUseCases } from '@/usecase/adedonhaUseCases';
 import { CidadeDormeUseCases } from '@/usecase/cidadeDormeUseCases';
+import { DesenhoUseCases } from '@/usecase/desenhoUseCases';
 import type { IAdedonhaUseCases } from '@/usecase/iAdedonhaUseCases';
 import type { ICidadeDormeUseCases } from '@/usecase/iCidadeDormeUseCases';
+import type { IDesenhoUseCases } from '@/usecase/iDesenhoUseCases';
 import type { IPgPlayUseCases } from '@/usecase/iPgPlayUseCases';
 import type { IQuemSouEuUseCases } from '@/usecase/iQuemSouEuUseCases';
 import type { ITermometroUseCases } from '@/usecase/iTermometroUseCases';
@@ -100,3 +102,8 @@ export const themePreferenceUseCases: IThemePreferenceUseCases =
 
 export const termometroUseCases: ITermometroUseCases =
   new TermometroUseCases();
+
+export const desenhoUseCases: IDesenhoUseCases = new DesenhoUseCases(
+  multiplayerRoomService,
+  gameCatalogDataSource
+);
