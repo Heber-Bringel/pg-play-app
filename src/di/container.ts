@@ -24,11 +24,13 @@ import type { IPgPlayUseCases } from '@/usecase/iPgPlayUseCases';
 import type { IQuemSouEuUseCases } from '@/usecase/iQuemSouEuUseCases';
 import type { ITermometroUseCases } from '@/usecase/iTermometroUseCases';
 import type { IThemePreferenceUseCases } from '@/usecase/iThemePreferenceUseCases';
+import type { IGameFeedbackUseCases } from '@/usecase/iGameFeedbackUseCases';
 import type { IVersiculoUseCases } from '@/usecase/iVersiculoUseCases';
 import { PgPlayUseCases } from '@/usecase/pgPlayUseCases';
 import { QuemSouEuUseCases } from '@/usecase/quemSouEuUseCases';
 import { TermometroUseCases } from '@/usecase/termometroUseCases';
 import { ThemePreferenceUseCases } from '@/usecase/themePreferenceUseCases';
+import { GameFeedbackUseCases } from '@/usecase/gameFeedbackUseCases';
 import { VersiculoUseCases } from '@/usecase/versiculoUseCases';
 
 // Equipes e placar persistem no aparelho (RF04–RF06); MemoryTeamDataSource segue para testes.
@@ -88,6 +90,10 @@ export const quemSouEuUseCases: IQuemSouEuUseCases = new QuemSouEuUseCases(
   screenOrientationService,
   hapticService
 );
+
+// Feedback tátil do cronômetro nos jogos de 1 celular (issue #77).
+export const gameFeedbackUseCases: IGameFeedbackUseCases =
+  new GameFeedbackUseCases(hapticService);
 
 export const themePreferenceUseCases: IThemePreferenceUseCases =
   new ThemePreferenceUseCases(themePreferenceDataSource);

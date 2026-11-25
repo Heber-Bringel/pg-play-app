@@ -39,6 +39,7 @@ Origem no sistema base: Não existe no Material 3 base; construído usando os to
 - **Alvo de toque mínimo:** cada tecla possui obrigatoriamente `48 dp × 48 dp` (`key.size`) com espaçamento `space.sm` (`8 dp`) entre teclas adjacentes.
 - **Contraste:** letra disponível com razão superior a **14,4:1**; letra certa com **5,02:1** (claro) e **11,15:1** (escuro); letra errada com **8,90:1** (ver [06-acessibilidade.md](../06-acessibilidade.md)).
 - **Diferenciação sem cor:** letras certas mudam a forma do container para círculo (`radius.full`), enquanto letras erradas mantêm o quadrado arredondado (`16 dp`) e aplicam risco tipográfico (`line-through`) sobre a letra.
+- **Feedback tátil (vibração):** letra errada vibra um **toque curto** (`impacto médio`); letra certa não vibra, para o teclado não tremer a cada acerto. Completar a palavra vibra **sucesso** e perder a última tentativa vibra só **erro**. Segue a mesma regra do [cronômetro](cronometro-expressivo.md) (`GameFeedbackUseCases.notifyLetterGuess`; spec `specs/026-ds-feedback-haptico-cronometro/`).
 
 ## Faça e evite
 

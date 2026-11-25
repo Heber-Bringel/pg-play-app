@@ -16,6 +16,7 @@ import {
   getFocusRingStyle,
   useKeyboardFocus,
 } from '@/view/components/useKeyboardFocus';
+import { useReduceMotion } from '@/view/components/useReduceMotion';
 import { useTheme, type AppTokens } from '@/view/theme';
 import {
   ALL_VERSE_PACKS,
@@ -104,6 +105,7 @@ const VersiculoOptionTile = ({
 
 const VersiculoScreen = () => {
   const [state, actions] = useVersiculoViewModel();
+  useReduceMotion(actions.setReduceMotion);
   const activeTokens = useTheme();
   const styles = useMemo(() => createStyles(activeTokens), [activeTokens]);
 
@@ -293,7 +295,10 @@ const VersiculoScreen = () => {
                 label={`Equipe ${state.currentTeam.name} · ${state.currentPassageIndex + 1}/${state.passages.length}`}
                 tone="action"
               />
-              <ExpressiveTimer secondsRemaining={state.secondsRemaining} />
+              <ExpressiveTimer
+                secondsRemaining={state.secondsRemaining}
+                reduceMotion={state.reduceMotion}
+              />
             </View>
 
             <View

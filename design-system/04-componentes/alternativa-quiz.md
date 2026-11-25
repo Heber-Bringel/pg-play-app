@@ -44,6 +44,7 @@ Origem no sistema base: Material 3, Outlined Card combinado com Selectable Actio
 - **Alvo de toque mínimo:** altura mínima de `56 dp` ocupando `100%` da largura útil da tela, separado das demais opções por `space.sm` (`8 dp`).
 - **Contraste:** estado padrão com razão superior a **14,4:1**; estado correto com **5,02:1** (claro) e **11,15:1** (escuro); estado incorreto com **6,47:1** (claro) e **8,90:1** (escuro) (ver [06-acessibilidade.md](../06-acessibilidade.md)).
 - **Leitor de tela:** anuncia a letra identificadora, o texto completo da alternativa e o resultado (`Correta` ou `Incorreta`) sem depender de percepção de cor.
+- **Feedback tátil (vibração):** ao tocar numa alternativa, o celular vibra o padrão de **sucesso** (correta) ou de **erro** (incorreta), também com "Reduzir movimento" ligado, por ser um aviso único. Quando o tempo acaba sem resposta, vibra só o tempo esgotado do [cronômetro](cronometro-expressivo.md). Implementação: `GameFeedbackUseCases.notifyAnswer`; spec `specs/026-ds-feedback-haptico-cronometro/`.
 
 ## Faça e evite
 

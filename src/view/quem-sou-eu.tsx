@@ -1,6 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import {
-  AccessibilityInfo,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,6 +12,7 @@ import { ExpressiveButton } from '@/view/components/expressiveButton';
 import { ExpressiveChip } from '@/view/components/expressiveChip';
 import { ExpressiveTag } from '@/view/components/expressiveTag';
 import { ExpressiveTimer } from '@/view/components/expressiveTimer';
+import { useReduceMotion } from '@/view/components/useReduceMotion';
 import { useTheme, type AppTokens } from '@/view/theme';
 import {
   ALL_QUEM_SOU_EU_PACKS,
@@ -27,33 +27,7 @@ const QuemSouEuScreen = () => {
   const styles = useMemo(() => createStyles(activeTokens), [activeTokens]);
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
-  const [reduceMotion, setReduceMotion] = useState<boolean>(false);
-
-  useEffect(() => {
-    let active = true;
-    AccessibilityInfo.isReduceMotionEnabled().then(
-      (enabled) => {
-        if (active) {
-          setReduceMotion(enabled);
-        }
-      },
-      () => {
-        // Mantém valor padrão caso a consulta não esteja disponível.
-      }
-    );
-
-    const subscription = AccessibilityInfo.addEventListener(
-      'reduceMotionChanged',
-      (enabled) => {
-        setReduceMotion(enabled);
-      }
-    );
-
-    return () => {
-      active = false;
-      subscription.remove();
-    };
-  }, []);
+  useReduceMotion(actions.setReduceMotion);
 
   const hasEnoughTeams = state.teams.length >= 2;
   const hitResults = state.turnResults.filter((item) => item.outcome === 'hit');
@@ -112,7 +86,7 @@ const QuemSouEuScreen = () => {
             </View>
             <ExpressiveTimer
               secondsRemaining={state.secondsRemaining}
-              reduceMotion={reduceMotion}
+              reduceMotion={state.reduceMotion}
             />
           </View>
 
