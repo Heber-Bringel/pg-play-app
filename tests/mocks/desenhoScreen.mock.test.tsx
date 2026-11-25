@@ -1,214 +1,284 @@
 import React from 'react';
-import renderer, { act } from 'react-test-renderer';
+import { fireEvent, render } from '@testing-library/react-native';
 import DesenhoRoute from '@/app/desenho';
-import DesenhoScreen from '@/view/desenho';
-import * as desenhoVmModule from '@/viewmodel/useDesenhoViewModel';
+import type { DesenhoRoom } from '@/model/entities/multiplayerSession';
+import { DesenhoScreen } from '@/view/desenho';
 import type { DesenhoActions, DesenhoState } from '@/viewmodel/useDesenhoViewModel';
+
+const mockUseDesenhoViewModel = jest.fn();
+
+jest.mock('@/viewmodel/useDesenhoViewModel', () => ({
+  ALL_DESENHO_CATEGORIES: [
+    'Bíblico',
+    'Animais',
+    'Objetos',
+    'Comidas',
+    'Lugares e Natureza',
+  ],
+  useDesenhoViewModel: () => mockUseDesenhoViewModel(),
+}));
 
 const createMockActions = (): DesenhoActions => ({
   handleSetReduceMotion: jest.fn(),
-  handleStartTurn: jest.fn(),
-  handleToggleWordVisibility: jest.fn(),
-  handleAddStroke: jest.fn(),
+  handleCreateRoom: jest.fn().mockResolvedValue(true),
+  handleJoinRoom: jest.fn().mockResolvedValue(true),
+  handleJoinDemoRoom: jest.fn().mockResolvedValue(true),
+  handleSelectDuration: jest.fn().mockResolvedValue(undefined),
+  handleSelectRounds: jest.fn().mockResolvedValue(undefined),
+  handleToggleCategory: jest.fn().mockResolvedValue(undefined),
+  handleStartMatch: jest.fn().mockResolvedValue(undefined),
+  handleSelectTool: jest.fn(),
+  handleSelectFillMode: jest.fn(),
   handleSelectColor: jest.fn(),
   handleSelectWidth: jest.fn(),
-  handleUndoStroke: jest.fn(),
-  handleClearCanvas: jest.fn(),
-  handleHit: jest.fn(async () => {}),
-  handleSkip: jest.fn(async () => {}),
+  handleCompleteElement: jest.fn().mockResolvedValue(undefined),
+  handleUndoElement: jest.fn().mockResolvedValue(undefined),
+  handleClearCanvas: jest.fn().mockResolvedValue(undefined),
+  handlePeekWord: jest.fn(),
+  handleChangeGuessDraft: jest.fn(),
+  handleSubmitGuess: jest.fn().mockResolvedValue(undefined),
   handleTick: jest.fn(),
-  handleNextTurn: jest.fn(),
-  handleSelectDuration: jest.fn(async () => {}),
-  handleSelectRounds: jest.fn(async () => {}),
-  handleToggleCategory: jest.fn(async () => {}),
+  handleFinishTurn: jest.fn().mockResolvedValue(undefined),
+  handleAdvanceTurn: jest.fn().mockResolvedValue(undefined),
+  handleRestartLobby: jest.fn().mockResolvedValue(undefined),
   handleRequestExit: jest.fn(),
   handleCancelExit: jest.fn(),
-  handleConfirmExit: jest.fn(),
-  handleGoToScoreboard: jest.fn(),
-  handleRetry: jest.fn(async () => {}),
+  handleConfirmExit: jest.fn().mockResolvedValue(undefined),
+  handleRetry: jest.fn().mockResolvedValue(undefined),
 });
 
-const baseState: DesenhoState = {
-  reduceMotion: false,
-  phase: 'pass-turn',
-  teams: [
-    { id: 't1', name: 'Tribo de Judá', score: 40 },
-    { id: 't2', name: 'Leões da Fé', score: 20 },
-  ],
-  currentTeamIndex: 0,
-  currentTeam: { id: 't1', name: 'Tribo de Judá', score: 40 },
+const createMockRoom = (overrides: Partial<DesenhoRoom> = {}): DesenhoRoom => ({
+  id: 'room-1',
+  code: 'DR2026',
+  gameType: 'desenho',
+  hostId: 'p1',
+  phase: 'lobby',
+  version: 1,
+  phaseEndsAt: null,
+  config: {
+    turnDurationSeconds: 90,
+    totalRounds: 2,
+    categories: ['Bíblico', 'Animais', 'Objetos', 'Comidas', 'Lugares e Natureza'],
+  },
   currentRound: 1,
-  totalRounds: 3,
-  isLastTurn: false,
-  turnDurationSeconds: 90,
+  drawerOrder: ['p1', 'p2'],
+  currentDrawerIndex: 0,
+  currentDrawerId: 'p1',
+  currentCardCategory: 'Bíblico',
+  currentSecretWord: 'Arca de Noé',
+  usedCardIds: ['desenho-1'],
+  elements: [],
+  guesses: [],
+  players: [
+    {
+      id: 'p1',
+      nickname: 'Roger',
+      isHost: true,
+      score: 15,
+      drawingScore: 15,
+      firstGuessCount: 0,
+      hasGuessedCurrentTurn: false,
+    },
+    {
+      id: 'p2',
+      nickname: 'Ana',
+      isHost: false,
+      score: 20,
+      drawingScore: 0,
+      firstGuessCount: 1,
+      hasGuessedCurrentTurn: false,
+    },
+  ],
+  ...overrides,
+});
+
+const createMockState = (overrides: Partial<DesenhoState> = {}): DesenhoState => ({
+  room: null,
+  currentPlayerId: 'p1',
+  currentPlayer: null,
+  currentDrawer: null,
+  isCurrentPlayerHost: true,
+  isCurrentPlayerDrawer: true,
+  isRealtimeEnabled: false,
+  reduceMotion: false,
   secondsRemaining: 90,
-  selectedCategories: ['Bíblico', 'Animais'],
-  currentCard: { id: 'd1', word: 'Arca de Noé', category: 'Bíblico', points: 20 },
-  lastTurnCard: { id: 'd2', word: 'Girafa', category: 'Animais', points: 20 },
-  remainingCardsCount: 10,
-  wordVisible: true,
-  strokes: [],
+  themeBannerSecondsLeft: 0,
+  isThemeBannerVisible: false,
+  isPeekingTheme: false,
+  isCanvasExpanded: false,
+  selectedTool: 'freehand',
+  selectedFillMode: 'stroke',
   selectedColor: 'ink',
   selectedWidth: 'thin',
-  turnHits: 2,
-  turnSkips: 1,
-  turnPointsDelta: 35,
+  guessDraft: '',
+  guessFeedback: null,
+  rankedPlayers: [],
+  awards: { generalChampion: null, bestArtist: null, eagleEye: null },
   confirmingExit: false,
   loading: false,
   error: null,
   categoryWarning: null,
-};
+  ...overrides,
+});
 
-describe('DesenhoScreen — Testes de Tela com Mocks de ViewModel (UC12)', () => {
-  afterEach(() => {
-    jest.restoreAllMocks();
+describe('DesenhoScreen — Testes de Tela com Mock (UC12 Multiplayer)', () => {
+  beforeEach(() => {
+    mockUseDesenhoViewModel.mockReset();
   });
 
-  it('deve reexportar a tela corretamente na rota fina src/app/desenho.tsx', () => {
+  it('deve reexportar DesenhoScreen pela rota fina src/app/desenho.tsx', () => {
     expect(DesenhoRoute).toBe(DesenhoScreen);
   });
 
-  it('deve renderizar o estado de carregamento (loading)', () => {
+  it('deve renderizar estado loading e tela inicial de entrada na sala', async () => {
     const actions = createMockActions();
-    jest
-      .spyOn(desenhoVmModule, 'useDesenhoViewModel')
-      .mockReturnValue([{ ...baseState, loading: true }, actions]);
-
-    let tree!: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<DesenhoScreen />);
-    });
-
-    const texts = tree.root.findAllByType('Text' as any);
+    mockUseDesenhoViewModel.mockReturnValue([
+      createMockState({ loading: true }),
+      actions,
+    ]);
+    const loadingScreen = await render(<DesenhoScreen />);
     expect(
-      texts.some((t) => t.props.children === 'Preparando a Arena de Desenho Relâmpago...')
-    ).toBe(true);
+      loadingScreen.getByText('Preparando a Sala de Desenho Relâmpago...')
+    ).toBeTruthy();
+
+    mockUseDesenhoViewModel.mockReturnValue([createMockState(), actions]);
+    const entryScreen = await render(<DesenhoScreen />);
+    expect(entryScreen.getByText('Criar Nova Sala')).toBeTruthy();
+    await fireEvent.press(entryScreen.getByText('Abrir Sala de Demonstração'));
+    expect(actions.handleJoinDemoRoom).toHaveBeenCalledTimes(1);
   });
 
-  it('deve renderizar o estado de erro semântico e permitir tentar novamente', () => {
+  it('deve renderizar o Lobby do Anfitrião e iniciar a partida', async () => {
     const actions = createMockActions();
-    jest
-      .spyOn(desenhoVmModule, 'useDesenhoViewModel')
-      .mockReturnValue([
-        { ...baseState, error: 'Falha ao carregar cartas desenháveis.' },
-        actions,
-      ]);
+    const room = createMockRoom({ phase: 'lobby' });
+    mockUseDesenhoViewModel.mockReturnValue([
+      createMockState({
+        room,
+        currentPlayer: room.players[0],
+        isCurrentPlayerHost: true,
+      }),
+      actions,
+    ]);
 
-    let tree!: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<DesenhoScreen />);
-    });
-
-    const texts = tree.root.findAllByType('Text' as any);
-    expect(
-      texts.some((t) => t.props.children === 'Falha ao carregar cartas desenháveis.')
-    ).toBe(true);
-
-    const retryBtn = tree.root.findByProps({ accessibilityLabel: 'Tentar Novamente' });
-    act(() => {
-      retryBtn.props.onPress();
-    });
-    expect(actions.handleRetry).toHaveBeenCalledTimes(1);
+    const screen = await render(<DesenhoScreen />);
+    expect(screen.getByText('Sala DR2026 — Lobby')).toBeTruthy();
+    await fireEvent.press(screen.getByText('Começar Partida!'));
+    expect(actions.handleStartMatch).toHaveBeenCalledTimes(1);
   });
 
-  it('deve renderizar estado orientativo quando houver menos de 2 equipes cadastradas', () => {
+  it('deve renderizar visão do Desenhista com tema 5s, depois canvas expandido e botão Espiar palavra', async () => {
     const actions = createMockActions();
-    jest
-      .spyOn(desenhoVmModule, 'useDesenhoViewModel')
-      .mockReturnValue([{ ...baseState, teams: [{ id: 't1', name: 'Só Uma', score: 0 }] }, actions]);
+    const room = createMockRoom({ phase: 'drawing' });
 
-    let tree!: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<DesenhoScreen />);
-    });
+    // Nos 5s iniciais: tema visível
+    mockUseDesenhoViewModel.mockReturnValue([
+      createMockState({
+        room,
+        currentPlayer: room.players[0],
+        currentDrawer: room.players[0],
+        isCurrentPlayerDrawer: true,
+        isThemeBannerVisible: true,
+        isPeekingTheme: false,
+        themeBannerSecondsLeft: 4,
+        isCanvasExpanded: false,
+      }),
+      actions,
+    ]);
+    const initialScreen = await render(<DesenhoScreen />);
+    expect(initialScreen.getByTestId('desenho-initial-theme-card')).toBeTruthy();
+    expect(initialScreen.getByText('Arca de Noé')).toBeTruthy();
+    expect(initialScreen.getByText('Some em 4s')).toBeTruthy();
 
-    const texts = tree.root.findAllByType('Text' as any);
-    expect(texts.some((t) => t.props.children === 'Equipes Insuficientes')).toBe(true);
+    // Após 5s: tema some, canvas expandido e botão Espiar palavra disponível
+    mockUseDesenhoViewModel.mockReturnValue([
+      createMockState({
+        room,
+        currentPlayer: room.players[0],
+        currentDrawer: room.players[0],
+        isCurrentPlayerDrawer: true,
+        isThemeBannerVisible: false,
+        isCanvasExpanded: true,
+      }),
+      actions,
+    ]);
+    const expandedScreen = await render(<DesenhoScreen />);
+    expect(expandedScreen.queryByTestId('desenho-initial-theme-card')).toBeNull();
+    await fireEvent.press(expandedScreen.getByText('Espiar palavra'));
+    expect(actions.handlePeekWord).toHaveBeenCalledTimes(1);
   });
 
-  it('deve renderizar pass-turn, drawing, turn-summary e finished acionando todas as ações', () => {
+  it('deve renderizar visão do Adivinhador sem palavra secreta e com envio de palpite', async () => {
     const actions = createMockActions();
-    const spy = jest.spyOn(desenhoVmModule, 'useDesenhoViewModel');
+    const room = createMockRoom({
+      phase: 'drawing',
+      currentSecretWord: null,
+      guesses: [
+        {
+          id: 'g-1',
+          playerId: 'p2',
+          playerNickname: 'Ana',
+          text: 'barco',
+          isCorrect: false,
+          pointsAwarded: 0,
+          createdAt: new Date().toISOString(),
+        },
+      ],
+    });
+    mockUseDesenhoViewModel.mockReturnValue([
+      createMockState({
+        room,
+        currentPlayerId: 'p2',
+        currentPlayer: room.players[1],
+        currentDrawer: room.players[0],
+        isCurrentPlayerHost: false,
+        isCurrentPlayerDrawer: false,
+        isCanvasExpanded: true,
+        guessDraft: 'Arca de Noé',
+      }),
+      actions,
+    ]);
 
-    spy.mockReturnValue([baseState, actions]);
-    let tree!: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(<DesenhoScreen />);
-    });
+    const screen = await render(<DesenhoScreen />);
+    expect(screen.getByText('Desenhando agora: Roger')).toBeTruthy();
+    expect(screen.queryByLabelText('Forma Triângulo')).toBeNull();
+    await fireEvent.press(screen.getByText('Enviar Palpite'));
+    expect(actions.handleSubmitGuess).toHaveBeenCalledTimes(1);
+  });
 
-    const chip120 = tree.root.findAllByProps({ accessibilityLabel: '120 segundos por turno' })[0];
-    const chip2 = tree.root.findAllByProps({ accessibilityLabel: '2 rodadas' })[0];
-    const packAnimais = tree.root.findByProps({ accessibilityLabel: 'Pacote Animais' });
-    const readyBtn = tree.root.findByProps({ accessibilityLabel: 'Estou Pronto!' });
-    act(() => {
-      chip120.props.onPress();
-      chip2.props.onPress();
-      packAnimais.props.onPress();
-      readyBtn.props.onPress();
-    });
-    expect(actions.handleSelectDuration).toHaveBeenCalledWith(120);
-    expect(actions.handleSelectRounds).toHaveBeenCalledWith(2);
-    expect(actions.handleToggleCategory).toHaveBeenCalledWith('Animais');
-    expect(actions.handleStartTurn).toHaveBeenCalledTimes(1);
+  it('deve renderizar turn_summary e pódio finished com destaques', async () => {
+    const actions = createMockActions();
+    const summaryRoom = createMockRoom({ phase: 'turn_summary' });
+    mockUseDesenhoViewModel.mockReturnValue([
+      createMockState({
+        room: summaryRoom,
+        currentDrawer: summaryRoom.players[0],
+        rankedPlayers: [summaryRoom.players[1], summaryRoom.players[0]],
+      }),
+      actions,
+    ]);
 
-    // Fase drawing com palavra visível e oculta + regra de honra
-    spy.mockReturnValue([{ ...baseState, phase: 'drawing', wordVisible: true }, actions]);
-    act(() => {
-      tree.update(<DesenhoScreen />);
-    });
-    const drawingTexts = tree.root.findAllByType('Text' as any);
-    expect(drawingTexts.some((t) => t.props.children === 'Sem letras nem números')).toBe(true);
-    expect(drawingTexts.some((t) => t.props.children === 'Arca de Noé')).toBe(true);
+    const summaryScreen = await render(<DesenhoScreen />);
+    expect(summaryScreen.getByText(/A palavra era: Arca de Noé/)).toBeTruthy();
+    await fireEvent.press(summaryScreen.getByText('Próximo Desenhista'));
+    expect(actions.handleAdvanceTurn).toHaveBeenCalledTimes(1);
 
-    const hideBtn = tree.root.findByProps({ accessibilityLabel: 'Esconder do Grupo' });
-    const hitBtn = tree.root.findByProps({ accessibilityLabel: 'Acertaram! (+20 pts)' });
-    const skipBtn = tree.root.findByProps({ accessibilityLabel: 'Pular (-5 pts)' });
-    act(() => {
-      hideBtn.props.onPress();
-      hitBtn.props.onPress();
-      skipBtn.props.onPress();
-    });
-    expect(actions.handleToggleWordVisibility).toHaveBeenCalledTimes(1);
-    expect(actions.handleHit).toHaveBeenCalledTimes(1);
-    expect(actions.handleSkip).toHaveBeenCalledTimes(1);
+    const finishedRoom = createMockRoom({ phase: 'finished' });
+    mockUseDesenhoViewModel.mockReturnValue([
+      createMockState({
+        room: finishedRoom,
+        rankedPlayers: [finishedRoom.players[1], finishedRoom.players[0]],
+        awards: {
+          generalChampion: finishedRoom.players[1],
+          bestArtist: finishedRoom.players[0],
+          eagleEye: finishedRoom.players[1],
+        },
+      }),
+      actions,
+    ]);
 
-    // Palavra oculta exibe "Mostrar Palavra"
-    spy.mockReturnValue([{ ...baseState, phase: 'drawing', wordVisible: false }, actions]);
-    act(() => {
-      tree.update(<DesenhoScreen />);
-    });
-    expect(tree.root.findByProps({ accessibilityLabel: 'Mostrar Palavra' })).toBeTruthy();
-
-    // Fase turn-summary revela última palavra em andamento e mostra "Ver Resumo Final" no último turno
-    spy.mockReturnValue([{ ...baseState, phase: 'turn-summary', isLastTurn: true }, actions]);
-    act(() => {
-      tree.update(<DesenhoScreen />);
-    });
-    const summaryTexts = tree.root.findAllByType('Text' as any);
-    expect(
-      summaryTexts.some(
-        (t) =>
-          typeof t.props.children === 'string' &&
-          t.props.children.includes('Última palavra: Girafa')
-      )
-    ).toBe(true);
-    const nextBtn = tree.root.findByProps({ accessibilityLabel: 'Ver Resumo Final' });
-    act(() => {
-      nextBtn.props.onPress();
-    });
-    expect(actions.handleNextTurn).toHaveBeenCalledTimes(1);
-
-    // Fase finished
-    spy.mockReturnValue([{ ...baseState, phase: 'finished' }, actions]);
-    act(() => {
-      tree.update(<DesenhoScreen />);
-    });
-    const scoreboardBtn = tree.root.findByProps({
-      accessibilityLabel: 'Ir para o Placar Final',
-    });
-    act(() => {
-      scoreboardBtn.props.onPress();
-    });
-    expect(actions.handleGoToScoreboard).toHaveBeenCalledTimes(1);
+    const finishedScreen = await render(<DesenhoScreen />);
+    expect(finishedScreen.getByText('Pódio Final — Desenho Relâmpago')).toBeTruthy();
+    expect(finishedScreen.getByText('Campeão: Ana')).toBeTruthy();
+    expect(finishedScreen.getByText('Melhor Artista: Roger')).toBeTruthy();
   });
 });
