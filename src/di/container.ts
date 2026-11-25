@@ -3,6 +3,7 @@ import { AsyncStorageTeamDataSource } from '@/infra/datasources/asyncStorageTeam
 import { AsyncStorageThemePreferenceDataSource } from '@/infra/datasources/asyncStorageThemePreferenceDataSource';
 import { HelloAoVerseDataSource } from '@/infra/datasources/helloAoVerseDataSource';
 import { MemoryGameCatalogDataSource } from '@/infra/datasources/memoryGameCatalogDataSource';
+import { MemoryIbgeForcaDataSource } from '@/infra/datasources/memoryIbgeForcaDataSource';
 import { MemoryQuemSouEuDataSource } from '@/infra/datasources/memoryQuemSouEuDataSource';
 import { MemoryVerseDataSource } from '@/infra/datasources/memoryVerseDataSource';
 import { ExpoHapticService } from '@/infra/services/expoHapticService';
@@ -34,7 +35,9 @@ import { VersiculoUseCases } from '@/usecase/versiculoUseCases';
 // Equipes e placar persistem no aparelho (RF04–RF06); MemoryTeamDataSource segue para testes.
 const teamDataSource = new AsyncStorageTeamDataSource();
 const themePreferenceDataSource = new AsyncStorageThemePreferenceDataSource();
-const gameCatalogDataSource = new MemoryGameCatalogDataSource();
+const gameCatalogDataSource = MemoryGameCatalogDataSource.withIbgeLocalidades(
+  new MemoryIbgeForcaDataSource()
+);
 const verseDataSource = new HelloAoVerseDataSource(new MemoryVerseDataSource());
 const matchSettingsDataSource = new AsyncStorageMatchSettingsDataSource();
 const quemSouEuDataSource = new MemoryQuemSouEuDataSource();
