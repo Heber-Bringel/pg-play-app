@@ -257,7 +257,7 @@ describe('Landing Page', () => {
   });
 
   it('leva à Google Play, à Política de Privacidade e aos Termos de Uso', () => {
-    expect(html).toContain('https://play.google.com/store/apps/details?id=br.edu.ifpi.pgplay');
+    expect(html).toContain('https://play.google.com/store/apps/details?id=br.pgplay.app');
     expect(html).toContain('href="privacidade.html"');
     expect(html).toContain('href="termos.html"');
   });
