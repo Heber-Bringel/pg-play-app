@@ -26,6 +26,7 @@ Modalidades clássicas especificadas no documento de [Requisitos e Casos de Uso 
 | 🔤 **Jogo da Forca** | Cooperativo / Equipes | [`jogo-da-forca.md`](jogo-da-forca.md) · `UC05` em [`requisitos-e-casos-de-uso-pg-play.md`](../requisitos/requisitos-e-casos-de-uso-pg-play.md) | `GameCard`, `LetterKey`, `ExpressiveButton` |
 | 🤔 **Quem Sou Eu?** | Equipes (1 celular na testa) · temas genéricos, não bíblico | [`quem-sou-eu.md`](quem-sou-eu.md) · `UC09` em [`requisitos-e-casos-de-uso-pg-play.md`](../requisitos/requisitos-e-casos-de-uso-pg-play.md) | `GameCard`, `ExpressiveTimer`, `ExpressiveButton` + inclinação com `expo-sensors` |
 | 📖 **Complete o Versículo** | Equipes (1 celular) | [`complete-o-versiculo.md`](complete-o-versiculo.md) · `UC10` em [`requisitos-e-casos-de-uso-pg-play.md`](../requisitos/requisitos-e-casos-de-uso-pg-play.md) | `GameCard`, `ExpressiveTextField`, `ExpressiveTimer`, `ExpressiveButton` |
+| 🎨 **Desenho Relâmpago** | Equipes (1 celular) | [`desenho-relampago.md`](desenho-relampago.md) · `UC12` em [`requisitos-e-casos-de-uso-pg-play.md`](../requisitos/requisitos-e-casos-de-uso-pg-play.md) | `DrawingCanvas`, `ExpressiveTimer`, `GameCard`, `ExpressiveButton`, `ExpressiveChip` |
 
 ---
 
