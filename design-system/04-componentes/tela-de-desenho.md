@@ -23,7 +23,8 @@ O componente `DrawingCanvas` (`src/view/components/drawingCanvas.tsx`) é purame
    - Renderiza os traços concluídos e o traço em andamento usando `<Svg>` e `<Path>` de `react-native-svg` combinados ao `PanResponder` nativo do `react-native` (compatível com Expo Go no Android, iOS e Web, sem dependência de `react-native-gesture-handler`).
    - Mantém fundo de papel claro fixo (`canvas.paperBg` → `color.canvas-paper` / `#FDF8FF`) tanto no tema Claro quanto no Escuro para que as 4 cores de caneta preservem contraste WCAG AA (`>= 4,88:1` a `16,42:1`) sem inversão cromática inesperada no meio do desenho.
    - Contorno de `border.thin` (`2 dp`) em `canvas.border` (`color.outline`), cantos arredondados `canvas.radius` (`radius.lg` = `20 dp`) e altura mínima `canvas.minHeight` (`256 dp` = `space['3xl'] * 4`).
-   - Quando não há nenhum traço (`strokes.length === 0` e sem gesto ativo), exibe marca-d'água centralizada em `color.on-highlight` / `font.body` com ícone `gesture-swipe` orientando: *"Arraste o dedo para desenhar · Sem letras nem números"*.
+   - Quando não há nenhum traço (`strokes.length === 0` e sem gesto ativo), exibe marca-d'água centralizada em `color.canvas-ink` / `font.body` com ícone `gesture-swipe` orientando: *"Arraste o dedo para desenhar · Sem letras nem números"*.
+   - Emite `onDrawingStart` e `onDrawingEnd` para permitir que telas com `ScrollView` bloqueiem a rolagem vertical durante o gesto de desenho (`onPanResponderTerminationRequest: () => false`), restaurando a rolagem ao soltar ou cancelar o gesto.
 
 2. **Barra de Ferramentas Expressiva (abaixo da folha):**
    - **Seletor de 4 Cores de Caneta (`ink`, `purple`, `coral`, `green`):** botões de amostra com alvo mínimo `canvas.tool.size` (`48 dp × 48 dp`) e espaçamento `space.sm` (`8 dp`).
@@ -44,6 +45,7 @@ O componente `DrawingCanvas` (`src/view/components/drawingCanvas.tsx`) é purame
 | `canvas.pen.purple` | `color.canvas-purple` | `#5B21B6` (8,84:1) | Caneta Roxo Expressivo |
 | `canvas.pen.coral` | `color.canvas-coral` | `#C2410C` (4,90:1) | Caneta Coral Vibrante |
 | `canvas.pen.green` | `color.canvas-green` | `#15803D` (4,88:1) | Caneta Verde Folha |
+| `canvas.pen.onPen` | `color.canvas-paper` | `#FDF8FF` (≥ 4,88:1) | Ícone `check` contrastante sobre qualquer uma das 4 canetas (Claro/Escuro) |
 | `canvas.stroke.thin` | `space.xs` | `4 dp` | Traço fino para detalhes |
 | `canvas.stroke.thick` | `space.sm` | `8 dp` | Traço grosso para contornos rápidos |
 | `canvas.tool.size` | `space.2xl` | `48 dp` | Largura e altura mínimas dos seletores da barra |

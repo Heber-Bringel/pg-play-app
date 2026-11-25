@@ -1,6 +1,6 @@
 # Tokens
 
-Os tokens do **PG Play Expressive (v1.1.0)** organizam todas as decisões visuais em três níveis: **Primitivo** (o valor bruto), **Semântico** (o propósito no tema claro e escuro) e **Componente** (onde o token é aplicado). Os componentes de código em React Native nunca referenciam valores literais ou tokens primitivos diretamente — apenas tokens semânticos e de componente, consumidos via `useTheme()` de `@/view/theme`.
+Os tokens do **PG Play Expressive (v1.2.0)** organizam todas as decisões visuais em três níveis: **Primitivo** (o valor bruto), **Semântico** (o propósito no tema claro e escuro) e **Componente** (onde o token é aplicado). Os componentes de código em React Native nunca referenciam valores literais ou tokens primitivos diretamente — apenas tokens semânticos e de componente, consumidos via `useTheme()` de `@/view/theme`.
 
 ---
 
@@ -239,6 +239,7 @@ Todas as escalas utilizam a família **Plus Jakarta Sans** mapeada por peso expl
 | `canvas.pen.purple` | `color.canvas-purple` | Novo (v1.2.0 — caneta Roxo 8,84:1 sobre `canvas.paperBg`) |
 | `canvas.pen.coral` | `color.canvas-coral` | Novo (v1.2.0 — caneta Coral 4,90:1 sobre `canvas.paperBg`) |
 | `canvas.pen.green` | `color.canvas-green` | Novo (v1.2.0 — caneta Verde 4,88:1 sobre `canvas.paperBg`) |
+| `canvas.pen.onPen` | `color.canvas-paper` | Novo (v1.2.0 — ícone `check` sobre as 4 canetas, ≥ 4,88:1 no claro e no escuro) |
 | `canvas.stroke.thin` | `space.xs` (`4 dp`) | Novo (v1.2.0 — traço fino na Tela de Desenho) |
 | `canvas.stroke.thick` | `space.sm` (`8 dp`) | Novo (v1.2.0 — traço grosso na Tela de Desenho) |
 | `canvas.tool.size` | `space.2xl` (`48 dp`) | Novo (v1.2.0 — alvo mínimo dos seletores de cor/espessura) |

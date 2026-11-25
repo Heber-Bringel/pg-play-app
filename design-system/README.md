@@ -1,6 +1,6 @@
 # PG Play Expressive · Sistema de design do app PG PLAY
 
-> Versão: 1.1.0 · Grupo: Heber Bringel e equipe ([pg-play-app](https://github.com/Heber-Bringel/pg-play-app.git)) · Disciplinas: IHC e PDM · IFPI Piripiri
+> Versão: 1.2.0 · Grupo: Heber Bringel e equipe ([pg-play-app](https://github.com/Heber-Bringel/pg-play-app.git)) · Disciplinas: IHC e PDM · IFPI Piripiri
 
 ## 1. Visão geral
 
@@ -20,12 +20,12 @@ O **PG PLAY** é um aplicativo móvel de minigames presenciais (Mímica, Quiz, F
 | Plataforma | Nativo na linguagem visual do Android, familiar no iOS e responsivo na Web com tema claro/escuro automático via `useColorScheme()`. |
 | Tecnologia | Os tokens em três níveis mapeiam diretamente para `src/view/theme.ts` (`ThemeProvider` + `useTheme()`) sem duplicatas nem valores literais. |
 
-## 3. Mapa dos arquivos (10 componentes documentados na v1.1.0)
+## 3. Mapa dos arquivos (11 componentes documentados na v1.2.0)
 
 | Arquivo | Conteúdo |
 | --- | --- |
 | [01-principios.md](01-principios.md) | Valores que guiam as decisões do sistema |
-| [02-tokens.md](02-tokens.md) | Tokens primitivos, semânticos e de componente (claro, escuro e JSON W3C — v1.1.0) |
+| [02-tokens.md](02-tokens.md) | Tokens primitivos, semânticos e de componente (claro, escuro e JSON W3C — v1.2.0) |
 | [03-fundamentos.md](03-fundamentos.md) | Regras de cor, bordas por estado, tipografia (`Plus Jakarta Sans`), espaço, ícones, elevação e movimento |
 | [04-componentes/botao.md](04-componentes/botao.md) | `ExpressiveButton` com *shape morphing*, Jumbo e variantes `text` e `icon` |
 | [04-componentes/campo-de-texto.md](04-componentes/campo-de-texto.md) | `ExpressiveTextField` para busca, cadastro de equipes e entradas de jogo |
@@ -41,7 +41,7 @@ O **PG PLAY** é um aplicativo móvel de minigames presenciais (Mímica, Quiz, F
 | [05-padroes.md](05-padroes.md) | Fluxos completos: Configuração de Equipes, Rodada com Tempo e Busca no Hub |
 | [06-acessibilidade.md](06-acessibilidade.md) | Contraste de textos (≥ 4,5:1) e componentes (≥ 3:1), alvos, foco `:focus-visible`, leitor de tela e movimento reduzido |
 | [07-teste-com-ia.md](07-teste-com-ia.md) | Validação do sistema com assistente de IA |
-| [CHANGELOG.md](CHANGELOG.md) | Histórico de versões (`1.0.0` → `1.1.0`) |
+| [CHANGELOG.md](CHANGELOG.md) | Histórico de versões (`1.0.0` → `1.2.0`) |
 
 ## 4. Instruções para assistentes de IA
 
