@@ -103,8 +103,8 @@ describe('GameFeedbackUseCases — vibração de acerto e erro (#77)', () => {
   });
 });
 
-describe('GameFeedbackUseCases — sons de jogo e preferência de som (#84)', () => {
-  it('toca bipe de alerta a cada segundo nos 10s finais (10s → 1s) e som de tempo esgotado em 0s', async () => {
+describe('GameFeedbackUseCases — sons de jogo, contagem regressiva e preferência de som (#84, #92)', () => {
+  it('toca som ritmado (playTimerTick) a cada segundo nos 10s finais (10s → 1s) e apito de tempo esgotado em 0s', async () => {
     const haptic = new MemoryHapticService();
     const sound = new MemorySoundService();
     const pref = new MemorySoundPreferenceDataSource({ enabled: true });
@@ -118,7 +118,23 @@ describe('GameFeedbackUseCases — sons de jogo e preferência de som (#84)', ()
       wrong: 0,
       letterWrong: 0,
       pass: 0,
+      timerTick: 10,
       timerCritical: 10,
+      timerExpired: 1,
+    });
+  });
+
+  it('com "Reduzir movimento" e som ligado, não pulsa vibração mas mantém os 10 ticks sonoros nos últimos 10s (#92)', async () => {
+    const haptic = new MemoryHapticService();
+    const sound = new MemorySoundService();
+    const pref = new MemorySoundPreferenceDataSource({ enabled: true });
+    const useCases = new GameFeedbackUseCases(haptic, sound, pref);
+
+    await runCountdown(useCases, 12, true);
+
+    expect(haptic.getFeedbackCounts()).toMatchObject({ pulses: 0, expired: 1 });
+    expect(sound.getSoundCounts()).toMatchObject({
+      timerTick: 10,
       timerExpired: 1,
     });
   });
@@ -140,6 +156,7 @@ describe('GameFeedbackUseCases — sons de jogo e preferência de som (#84)', ()
       wrong: 1,
       letterWrong: 1,
       pass: 1,
+      timerTick: 0,
       timerCritical: 0,
       timerExpired: 0,
     });
@@ -163,6 +180,7 @@ describe('GameFeedbackUseCases — sons de jogo e preferência de som (#84)', ()
       wrong: 0,
       letterWrong: 0,
       pass: 0,
+      timerTick: 0,
       timerCritical: 0,
       timerExpired: 0,
     });

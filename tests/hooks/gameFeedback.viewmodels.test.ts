@@ -108,8 +108,8 @@ describe('Feedback tátil do cronômetro nas ViewModels (#77)', () => {
     jest.useRealTimers();
   });
 
-  it('Mímica: 10 pulsos nos segundos finais e 1 vibração forte ao zerar', async () => {
-    const { haptic, feedback } = buildFeedback();
+  it('Mímica: 10 pulsos táteis e 10 ticks sonoros nos segundos finais e 1 aviso ao zerar (#77, #92)', async () => {
+    const { haptic, sound, feedback } = buildFeedback();
     const useCases = buildPgPlay();
     const hook = renderHook(() => useMimicaViewModel(useCases, feedback));
     await hook.mount();
@@ -118,10 +118,18 @@ describe('Feedback tátil do cronômetro nas ViewModels (#77)', () => {
       hook.actions.handleStartTurn();
     });
     const duration = hook.state.secondsRemaining;
-    advanceSeconds(duration);
+    for (let i = 0; i < duration; i += 1) {
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
+    }
 
     expect(hook.state.secondsRemaining).toBe(0);
     expect(haptic.getFeedbackCounts()).toMatchObject({ pulses: 10, expired: 1 });
+    expect(sound.getSoundCounts()).toMatchObject({
+      timerTick: 10,
+      timerExpired: 1,
+    });
     hook.unmount();
   });
 

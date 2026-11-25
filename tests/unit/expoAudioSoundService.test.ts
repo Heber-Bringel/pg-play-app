@@ -13,18 +13,19 @@ const TEST_SOURCES: SoundSourcesMap = {
   wrong: 'src-wrong',
   letterWrong: 'src-letter-wrong',
   pass: 'src-pass',
+  timerTick: 'src-timer-tick',
   timerCritical: 'src-timer-critical',
   timerExpired: 'src-timer-expired',
 };
 
-describe('ExpoAudioSoundService (#84)', () => {
+describe('ExpoAudioSoundService (#84, #92)', () => {
   beforeEach(() => {
     createAudioPlayer.mockClear();
     preload.mockClear();
     setAudioModeAsync.mockClear();
   });
 
-  it('pré-carrega os 6 sons, configura modo silencioso do iOS e reproduz cada efeito', async () => {
+  it('pré-carrega os 7 sons, configura modo silencioso do iOS e reproduz cada efeito', async () => {
     const service = new ExpoAudioSoundService(TEST_SOURCES);
     await Promise.resolve();
     await Promise.resolve();
@@ -35,13 +36,14 @@ describe('ExpoAudioSoundService (#84)', () => {
         interruptionMode: 'mixWithOthers',
       })
     );
-    expect(preload).toHaveBeenCalledTimes(6);
-    expect(createAudioPlayer).toHaveBeenCalledTimes(6);
+    expect(preload).toHaveBeenCalledTimes(7);
+    expect(createAudioPlayer).toHaveBeenCalledTimes(7);
 
     await service.playCorrect();
     await service.playWrong();
     await service.playLetterWrong();
     await service.playPass();
+    await service.playTimerTick();
     await service.playTimerCritical();
     await service.playTimerExpired();
 
@@ -65,6 +67,7 @@ describe('ExpoAudioSoundService (#84)', () => {
     await expect(service.playWrong()).resolves.toBeUndefined();
     await expect(service.playLetterWrong()).resolves.toBeUndefined();
     await expect(service.playPass()).resolves.toBeUndefined();
+    await expect(service.playTimerTick()).resolves.toBeUndefined();
     await expect(service.playTimerCritical()).resolves.toBeUndefined();
     await expect(service.playTimerExpired()).resolves.toBeUndefined();
   });
