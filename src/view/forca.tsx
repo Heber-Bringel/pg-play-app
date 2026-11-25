@@ -18,6 +18,7 @@ import {
   normalizeChar,
   useForcaViewModel,
   type ForcaAttemptsOption,
+  type MaskedLetter,
 } from '@/viewmodel/useForcaViewModel';
 
 const FORCA_ATTEMPTS: ForcaAttemptsOption[] = [5, 6, 8];
@@ -51,6 +52,37 @@ export const ForcaScreen = () => {
     }
     return rows;
   }, [keysPerRow]);
+
+  const wordGroups = useMemo(() => {
+    const groups: { letter: MaskedLetter; index: number }[][] = [];
+    let currentGroup: { letter: MaskedLetter; index: number }[] = [];
+    state.maskedWord.forEach((letter, index) => {
+      if (letter.original === ' ') {
+        if (currentGroup.length > 0) {
+          groups.push(currentGroup);
+          currentGroup = [];
+        }
+      } else {
+        currentGroup.push({ letter, index });
+      }
+    });
+    if (currentGroup.length > 0) {
+      groups.push(currentGroup);
+    }
+    return groups;
+  }, [state.maskedWord]);
+
+  const maskedWordAccessibilityLabel = useMemo(() => {
+    if (state.maskedWord.length === 0) {
+      return 'Palavra secreta';
+    }
+    const items = state.maskedWord.map((letter) => {
+      if (letter.original === ' ') return 'espaço';
+      if (letter.original === '-') return 'hífen';
+      return letter.revealed ? letter.original : 'lacuna';
+    });
+    return `Palavra secreta: ${items.join(', ')}`;
+  }, [state.maskedWord]);
 
   if (state.loading) {
     return (
@@ -235,22 +267,35 @@ export const ForcaScreen = () => {
             <Text allowFontScaling style={styles.hintLabel}>
               {`DICA: ${state.currentPuzzle.hint}`}
             </Text>
-            <View style={styles.slotsRow}>
-              {state.maskedWord.map((letter, index) => {
-                if (letter.original === ' ') {
-                  return <View key={`slot-${index}`} style={styles.spaceSlot} />;
-                }
-                return (
-                  <View key={`slot-${index}`} style={styles.slotWrapper}>
-                    <View style={styles.letterSlot}>
-                      <Text allowFontScaling style={styles.slotText}>
-                        {letter.revealed ? letter.original : ' '}
-                      </Text>
-                    </View>
-                    <View style={styles.slotUnderline} />
-                  </View>
-                );
-              })}
+            <View
+              style={styles.slotsRow}
+              accessibilityLabel={maskedWordAccessibilityLabel}
+            >
+              {wordGroups.map((group, groupIndex) => (
+                <View key={`word-${groupIndex}`} style={styles.wordGroup}>
+                  {group.map(({ letter, index }) => {
+                    if (letter.original === '-') {
+                      return (
+                        <View key={`slot-${index}`} style={styles.hyphenSlot}>
+                          <Text allowFontScaling style={styles.hyphenText}>
+                            -
+                          </Text>
+                        </View>
+                      );
+                    }
+                    return (
+                      <View key={`slot-${index}`} style={styles.slotWrapper}>
+                        <View style={styles.letterSlot}>
+                          <Text allowFontScaling style={styles.slotText}>
+                            {letter.revealed ? letter.original : ' '}
+                          </Text>
+                        </View>
+                        <View style={styles.slotUnderline} />
+                      </View>
+                    );
+                  })}
+                </View>
+              ))}
             </View>
           </View>
 
@@ -440,6 +485,13 @@ const createStyles = (activeTokens: AppTokens) => {
       flexDirection: 'row',
       flexWrap: 'wrap',
       justifyContent: 'center',
+      columnGap: space.md,
+      rowGap: space.sm,
+    },
+    wordGroup: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'center',
       gap: space.xs,
     },
     slotWrapper: {
@@ -468,8 +520,18 @@ const createStyles = (activeTokens: AppTokens) => {
       backgroundColor: color.action,
       borderRadius: radius.sm,
     },
-    spaceSlot: {
-      width: space.md,
+    hyphenSlot: {
+      minWidth: space.md,
+      minHeight: space['2xl'],
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    hyphenText: {
+      fontFamily: font.title.family,
+      fontSize: font.title.size,
+      fontWeight: font.title.weight,
+      lineHeight: font.title.lineHeight,
+      color: color.onSurfaceMuted,
     },
     keyboardContainer: {
       gap: space.sm,
