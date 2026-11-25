@@ -39,14 +39,14 @@ O **Desenho Relâmpago** é uma dinâmica visual em **1 celular compartilhado** 
 1. **Cronômetro e Feedback Tátil:** o `ExpressiveTimer` inicia a contagem regressiva (`MM:SS`), entra em **Modo Crítico** nos últimos `10s` (cor `error`, forma `16 dp`, ícone `alert` e pulsação respeitando `useReduceMotion`) e dispara os pulsos táteis via `IGameFeedbackUseCases` até `00:00` (`bell-ring`) (**RF10**).
 2. **Palavra Secreta e Regra de Honra (`RF42`):**
    - No início de cada nova carta, a palavra secreta aparece em destaque com o botão tonal **"Esconder do Grupo"** (ícone `eye-off-outline`).
-   - Ao tocar em **"Esconder do Grupo"**, a palavra é substituída pelo selo seguro *"🤫 Palavra oculta — só o desenhista sabe"* (com opção **"Conferir Palavra"** para espiar rapidamente), liberando o grupo para olhar diretamente para o celular enquanto o representante desenha!
-   - Banner/aviso constante de regra de honra: *"Proibido escrever letras ou números"*.
+   - Ao tocar em **"Esconder do Grupo"**, a palavra é substituída pelo selo seguro *"Palavra oculta — só o desenhista sabe"* (com opção **"Mostrar Palavra"** para espiar rapidamente), liberando o grupo para olhar diretamente para o celular enquanto o representante desenha!
+   - Banner/aviso constante de regra de honra: *"Sem letras nem números"*.
 3. **Tela de Desenho (`DrawingCanvas` — `RF41`):**
-   - Folha de papel clara (`canvas.paperBg` = `#FDF8FF`) com traço contínuo ao arrastar o dedo (`react-native-svg` + `PanResponder`).
+   - Folha de papel clara (`canvas.paperBg` = `#FDF8FF`) com traço contínuo ao arrastar o dedo (`react-native-svg` + `PanResponder`), bloqueando a rolagem vertical da tela durante o gesto de desenho.
    - Barra de ferramentas com **4 cores acessíveis** (*Grafite*, *Roxo*, *Coral* e *Verde*), **2 espessuras** (*Fina 4 dp* e *Grossa 8 dp*), **"Desfazer"** (remove o último traço) e **"Limpar"** (apaga todos os traços da palavra atual).
 4. **Ações de Resultado (`RF43`):**
-   - ✅ **"Acertaram! (+20 pts)"** (`Primário Jumbo`, `64 dp`): soma `+20 pts` à equipe da vez, limpa os traços da tela, sorteia a próxima palavra (com palavra inicialmente visível para o desenhista conferir antes de esconder) e mantém o cronômetro correndo.
-   - ⏭️ **"Pular (-5 pts)"** (`Tonal`, `56 dp`): desconta `5` pontos da equipe (respeitando o piso `0`), limpa os traços da tela e sorteia outra palavra.
+   - ✅ **"Acertaram! (+20 pts)"** (`ExpressiveButton` variante `successJumbo`, `64 dp`): soma `+20 pts` à equipe da vez, limpa os traços da tela, sorteia a próxima palavra (com palavra inicialmente visível para o desenhista conferir antes de esconder) e mantém o cronômetro correndo.
+   - ⏭️ **"Pular (-5 pts)"** (`ExpressiveButton` variante `secondary`, `48 dp`): desconta `5` pontos da equipe (respeitando o piso `0`), limpa os traços da tela e sorteia outra palavra.
 5. **Saída Segura (`RF11`):** botão **"Sair"** (delineado) no canto superior esquerdo, afastado dos botões de pontuação e da folha de desenho, pausando o cronômetro enquanto o `ConfirmModal` está aberto.
 
 ### 🔔 Fase 3 — Resumo do Turno (`turn-summary`)

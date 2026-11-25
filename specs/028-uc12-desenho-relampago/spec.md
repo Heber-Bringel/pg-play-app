@@ -2,7 +2,7 @@
 
 - **Branch da Feature:** `feat/028-uc12-desenho-relampago`
 - **Criado em:** 2026-11-25
-- **Status:** Em Revisão
+- **Status:** Aprovado
 - **Caso(s) de Uso / Requisito(s):** `UC12` (`RF41`–`RF44`, `RF09`–`RF12`, `RF24`, `RF28`–`RF31`, `RNF01`, `RNF02`, `RNF04`–`RNF10`) — Ref.: `docs/requisitos/requisitos-e-casos-de-uso-pg-play.md` e `docs/jogos/desenho-relampago.md`
 - **Issue vinculada:** `#83`
 
@@ -20,13 +20,13 @@ Como **Representante da Equipe da Vez**, quero ver uma palavra secreta concreta,
 
 **Cenários de Aceitação (Dado / Quando / Então):**
 
-1. **Dado** que o jogo foi aberto no Hub com pelo menos `2` equipes cadastradas, **Quando** a tela carrega na fase `pass-turn`, **Então** o sistema exibe a equipe da vez (`RF09`) e o botão Jumbo **"Estou Pronto!"** sem revelar nenhuma palavra secreta (`RF24`).
-2. **Dado** que o representante tocou em **"Estou Pronto!"**, **Quando** a fase `drawing` inicia, **Então** o `ExpressiveTimer` começa a contagem regressiva (`90s` por padrão), a palavra secreta aparece em destaque com o botão **"Esconder do Grupo"**, o aviso de regra de honra *"Sem letras nem números"* fica visível (`RF42`) e a folha de desenho aparece limpa (`RF41`).
-3. **Dado** que a palavra secreta está visível, **Quando** o representante toca em **"Esconder do Grupo"**, **Então** a palavra é ocultada na tela (substituída por um aviso seguro de palavra oculta) e o botão passa a oferecer **"Mostrar Palavra"**, permitindo que o grupo olhe para o celular enquanto o desenho é feito (`RF42`).
-4. **Dado** que a fase `drawing` está ativa, **Quando** o representante arrasta o dedo na folha, troca entre as `4` cores (*Grafite*, *Roxo*, *Coral*, *Verde*) ou `2` espessuras (*Fina 4 dp*, *Grossa 8 dp*), **Então** novos traços refletem a cor e espessura selecionadas sem alterar os traços já desenhados, **"Desfazer"** remove apenas o último traço e **"Limpar"** remove todos os traços atuais (`RF41`).
-5. **Dado** um desenho em andamento, **Quando** o representante toca em **"Acertaram! (+20 pts)"**, **Então** o `PgPlayUseCases` soma `+20 pts` à equipe da vez, a folha de desenho é limpa automaticamente e uma nova palavra inédita é sorteada (`RF43`, `RF30`).
-6. **Dado** uma palavra difícil em andamento, **Quando** o representante toca em **"Pular (-5 pts)"**, **Então** o `PgPlayUseCases` desconta até `5 pts` da equipe da vez (respeitando o piso `0`), limpa a folha de desenho e sorteia a próxima palavra (`RF43`).
-7. **Dado** que o cronômetro chegou a `00:00`, **Quando** o tempo do turno se esgota, **Então** o `DrawingCanvas` e os botões de pontuação são bloqueados imediatamente e a tela transita para `turn-summary` exibindo acertos, pulos e saldo de pontos do turno (`RF10`).
+1. **Dado** que o jogo foi aberto no Hub com pelo menos `2` equipes cadastradas, **Quando** a tela carrega na fase `pass-turn`, **Então** o sistema exibe a equipe da vez (`RF09`) e o botão Jumbo **"Estou Pronto!"** (`variant="primaryJumbo"`) sem revelar nenhuma palavra secreta (`RF24`).
+2. **Dado** que o representante tocou em **"Estou Pronto!"**, **Quando** a fase `drawing` inicia, **Então** o `ExpressiveTimer` começa a contagem regressiva (`90s` por padrão), a palavra secreta aparece em destaque (`font.display`, `30 dp`) com o botão **"Esconder do Grupo"**, o aviso de regra de honra *"Sem letras nem números"* fica visível (`RF42`) e a folha de desenho aparece limpa (`RF41`).
+3. **Dado** que a palavra secreta está visível, **Quando** o representante toca em **"Esconder do Grupo"**, **Então** a palavra é ocultada na tela (substituída por *"Palavra oculta — só o desenhista sabe"*) e o botão passa a oferecer **"Mostrar Palavra"**, permitindo que o grupo olhe para o celular enquanto o desenho é feito (`RF42`).
+4. **Dado** que a fase `drawing` está ativa, **Quando** o representante arrasta o dedo na folha, troca entre as `4` cores (*Grafite*, *Roxo*, *Coral*, *Verde*) ou `2` espessuras (*Fina 4 dp*, *Grossa 8 dp*), **Então** novos traços refletem a cor e espessura selecionadas sem alterar os traços já desenhados, a rolagem da tela permanece travada durante o traço, **"Desfazer"** remove apenas o último traço e **"Limpar"** remove todos os traços atuais (`RF41`).
+5. **Dado** um desenho em andamento, **Quando** o representante toca em **"Acertaram! (+20 pts)"** (`variant="successJumbo"`), **Então** o `PgPlayUseCases` soma `+20 pts` à equipe da vez, a folha de desenho é limpa automaticamente e uma nova palavra inédita é sorteada (`RF43`, `RF30`).
+6. **Dado** uma palavra difícil em andamento, **Quando** o representante toca em **"Pular (-5 pts)"** (`variant="secondary"`), **Então** o `PgPlayUseCases` desconta até `5 pts` da equipe da vez (respeitando o piso `0`), limpa a folha de desenho e sorteia a próxima palavra (`RF43`).
+7. **Dado** que o cronômetro chegou a `00:00`, **Quando** o tempo do turno se esgota, **Então** o `DrawingCanvas` e os botões de pontuação são bloqueados imediatamente (descartando eventual traço em andamento) e a tela transita para `turn-summary` exibindo acertos, pulos, a última palavra em andamento (sem pontuar) e o saldo de pontos do turno, oferecendo **"Próxima Equipe"** (ou **"Ver Resumo Final"** no último turno) (`RF10`).
 
 ---
 
@@ -46,26 +46,29 @@ Como **Líder do PG**, quero ajustar o tempo por turno (`60s`, `90s` ou `120s`),
 
 ---
 
-### História de Usuário 3 — Alternar equipes, consolidar Placar Geral e sair com segurança (Prioridade: P2)
+### História de Usuário 3 — Alternar equipes, consolidar Placar Geral, estados de tela e sair com segurança (Prioridade: P2)
 
-Como **Líder do PG**, quero que os turnos alternem entre todas as equipes cadastradas sem repetir palavras acertadas, que o fim das rodadas (ou do banco de palavras) leve ao Placar Geral (`UC06`) com os pontos já somados e que o botão **"Sair"** peça confirmação antes de encerrar a partida.
+Como **Líder do PG**, quero que os turnos alternem entre todas as equipes cadastradas sem repetir palavras acertadas, que o fim das rodadas (ou do banco de palavras) leve ao Placar Geral (`UC06`) com os pontos já somados, que a tela trate carregamento/falhas de forma clara e que o botão **"Sair"** peça confirmação antes de encerrar a partida.
 
-**Por que esta prioridade:** Assegura continuidade competitiva justa no encontro presencial e previne perda acidental do turno por esbarrão na tela enquanto o grupo desenha (`RF11`, `RF12`, `RF30`, `RF31`).
+**Por que esta prioridade:** Assegura continuidade competitiva justa no encontro presencial, feedback claro nos 4 estados de tela e prevenção de perda acidental do turno por esbarrão enquanto o grupo desenha (`RF11`, `RF12`, `RF30`, `RF31`).
 
 **Cenários de Aceitação (Dado / Quando / Então):**
 
-1. **Dado** que todas as equipes jogaram todas as rodadas configuradas (ou todas as palavras disponíveis foram acertadas), **Quando** o último turno se encerra, **Então** a tela exibe o card `finished` com o resumo da partida e o botão **"Ir para o Placar Final"** navega para `/scoreboard` com as pontuações atualizadas (`RF12`, `RF31`).
+1. **Dado** que todas as equipes jogaram todas as rodadas configuradas (ou todas as palavras disponíveis foram acertadas), **Quando** o último turno se encerra, **Então** a tela exibe o card `finished` com o resumo da partida e o botão **"Ir para o Placar Final"** (`variant="primaryJumbo"`) navega para `/scoreboard` com as pontuações atualizadas (`RF12`, `RF31`).
 2. **Dado** que um turno está em andamento na fase `drawing`, **Quando** alguém toca em **"Sair"** no canto superior esquerdo, **Então** o cronômetro pausa, a folha de desenho fica bloqueada e um `ConfirmModal` pergunta se deseja encerrar a partida ou cancelar e continuar desenhando (`RF11`).
+3. **Dado** que a arena está carregando dados iniciais ou ocorre um `DomainError` no carregamento, **Quando** a tela renderiza esses estados, **Então** exibe feedback acessível de carregamento (`accessibilityRole="progressbar"`) ou card de erro semântico com o botão **"Tentar Novamente"** (`actions.handleRetry`).
 
 ---
 
 ### Casos de Borda (Edge Cases)
 
 - **Pulo com pontuação zerada ou menor que 5 (`RF43`):** Se a equipe tiver `0 pts` (ou `3 pts`), tocar em *"Pular (-5 pts)"* reduz o placar apenas até `0 pts` — a pontuação acumulada nunca fica negativa.
-- **Reciclagem de palavras puladas vs. esgotamento do banco (`RF12`, `RF30`):** Palavras acertadas são removidas definitivamente da partida; palavras puladas vão para uma fila secundária (`skippedDeck`) e só voltam ao sorteio se o `freshDeck` acabar. Se ambas as filas ficarem vazias no meio de um turno, a partida encerra graciosamente na fase `finished`.
+- **Reciclagem de palavras puladas vs. esgotamento do banco (`RF12`, `RF30`):** Palavras acertadas são removidas definitivamente da partida; palavras puladas vão para uma fila secundária (`skippedDeck`) e só voltam ao sorteio se o `freshDeck` acabar. Quando restar apenas `1` palavra em `skippedDeck` (e `freshDeck` vazio), pular ainda aplica a penalidade e limpa a folha mantendo a única palavra restante disponível; se ambas as filas ficarem vazias no meio de um turno, a partida encerra graciosamente na fase `finished`.
+- **Bloqueio de rolagem durante o traço (`PanResponder` × `ScrollView`):** Ao iniciar um gesto na folha (`onDrawingStart`), o `ScrollView` da tela desabilita a rolagem (`scrollEnabled={false}`) e só a reabilita ao finalizar/cancelar o gesto (`onDrawingEnd`), evitando que traços verticais rolem a tela no mobile ou Web.
+- **Toque curto (ponto único) e interrupção no meio do traço:** Um toque sem arrastar gera um ponto visível no `<Path>` SVG (`M x y L x y` com `strokeLinecap="round"`). Caso o tempo chegue a `00:00` ou o modal de saída abra enquanto o dedo está pressionado, o traço ativo é cancelado/descartado com segurança e o `scrollEnabled` é restaurado.
 - **Desfazer/Limpar sem traços:** Quando `strokes.length === 0`, os botões *"Desfazer"* e *"Limpar"* permanecem desabilitados (`accessibilityState={{ disabled: true }}`) e chamadas às ações não causam erro.
-- **Últimos 10 segundos e Redução de Movimento (`RF10`, `RNF09`):** Entre `10s` e `1s` restantes, o `ExpressiveTimer` entra em modo crítico (`timer.bg.critical`, raio `16 dp`, ícone `alert`) e a `useDesenhoViewModel` notifica `IGameFeedbackUseCases.notifyTimerTick(prev, curr, { reduceMotion })`, respeitando a preferência `Reduce Motion` do sistema.
-- **Menos de 2 equipes cadastradas:** Caso o usuário acesse `/desenho` diretamente com `< 2` equipes, a tela exibe estado orientativo seguro com botão para voltar ao início/equipes.
+- **Últimos 10 segundos, Feedback Tátil e Redução de Movimento (`RF10`, `RNF09`):** Entre `10s` e `1s` restantes, o `ExpressiveTimer` entra em modo crítico (`timer.bg.critical`, raio `16 dp`, ícone `alert`) e a `useDesenhoViewModel` notifica `IGameFeedbackUseCases.notifyTimerTick(prev, curr, { reduceMotion })`, respeitando `Reduce Motion` (sem vibrar em acerto/pulo manual, seguindo o padrão da Mímica).
+- **Menos de 2 equipes cadastradas:** Caso o usuário acesse `/desenho` diretamente com `< 2` equipes, a tela exibe estado orientativo seguro com botão para voltar ao início.
 - **Armazenamento antigo ou corrompido (`Offline-First`):** Se o JSON salvo em `AsyncStorage` vier de versão anterior (sem a chave `desenho`) ou estiver corrompido, `AsyncStorageMatchSettingsDataSource` e `sanitizeMatchSettings` restauram `DEFAULT_MATCH_SETTINGS.desenho` (`90s`, `3` rodadas) automaticamente.
 
 ---
@@ -73,8 +76,8 @@ Como **Líder do PG**, quero que os turnos alternem entre todas as equipes cadas
 ## 2. Requisitos da Funcionalidade *(Obrigatório)*
 
 ### Requisitos Funcionais (`RF`)
-- **`RF41` (Tela de Desenho Expressiva):** O componente `DrawingCanvas` deve capturar gestos contínuos via `PanResponder` e renderizar traços suaves em `react-native-svg` sobre superfície de papel clara fixa (`canvas.paperBg`), disponibilizando `4` cores (`ink`, `purple`, `coral`, `green`), `2` espessuras (`thin` = `4 dp`, `thick` = `8 dp`), *"Desfazer"* e *"Limpar"*.
-- **`RF42` (Palavra Secreta e Regra de Honra):** A arena deve exibir a palavra secreta com botão de alternância *"Esconder do Grupo"* / *"Mostrar Palavra"* e manter visível o aviso de regra de honra (*"Sem letras nem números"*).
+- **`RF41` (Tela de Desenho Expressiva):** O componente `DrawingCanvas` deve capturar gestos contínuos via `PanResponder` (com callbacks `onDrawingStart`/`onDrawingEnd` para travar rolagem) e renderizar traços suaves em `react-native-svg` sobre superfície de papel clara fixa (`canvas.paperBg`), disponibilizando `4` cores (`ink`, `purple`, `coral`, `green`), `2` espessuras (`thin` = `4 dp`, `thick` = `8 dp`), *"Desfazer"* e *"Limpar"*.
+- **`RF42` (Palavra Secreta e Regra de Honra):** A arena deve exibir a palavra secreta em `font.display` (`30 dp`) com botão de alternância *"Esconder do Grupo"* / *"Mostrar Palavra"* e manter visível o aviso de regra de honra (*"Sem letras nem números"*).
 - **`RF43` (Pontuação de Acerto e Pulo):** O `PgPlayUseCases` deve somar `+20 pts` em `scoreDesenhoHit` e descontar até `5 pts` (piso `0`) em `scoreDesenhoSkip`, lançando `ValidationError` para `teamId` vazio/inexistente ou valores inválidos, enquanto a `ViewModel` limpa os traços a cada troca de carta.
 - **`RF44` (Parâmetros e Pacotes Desenháveis):** O sistema deve suportar durações `60 | 90 | 120` segundos (padrão `90`), `1` a `5` rodadas por equipe (padrão `3`) persistidas em `MatchSettings.desenho`, e `5` pacotes próprios de palavras concretas desenháveis (`Bíblico`, `Animais`, `Objetos`, `Comidas`, `Lugares e Natureza`) via `IGameCatalogDataSource`.
 - **`RF09`–`RF12`, `RF24`, `RF28`–`RF31` (Regras Gerais de Arena 1 Celular):** Identificação da equipe da vez, passagem de turno com *"Estou Pronto!"*, cronômetro com modo crítico `<= 10s` e feedback háptico, saída segura com `ConfirmModal`, não repetição de acertos e integração com o Placar Geral (`UC06`).
@@ -92,8 +95,8 @@ Como **Líder do PG**, quero que os turnos alternem entre todas as equipes cadas
 
 ## 3. Critérios de Sucesso e Acessibilidade *(Obrigatório)*
 
-- **`CS-01` (IHC / Acessibilidade Motora e Visual — `RNF05`, `RNF06`, `RNF07`, `RNF08`)**: Todos os controles da barra do `DrawingCanvas` possuem alvo mínimo `48 dp × 48 dp` (`64 dp` no botão Jumbo *"Acertaram!"*), `accessibilityRole` + `accessibilityLabel` + `accessibilityState`, contraste `>= 4,88:1` das 4 canetas sobre o papel `#FDF8FF` nos dois temas e seleção de cor comunicada por forma (`9999 dp` → `16 dp`) + borda + ícone `check` + rótulo textual.
+- **`CS-01` (IHC / Acessibilidade Motora e Visual — `RNF05`, `RNF06`, `RNF07`, `RNF08`)**: Todos os controles da barra do `DrawingCanvas` possuem alvo mínimo `48 dp × 48 dp` (`64 dp` nos botões Jumbo *"Estou Pronto!"*, *"Acertaram! (+20 pts)"* e *"Ir para o Placar Final"*), `accessibilityRole` + `accessibilityLabel` + `accessibilityState`, contraste `>= 4,88:1` das 4 canetas sobre o papel (`canvas.paperBg`) e do ícone `check` (`canvas.pen.onPen`) sobre todas as 4 canetas nos dois temas, e seleção de cor comunicada por forma (`9999 dp` → `16 dp`) + borda + ícone `check` + rótulo textual.
 - **`CS-02` (Movimento e Feedback Tátil — `RNF09`)**: O cronômetro e os seletores respeitam `useReduceMotion` e notificam `IGameFeedbackUseCases.notifyTimerTick` nos segundos críticos.
 - **`CS-03` (Design Tokens Puros — `RNF10`)**: Zero valores literais de cor ou dimensão em `src/view/components/drawingCanvas.tsx` e `src/view/desenho.tsx`; `node scripts/check-design-system.mjs` aprovado sem erros.
 - **`CS-04` (Portabilidade — `RNF01`)**: Desenho fluido via `react-native-svg` + `PanResponder` compatível com Expo Go (Android e iOS) e Web.
-- **`CS-05` (Arquitetura MVVM e Qualidade)**: `npm run check` (`check-arquitetura.mjs` + `tsc --noEmit` + `jest`) executando com **0 violações e 0 falhas**.
+- **`CS-05` (Arquitetura MVVM e Qualidade)**: `npm run check` (`check-arquitetura.mjs` + `check-design-system.mjs` + `tsc --noEmit` + `jest`) executando com **0 violações e 0 falhas**.
