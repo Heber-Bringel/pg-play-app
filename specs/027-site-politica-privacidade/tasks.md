@@ -64,3 +64,4 @@
 ## Fase 8: Cabeçalho M3 Expressive (2026-11-25)
 
 - [x] **T022** Cabeçalho como barra de ferramentas flutuante: pílula com vidro fosco e elevação ao rolar, marca com subtítulo, links em pílula com indicador ativo e *shape morphing*, destaque da seção visível (`:target-current`, Chrome 140+), botão "Baixar" e menu do celular com `<details>` (sem JavaScript), conferido em 320, 360, 820 e 1366 px nos temas claro e escuro.
+- [x] **T023** Cortes no celular (auditoria automática em 320, 360, 390 e 412 px, com fonte normal e em 130%): chips "Ir para um jogo" quebram em linhas em vez de rolar de lado; tabela da Política de Privacidade sem largura mínima e empilhada abaixo de 36rem; entrada lateral dos celulares da vitrine reduzida no celular (24 px e 4°).

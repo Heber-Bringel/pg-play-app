@@ -96,6 +96,10 @@
   /* motion.spring.effects (damping 22, stiffness 300): cor, opacidade e revelações */
   --ease-effects: linear(0, 0.052, 0.176, 0.335, 0.502, 0.657, 0.79, 0.896, 0.974, 1.027, 1.058, 1.073, 1.075, 1.07, 1.059, 1.047, 1.034, 1.023, 1.014, 1.006, 1);
 
+  /* Entrada lateral dos celulares da vitrine (maior a partir de 56rem) */
+  --slide-distance: 24px;
+  --slide-tilt: 4deg;
+
   --content-width: 76rem;
   --reading-width: 46rem;
 }
@@ -563,13 +567,11 @@ li + li {
 
 .chip-row {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-sm);
-  margin: 0 calc(-1 * var(--space-md)) var(--space-2xl);
-  padding: var(--space-xs) var(--space-md);
-  overflow-x: auto;
+  margin: 0 0 var(--space-2xl);
+  padding: 0;
   list-style: none;
-  scroll-snap-type: x proximity;
-  scrollbar-width: none;
 }
 
 .chip-row li + li {
@@ -1257,7 +1259,6 @@ li + li {
 
 table {
   width: 100%;
-  min-width: 32rem;
   border-collapse: collapse;
   font-size: 0.9375rem;
 }
@@ -1287,6 +1288,52 @@ th {
   background: var(--color-highlight);
   color: var(--color-on-highlight);
   font-weight: 700;
+}
+
+/* Celular: cada linha da tabela vira um bloco (dado em negrito e explicação embaixo) */
+@media (max-width: 36rem) {
+  .table-wrap {
+    overflow: visible;
+  }
+
+  .table-wrap table,
+  .table-wrap tbody,
+  .table-wrap tr,
+  .table-wrap td {
+    display: block;
+  }
+
+  .table-wrap caption {
+    display: block;
+    border-bottom: 0;
+  }
+
+  .table-wrap thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+
+  .table-wrap tr {
+    padding: var(--space-sm) var(--space-md);
+    border-top: 1px solid var(--color-surface-variant);
+  }
+
+  .table-wrap td {
+    padding: 0;
+    border: 0;
+  }
+
+  .table-wrap td:first-child {
+    font-weight: 700;
+  }
+
+  .table-wrap td + td {
+    margin-top: var(--space-xs);
+    color: var(--color-on-surface-muted);
+  }
 }
 
 /* Barra de progresso de leitura (só aparece com suporte a scroll-timeline) */
@@ -1352,6 +1399,11 @@ th {
 }
 
 @media (min-width: 56rem) {
+  :root {
+    --slide-distance: 60px;
+    --slide-tilt: 8deg;
+  }
+
   .site-nav {
     display: block;
   }
@@ -1702,14 +1754,14 @@ th {
   @keyframes slide-in-left {
     from {
       opacity: 0;
-      transform: translateX(-60px) rotate(-8deg) scale(0.9);
+      transform: translateX(calc(-1 * var(--slide-distance))) rotate(calc(-1 * var(--slide-tilt))) scale(0.92);
     }
   }
 
   @keyframes slide-in-right {
     from {
       opacity: 0;
-      transform: translateX(60px) rotate(8deg) scale(0.9);
+      transform: translateX(var(--slide-distance)) rotate(var(--slide-tilt)) scale(0.92);
     }
   }
 
