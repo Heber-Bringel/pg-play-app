@@ -162,6 +162,14 @@ function generatePinCode(): string {
   return code;
 }
 
+type DesenhoCanvasDeltaPayload = {
+  roomId: string;
+  senderId: string;
+  op: 'append' | 'undo' | 'clear';
+  element?: DrawingElement;
+  version?: number;
+};
+
 export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
   private readonly delegateService?: IMultiplayerRoomService;
   private readonly supabaseUrl: string;
@@ -171,6 +179,7 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
   private cachedUserId: string | null = null;
   private activeChannels: Map<string, ReturnType<SupabaseClient['channel']>> =
     new Map();
+  private desenhoRoomCache: Map<string, DesenhoRoom> = new Map();
 
   constructor(
     config: SupabaseServiceConfig = {
@@ -255,6 +264,7 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
   private wrapError(err: unknown, fallbackMessage: string): never {
     if (
       err instanceof AuthError ||
+      err instanceof ConflictError ||
       err instanceof DataSourceError ||
       err instanceof ValidationError
     ) {
@@ -2391,6 +2401,63 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
     }
   }
 
+  private async broadcastDesenhoCanvasDelta(
+    payload: DesenhoCanvasDeltaPayload
+  ): Promise<void> {
+    const channel = this.activeChannels.get(`desenho-room-${payload.roomId}`);
+    if (!channel) return;
+    try {
+      await channel.send({
+        type: 'broadcast',
+        event: 'canvas_delta',
+        payload,
+      });
+    } catch {
+      // Falha transitória de broadcast não bloqueia a operação persistida.
+    }
+  }
+
+  private mapDesenhoRpcError(message: string, fallbackMessage: string): never {
+    if (message.includes('CONFLICT_PHASE')) {
+      throw new ConflictError(message.replace(/^CONFLICT_PHASE:\s*/, ''));
+    }
+    if (message.includes('VALIDATION_ERROR')) {
+      throw new ValidationError(message.replace(/^VALIDATION_ERROR:\s*/, ''));
+    }
+    throw new DataSourceError(message || fallbackMessage);
+  }
+
+  private applyDesenhoCanvasDelta(
+    snapshot: DesenhoRoom,
+    delta: DesenhoCanvasDeltaPayload
+  ): DesenhoRoom {
+    let nextElements = snapshot.elements;
+    if (delta.op === 'append' && delta.element) {
+      const incoming = delta.element;
+      nextElements = snapshot.elements.some((el) => el.id === incoming.id)
+        ? snapshot.elements
+        : [...snapshot.elements, incoming];
+    } else if (delta.op === 'undo') {
+      nextElements =
+        snapshot.elements.length > 0
+          ? snapshot.elements.slice(0, -1)
+          : snapshot.elements;
+    } else if (delta.op === 'clear') {
+      nextElements = [];
+    }
+
+    const nextVersion =
+      typeof delta.version === 'number'
+        ? Math.max(snapshot.version, delta.version)
+        : snapshot.version + 1;
+
+    return {
+      ...snapshot,
+      version: nextVersion,
+      elements: nextElements,
+    };
+  }
+
   private async loadDesenhoSnapshot(
     roomId: string,
     viewerPlayerId?: string
@@ -2398,23 +2465,39 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
     const client = this.getClient();
     const uid = viewerPlayerId ?? (await this.ensureAuthenticatedUserId());
 
-    const { data: roomRow, error: roomError } = await client
-      .from('rooms')
-      .select('*')
-      .eq('id', roomId)
-      .eq('game_type', 'desenho')
-      .single();
+    const [
+      { data: roomRow, error: roomError },
+      { data: playerRows, error: playersError },
+      { data: allGuessRows },
+      { data: secretRow },
+    ] = await Promise.all([
+      client
+        .from('rooms')
+        .select('*')
+        .eq('id', roomId)
+        .eq('game_type', 'desenho')
+        .single(),
+      client
+        .from('room_players')
+        .select('id, room_id, user_id, nickname, is_host, score')
+        .eq('room_id', roomId)
+        .order('is_host', { ascending: false })
+        .order('id', { ascending: true }),
+      client
+        .from('desenho_guesses')
+        .select('*')
+        .eq('room_id', roomId)
+        .order('created_at', { ascending: true }),
+      client
+        .from('desenho_secrets')
+        .select('secret_word, category, drawer_id')
+        .eq('room_id', roomId)
+        .maybeSingle(),
+    ]);
 
     if (roomError || !roomRow) {
       throw new DataSourceError('Sala de Desenho Relâmpago não encontrada.');
     }
-
-    const { data: playerRows, error: playersError } = await client
-      .from('room_players')
-      .select('id, room_id, user_id, nickname, is_host, score')
-      .eq('room_id', roomId)
-      .order('is_host', { ascending: false })
-      .order('id', { ascending: true });
 
     if (playersError) {
       throw new DataSourceError(
@@ -2469,19 +2552,24 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
         ? rawConfig.totalRounds
         : 2;
 
-    const { data: guessRows } = await client
-      .from('desenho_guesses')
-      .select('*')
-      .eq('room_id', roomId)
-      .eq('round_number', roomRow.current_round ?? 1)
-      .eq('drawer_index', currentDrawerIndex)
-      .order('created_at', { ascending: true });
-
-    const { data: secretRow } = await client
-      .from('desenho_secrets')
-      .select('secret_word, category, drawer_id')
-      .eq('room_id', roomId)
-      .maybeSingle();
+    const currentRound = (roomRow.current_round as number | undefined) ?? 1;
+    const guessRows = (
+      (allGuessRows ?? []) as Array<{
+        id: string;
+        user_id: string;
+        player_nickname: string;
+        guess_text: string;
+        is_correct: boolean;
+        points_awarded: number;
+        created_at: string;
+        round_number?: number;
+        drawer_index?: number;
+      }>
+    ).filter(
+      (g) =>
+        (g.round_number === undefined || g.round_number === currentRound) &&
+        (g.drawer_index === undefined || g.drawer_index === currentDrawerIndex)
+    );
 
     const phase = (roomRow.phase || 'lobby') as DesenhoPhase;
     const canSeeSecret =
@@ -2501,17 +2589,7 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
       })
     );
 
-    const guesses: DesenhoGuess[] = (
-      (guessRows ?? []) as Array<{
-        id: string;
-        user_id: string;
-        player_nickname: string;
-        guess_text: string;
-        is_correct: boolean;
-        points_awarded: number;
-        created_at: string;
-      }>
-    ).map((g) => ({
+    const guesses: DesenhoGuess[] = guessRows.map((g) => ({
       id: g.id,
       playerId: g.user_id,
       playerNickname: g.player_nickname,
@@ -2521,7 +2599,7 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
       createdAt: g.created_at,
     }));
 
-    return {
+    const snapshot: DesenhoRoom = {
       id: roomRow.id as string,
       code: roomRow.code as string,
       gameType: 'desenho',
@@ -2534,7 +2612,7 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
         totalRounds,
         categories,
       },
-      currentRound: (roomRow.current_round as number | undefined) ?? 1,
+      currentRound,
       drawerOrder,
       currentDrawerIndex,
       currentDrawerId,
@@ -2550,6 +2628,9 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
       guesses,
       players,
     };
+
+    this.desenhoRoomCache.set(roomId, snapshot);
+    return snapshot;
   }
 
   async getDesenhoRoom(
@@ -2803,45 +2884,6 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
     }
   }
 
-  private async updateDesenhoElements(
-    roomId: string,
-    drawerId: string,
-    updater: (current: DrawingElement[]) => DrawingElement[]
-  ): Promise<DesenhoRoom> {
-    const client = this.getClient();
-    const { data: roomRow, error: readError } = await client
-      .from('rooms')
-      .select('phase, config')
-      .eq('id', roomId)
-      .single();
-    if (readError || !roomRow) {
-      throw new DataSourceError('Sala de Desenho Relâmpago não encontrada.');
-    }
-    const rawConfig = (roomRow.config ?? {}) as Record<string, unknown>;
-    if (roomRow.phase !== 'drawing') {
-      throw new ConflictError('Não é possível editar fora da fase ativa.');
-    }
-    if (rawConfig.currentDrawerId !== drawerId) {
-      throw new ValidationError('Apenas o desenhista da vez pode desenhar.');
-    }
-    const currentElements = Array.isArray(rawConfig.elements)
-      ? (rawConfig.elements as DrawingElement[])
-      : [];
-    const nextConfig = {
-      ...rawConfig,
-      elements: updater(currentElements),
-    };
-    const { error: updateError } = await client
-      .from('rooms')
-      .update({ config: nextConfig })
-      .eq('id', roomId);
-    if (updateError) {
-      throw new DataSourceError('Não foi possível sincronizar o desenho.');
-    }
-    await this.broadcastDesenhoUpdate(roomId);
-    return await this.loadDesenhoSnapshot(roomId, drawerId);
-  }
-
   async addDesenhoElement(
     roomId: string,
     drawerId: string,
@@ -2852,10 +2894,35 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
       return this.delegateService.addDesenhoElement(roomId, drawerId, element);
     }
     try {
-      return await this.updateDesenhoElements(roomId, drawerId, (curr) => [
-        ...curr,
+      const client = this.getClient();
+      const { data, error } = await client.rpc('desenho_append_element', {
+        p_room_id: roomId,
+        p_element: element,
+      });
+      if (error) {
+        this.mapDesenhoRpcError(
+          error.message,
+          'Não foi possível enviar o elemento desenhado.'
+        );
+      }
+
+      const rpcPayload = (data ?? {}) as { version?: number };
+      const delta: DesenhoCanvasDeltaPayload = {
+        roomId,
+        senderId: drawerId,
+        op: 'append',
         element,
-      ]);
+        version: rpcPayload.version,
+      };
+      void this.broadcastDesenhoCanvasDelta(delta);
+
+      const cached = this.desenhoRoomCache.get(roomId);
+      if (cached) {
+        const updated = this.applyDesenhoCanvasDelta(cached, delta);
+        this.desenhoRoomCache.set(roomId, updated);
+        return updated;
+      }
+      return await this.loadDesenhoSnapshot(roomId, drawerId);
     } catch (err: unknown) {
       this.wrapError(err, 'Não foi possível enviar o elemento desenhado.');
     }
@@ -2870,9 +2937,33 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
       return this.delegateService.undoDesenhoElement(roomId, drawerId);
     }
     try {
-      return await this.updateDesenhoElements(roomId, drawerId, (curr) =>
-        curr.length > 0 ? curr.slice(0, -1) : curr
-      );
+      const client = this.getClient();
+      const { data, error } = await client.rpc('desenho_undo_element', {
+        p_room_id: roomId,
+      });
+      if (error) {
+        this.mapDesenhoRpcError(
+          error.message,
+          'Não foi possível desfazer o último traço.'
+        );
+      }
+
+      const rpcPayload = (data ?? {}) as { version?: number };
+      const delta: DesenhoCanvasDeltaPayload = {
+        roomId,
+        senderId: drawerId,
+        op: 'undo',
+        version: rpcPayload.version,
+      };
+      void this.broadcastDesenhoCanvasDelta(delta);
+
+      const cached = this.desenhoRoomCache.get(roomId);
+      if (cached) {
+        const updated = this.applyDesenhoCanvasDelta(cached, delta);
+        this.desenhoRoomCache.set(roomId, updated);
+        return updated;
+      }
+      return await this.loadDesenhoSnapshot(roomId, drawerId);
     } catch (err: unknown) {
       this.wrapError(err, 'Não foi possível desfazer o último traço.');
     }
@@ -2887,7 +2978,33 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
       return this.delegateService.clearDesenhoCanvas(roomId, drawerId);
     }
     try {
-      return await this.updateDesenhoElements(roomId, drawerId, () => []);
+      const client = this.getClient();
+      const { data, error } = await client.rpc('desenho_clear_canvas', {
+        p_room_id: roomId,
+      });
+      if (error) {
+        this.mapDesenhoRpcError(
+          error.message,
+          'Não foi possível limpar a folha de desenho.'
+        );
+      }
+
+      const rpcPayload = (data ?? {}) as { version?: number };
+      const delta: DesenhoCanvasDeltaPayload = {
+        roomId,
+        senderId: drawerId,
+        op: 'clear',
+        version: rpcPayload.version,
+      };
+      void this.broadcastDesenhoCanvasDelta(delta);
+
+      const cached = this.desenhoRoomCache.get(roomId);
+      if (cached) {
+        const updated = this.applyDesenhoCanvasDelta(cached, delta);
+        this.desenhoRoomCache.set(roomId, updated);
+        return updated;
+      }
+      return await this.loadDesenhoSnapshot(roomId, drawerId);
     } catch (err: unknown) {
       this.wrapError(err, 'Não foi possível limpar a folha de desenho.');
     }
@@ -3049,6 +3166,42 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
         });
     };
 
+    const handleRoomChange = (payload: { new?: Record<string, unknown> }) => {
+      const cached = this.desenhoRoomCache.get(roomId);
+      const nextRow = payload?.new;
+      const incomingVersion =
+        typeof nextRow?.version === 'number' ? nextRow.version : undefined;
+      const incomingPhase =
+        typeof nextRow?.phase === 'string' ? nextRow.phase : undefined;
+      if (
+        cached &&
+        typeof incomingVersion === 'number' &&
+        incomingVersion <= cached.version &&
+        (!incomingPhase || incomingPhase === cached.phase)
+      ) {
+        return;
+      }
+      refresh();
+    };
+
+    const handleCanvasDelta = (message: { payload?: unknown }) => {
+      const delta = message?.payload as DesenhoCanvasDeltaPayload | undefined;
+      if (!delta || delta.roomId !== roomId) {
+        return;
+      }
+      if (this.cachedUserId && delta.senderId === this.cachedUserId) {
+        return;
+      }
+      const cached = this.desenhoRoomCache.get(roomId);
+      if (cached && cached.phase === 'drawing') {
+        const updated = this.applyDesenhoCanvasDelta(cached, delta);
+        this.desenhoRoomCache.set(roomId, updated);
+        onRoomUpdated(updated);
+        return;
+      }
+      refresh();
+    };
+
     const channel = client
       .channel(channelName)
       .on(
@@ -3059,7 +3212,7 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
           table: 'rooms',
           filter: `id=eq.${roomId}`,
         },
-        refresh
+        handleRoomChange
       )
       .on(
         'postgres_changes',
@@ -3081,6 +3234,7 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
         },
         refresh
       )
+      .on('broadcast', { event: 'canvas_delta' }, handleCanvasDelta)
       .on('broadcast', { event: 'room_updated' }, refresh)
       .subscribe((status?: string) => {
         if (status === 'SUBSCRIBED') {
