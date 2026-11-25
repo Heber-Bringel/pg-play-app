@@ -12,6 +12,7 @@ import { PgPlayUseCases } from '@/usecase/pgPlayUseCases';
 import { QuemSouEuUseCases } from '@/usecase/quemSouEuUseCases';
 import { GameFeedbackUseCases } from '@/usecase/gameFeedbackUseCases';
 import { VersiculoUseCases } from '@/usecase/versiculoUseCases';
+import { useDesenhoViewModel } from '@/viewmodel/useDesenhoViewModel';
 import { useForcaViewModel } from '@/viewmodel/useForcaViewModel';
 import { useMimicaViewModel } from '@/viewmodel/useMimicaViewModel';
 import { useQuemSouEuViewModel } from '@/viewmodel/useQuemSouEuViewModel';
@@ -200,6 +201,24 @@ describe('Feedback tátil do cronômetro nas ViewModels (#77)', () => {
     advanceSeconds(30);
 
     expect(hook.state.secondsRemaining).toBe(0);
+    expect(haptic.getFeedbackCounts()).toMatchObject({ pulses: 10, expired: 1 });
+    hook.unmount();
+  });
+
+  it('Desenho Relâmpago: 10 pulsos nos segundos finais e 1 vibração forte ao zerar', async () => {
+    const { haptic, feedback } = buildFeedback();
+    const useCases = buildPgPlay();
+    const hook = renderHook(() => useDesenhoViewModel(useCases, feedback));
+    await hook.mount();
+
+    act(() => {
+      hook.actions.handleStartTurn();
+    });
+    const duration = hook.state.secondsRemaining;
+    advanceSeconds(duration);
+
+    expect(hook.state.secondsRemaining).toBe(0);
+    expect(hook.state.phase).toBe('turn-summary');
     expect(haptic.getFeedbackCounts()).toMatchObject({ pulses: 10, expired: 1 });
     hook.unmount();
   });

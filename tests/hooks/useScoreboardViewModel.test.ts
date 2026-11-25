@@ -117,6 +117,9 @@ describe('useScoreboardViewModel — Hook do Placar e Ranking Geral do PG (UC06)
       scoreForcaWord: async () => [],
       listQuizQuestions: async () => [],
       scoreQuizAnswer: async () => [],
+      listDesenhoCards: async () => [],
+      scoreDesenhoHit: async () => [],
+      scoreDesenhoSkip: async () => [],
       getScoreboard: async () => {
         throw new ValidationError('Falha ao consultar o placar.');
       },
@@ -127,6 +130,7 @@ describe('useScoreboardViewModel — Hook do Placar e Ranking Geral do PG (UC06)
         mimica: { durationSeconds: 60, totalRounds: 3 },
         quiz: { durationSeconds: 20, questionCount: 5 },
         forca: { maxAttempts: 5, totalRounds: 3 },
+        desenho: { durationSeconds: 90, totalRounds: 3 },
       }),
       updateMimicaSettings: async () => {
         throw new ValidationError('Falha ao salvar parâmetros.');
@@ -135,6 +139,9 @@ describe('useScoreboardViewModel — Hook do Placar e Ranking Geral do PG (UC06)
         throw new ValidationError('Falha ao salvar parâmetros.');
       },
       updateForcaSettings: async () => {
+        throw new ValidationError('Falha ao salvar parâmetros.');
+      },
+      updateDesenhoSettings: async () => {
         throw new ValidationError('Falha ao salvar parâmetros.');
       },
       planQuizMatch: () => ({ totalQuestions: 0, questionsPerTeam: 0, limitedByBank: false }),
