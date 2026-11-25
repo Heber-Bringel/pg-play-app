@@ -2,6 +2,7 @@ export type MimicaDurationOption = 45 | 60 | 90;
 export type QuizDurationOption = 15 | 20 | 30;
 export type QuizQuestionCountOption = 5 | 10 | 15;
 export type ForcaAttemptsOption = 5 | 6 | 8;
+export type DesenhoDurationOption = 60 | 90 | 120;
 
 export const QUIZ_QUESTION_COUNT_OPTIONS: readonly QuizQuestionCountOption[] = [5, 10, 15];
 
@@ -20,10 +21,16 @@ export type ForcaSettings = {
   totalRounds: number;
 };
 
+export type DesenhoSettings = {
+  durationSeconds: DesenhoDurationOption;
+  totalRounds: number;
+};
+
 export type MatchSettings = {
   mimica: MimicaSettings;
   quiz: QuizSettings;
   forca: ForcaSettings;
+  desenho: DesenhoSettings;
 };
 
 export const DEFAULT_MATCH_SETTINGS: MatchSettings = {
@@ -37,6 +44,10 @@ export const DEFAULT_MATCH_SETTINGS: MatchSettings = {
   },
   forca: {
     maxAttempts: 6,
+    totalRounds: 3,
+  },
+  desenho: {
+    durationSeconds: 90,
     totalRounds: 3,
   },
 };
