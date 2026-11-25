@@ -240,6 +240,11 @@ export function useQuemSouEuViewModel(
 
       const result = useCase.recordCardOutcome(card, outcome);
       setTurnResults((prev) => [...prev, result]);
+      if (outcome === 'hit') {
+        void gameFeedback.notifyAnswer('correct');
+      } else {
+        void gameFeedback.notifyPass();
+      }
 
       feedbackSeqRef.current += 1;
       setLastFeedback({ outcome, seq: feedbackSeqRef.current });
@@ -258,7 +263,7 @@ export function useQuemSouEuViewModel(
         }
       }, FEEDBACK_DISPLAY_MS);
     },
-    [cards, exitConfirmVisible, phase, updateCardIndex, useCase]
+    [cards, exitConfirmVisible, gameFeedback, phase, updateCardIndex, useCase]
   );
 
   // Mantém sempre a versão mais recente de registerOutcome acessível ao

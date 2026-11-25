@@ -51,6 +51,29 @@ export const ThemeModeToggleButton = ({
   );
 };
 
+export type SoundToggleButtonProps = {
+  soundEnabled: boolean;
+  onPress: () => void;
+};
+
+export const SoundToggleButton = ({
+  soundEnabled,
+  onPress,
+}: SoundToggleButtonProps) => {
+  return (
+    <ExpressiveButton
+      variant="icon"
+      icon={soundEnabled ? 'volume-high' : 'volume-off'}
+      accessibilityLabel={
+        soundEnabled
+          ? 'Som do jogo: Ligado. Toque para desligar o som'
+          : 'Som do jogo: Desligado. Toque para ligar o som'
+      }
+      onPress={onPress}
+    />
+  );
+};
+
 export type ThemeModePanelProps = {
   preference: ThemePreference;
   onSelectPreference: (preference: ThemePreference) => void;
