@@ -64,6 +64,7 @@ export type MimicaActions = {
   handleRequestExit: () => void;
   handleCancelExit: () => void;
   handleConfirmExit: () => void;
+  handleGoToTeams: () => void;
   handleGoToScoreboard: () => void;
   handleRetry: () => Promise<void>;
 };
@@ -389,6 +390,10 @@ export function useMimicaViewModel(
     router.replace('/');
   }, [router]);
 
+  const handleGoToTeams = useCallback(() => {
+    router.push('/teams');
+  }, [router]);
+
   const handleGoToScoreboard = useCallback(() => {
     router.push('/scoreboard');
   }, [router]);
@@ -435,6 +440,7 @@ export function useMimicaViewModel(
     handleRequestExit,
     handleCancelExit,
     handleConfirmExit,
+    handleGoToTeams,
     handleGoToScoreboard,
     handleRetry,
   };
