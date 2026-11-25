@@ -21,6 +21,7 @@ import {
   timer,
   quiz,
   key,
+  canvas,
 } from '@/view/theme';
 
 function relativeLuminance(hex: string): number {
@@ -143,6 +144,19 @@ describe('Sistema de Design PG Play Expressive v1.1.0 - Tokens (02-tokens.md)', 
     expect(quiz.option.bg).toBe('#FFFFFF');
     expect(key.size).toBe(48);
     expect(key.hit.bg).toBe('#15803D');
+    expect(canvas.paperBg).toBe('#FDF8FF');
+    expect(canvas.minHeight).toBe(256);
+    expect(canvas.radius).toBe(20);
+    expect(canvas.pen.ink).toBe('#1D1B20');
+    expect(canvas.pen.purple).toBe('#5B21B6');
+    expect(canvas.pen.coral).toBe('#C2410C');
+    expect(canvas.pen.green).toBe('#15803D');
+    expect(canvas.pen.onPen).toBe('#FDF8FF');
+    expect(canvas.stroke.thin).toBe(4);
+    expect(canvas.stroke.thick).toBe(8);
+    expect(canvas.tool.size).toBe(48);
+    expect(canvas.tool.radius).toBe(9999);
+    expect(canvas.tool.radiusSelected).toBe(16);
   });
 
   it('deve cumprir WCAG 1.4.11 (>= 3:1) em contornos/componentes e >= 4,5:1 em textos nos modos claro e escuro', () => {
@@ -173,6 +187,19 @@ describe('Sistema de Design PG Play Expressive v1.1.0 - Tokens (02-tokens.md)', 
         expect(
           contrastRatio(tagPalette.border, c.surfaceContainer)
         ).toBeGreaterThanOrEqual(3);
+      }
+
+      const canvasPalette = theme.component.canvas;
+      expect(canvasPalette.paperBg).toBe('#FDF8FF');
+      expect(contrastRatio(canvasPalette.border, canvasPalette.paperBg)).toBeGreaterThanOrEqual(3);
+      for (const penColor of [
+        canvasPalette.pen.ink,
+        canvasPalette.pen.purple,
+        canvasPalette.pen.coral,
+        canvasPalette.pen.green,
+      ]) {
+        expect(contrastRatio(penColor, canvasPalette.paperBg)).toBeGreaterThanOrEqual(4.5);
+        expect(contrastRatio(canvasPalette.pen.onPen, penColor)).toBeGreaterThanOrEqual(4.5);
       }
     }
   });
