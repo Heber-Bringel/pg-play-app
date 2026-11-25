@@ -494,6 +494,12 @@ type ThemePreferenceContextValue = {
   setPreference: (preference: ThemePreference) => void;
 };
 
+type SoundPreferenceContextValue = {
+  soundEnabled: boolean;
+  setSoundEnabled: (enabled: boolean) => void;
+  toggleSoundEnabled: () => void;
+};
+
 const ThemeModeContext = createContext<ThemeMode | null>(null);
 const ThemeOverrideSetterContext = createContext<ThemeOverrideSetter | null>(
   null
@@ -501,11 +507,16 @@ const ThemeOverrideSetterContext = createContext<ThemeOverrideSetter | null>(
 const ThemePreferenceContext = createContext<ThemePreferenceContextValue | null>(
   null
 );
+const SoundPreferenceContext = createContext<SoundPreferenceContextValue | null>(
+  null
+);
 
 export type ThemeProviderProps = {
   mode?: ThemeMode;
   preference?: ThemePreference;
   onChangePreference?: (preference: ThemePreference) => void;
+  soundEnabled?: boolean;
+  onChangeSoundEnabled?: (enabled: boolean) => void;
   children: React.ReactNode;
 };
 
@@ -513,6 +524,8 @@ export const ThemeProvider = ({
   mode,
   preference,
   onChangePreference,
+  soundEnabled,
+  onChangeSoundEnabled,
   children,
 }: ThemeProviderProps) => {
   const systemScheme = useColorScheme();
@@ -521,8 +534,12 @@ export const ThemeProvider = ({
   const [overrideMode, setOverrideMode] = useState<ThemeMode | null>(null);
   const [internalPreference, setInternalPreference] =
     useState<ThemePreference>(preference ?? 'auto');
+  const [internalSoundEnabled, setInternalSoundEnabled] = useState<boolean>(
+    soundEnabled ?? true
+  );
 
   const activePreference: ThemePreference = preference ?? internalPreference;
+  const activeSoundEnabled: boolean = soundEnabled ?? internalSoundEnabled;
 
   const handleSetPreference = useCallback(
     (next: ThemePreference) => {
@@ -532,12 +549,33 @@ export const ThemeProvider = ({
     [onChangePreference]
   );
 
+  const handleSetSoundEnabled = useCallback(
+    (next: boolean) => {
+      setInternalSoundEnabled(next);
+      onChangeSoundEnabled?.(next);
+    },
+    [onChangeSoundEnabled]
+  );
+
+  const handleToggleSoundEnabled = useCallback(() => {
+    handleSetSoundEnabled(!activeSoundEnabled);
+  }, [activeSoundEnabled, handleSetSoundEnabled]);
+
   const preferenceContextValue = useMemo<ThemePreferenceContextValue>(
     () => ({
       preference: activePreference,
       setPreference: handleSetPreference,
     }),
     [activePreference, handleSetPreference]
+  );
+
+  const soundContextValue = useMemo<SoundPreferenceContextValue>(
+    () => ({
+      soundEnabled: activeSoundEnabled,
+      setSoundEnabled: handleSetSoundEnabled,
+      toggleSoundEnabled: handleToggleSoundEnabled,
+    }),
+    [activeSoundEnabled, handleSetSoundEnabled, handleToggleSoundEnabled]
   );
 
   const isRootAutoProvider = parentMode === null && mode === undefined;
@@ -564,9 +602,13 @@ export const ThemeProvider = ({
       ThemePreferenceContext.Provider,
       { value: preferenceContextValue },
       React.createElement(
-        ThemeOverrideSetterContext.Provider,
-        { value: setOverrideMode },
-        modeElement
+        SoundPreferenceContext.Provider,
+        { value: soundContextValue },
+        React.createElement(
+          ThemeOverrideSetterContext.Provider,
+          { value: setOverrideMode },
+          modeElement
+        )
       )
     );
   }
@@ -593,6 +635,19 @@ export function useThemePreference(): ThemePreferenceContextValue {
       context ?? {
         preference: 'auto',
         setPreference: () => {},
+      },
+    [context]
+  );
+}
+
+export function useSoundPreference(): SoundPreferenceContextValue {
+  const context = useContext(SoundPreferenceContext);
+  return useMemo(
+    () =>
+      context ?? {
+        soundEnabled: true,
+        setSoundEnabled: () => {},
+        toggleSoundEnabled: () => {},
       },
     [context]
   );

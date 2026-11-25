@@ -233,4 +233,44 @@ describe('HubScreen — Testes de Tela com Mocks de ViewModel (UC01)', () => {
         .backgroundColor
     ).toBe(tokens.semantic.color.surface);
   });
+
+  it('exibe botão de som ligado por padrão no cabeçalho e permite alternar entre ligado e desligado (#84)', () => {
+    const actions = createMockActions();
+    jest
+      .spyOn(hubVmModule, 'useHubViewModel')
+      .mockReturnValue([baseState, actions]);
+
+    let tree!: renderer.ReactTestRenderer;
+    act(() => {
+      tree = renderer.create(
+        <ThemeProvider>
+          <HubScreen />
+        </ThemeProvider>
+      );
+    });
+
+    const soundOnBtn = tree.root.findByProps({
+      accessibilityLabel: 'Som do jogo: Ligado. Toque para desligar o som',
+    });
+    expect(soundOnBtn).toBeTruthy();
+
+    act(() => {
+      soundOnBtn.props.onPress();
+    });
+
+    const soundOffBtn = tree.root.findByProps({
+      accessibilityLabel: 'Som do jogo: Desligado. Toque para ligar o som',
+    });
+    expect(soundOffBtn).toBeTruthy();
+
+    act(() => {
+      soundOffBtn.props.onPress();
+    });
+
+    expect(
+      tree.root.findByProps({
+        accessibilityLabel: 'Som do jogo: Ligado. Toque para desligar o som',
+      })
+    ).toBeTruthy();
+  });
 });
