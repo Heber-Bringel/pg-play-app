@@ -7,7 +7,9 @@ import type {
   QuizQuestion,
 } from '@/model/entities/arenaChallenge';
 import type { ContentPack, ContentPackGameId } from '@/model/entities/contentPack';
+import type { DesenhoCard, DesenhoCategory } from '@/model/entities/drawingChallenge';
 import type {
+  DesenhoSettings,
   ForcaSettings,
   MatchSettings,
   MimicaSettings,
@@ -31,12 +33,16 @@ export interface IPgPlayUseCases {
   scoreForcaWord(teamId: string, remainingAttempts?: number): Promise<Team[]>;
   listQuizQuestions(categories?: QuizCategory[]): Promise<QuizQuestion[]>;
   scoreQuizAnswer(teamId: string, isCorrect: boolean, points?: number): Promise<Team[]>;
+  listDesenhoCards(categories?: DesenhoCategory[]): Promise<DesenhoCard[]>;
+  scoreDesenhoHit(teamId: string, points?: number): Promise<Team[]>;
+  scoreDesenhoSkip(teamId: string, penalty?: number): Promise<Team[]>;
   getScoreboard(): Promise<Team[]>;
   resetScoreboard(): Promise<Team[]>;
   getMatchSettings(): Promise<MatchSettings>;
   updateMimicaSettings(changes: Partial<MimicaSettings>): Promise<MatchSettings>;
   updateQuizSettings(changes: Partial<QuizSettings>): Promise<MatchSettings>;
   updateForcaSettings(changes: Partial<ForcaSettings>): Promise<MatchSettings>;
+  updateDesenhoSettings(changes: Partial<DesenhoSettings>): Promise<MatchSettings>;
   planQuizMatch(
     configuredCount: number,
     availableQuestions: number,

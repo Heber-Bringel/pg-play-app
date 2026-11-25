@@ -10,9 +10,12 @@ import type {
   QuizQuestion,
 } from '@/model/entities/arenaChallenge';
 import type { ContentPack, ContentPackGameId } from '@/model/entities/contentPack';
+import type { DesenhoCard, DesenhoCategory } from '@/model/entities/drawingChallenge';
 import {
   DEFAULT_MATCH_SETTINGS,
   QUIZ_QUESTION_COUNT_OPTIONS,
+  type DesenhoDurationOption,
+  type DesenhoSettings,
   type ForcaAttemptsOption,
   type ForcaSettings,
   type MatchSettings,
@@ -38,6 +41,7 @@ const VALID_CONTENT_PACK_GAMES: ReadonlySet<ContentPackGameId> = new Set([
   'mimica',
   'quiz',
   'forca',
+  'desenho',
 ]);
 
 function normalizeSearchText(value: string): string {
@@ -50,6 +54,8 @@ function normalizeSearchText(value: string): string {
 
 export const DEFAULT_MIMICA_HIT_POINTS = 20;
 export const DEFAULT_MIMICA_SKIP_PENALTY = 5;
+export const DEFAULT_DESENHO_HIT_POINTS = 20;
+export const DEFAULT_DESENHO_SKIP_PENALTY = 5;
 export const DEFAULT_FORCA_WIN_POINTS = 30;
 export const DEFAULT_FORCA_ATTEMPT_BONUS = 2;
 export const DEFAULT_QUIZ_CORRECT_POINTS = 10;
@@ -60,6 +66,7 @@ const VALID_QUIZ_QUESTION_COUNTS: ReadonlySet<number> = new Set<QuizQuestionCoun
   QUIZ_QUESTION_COUNT_OPTIONS
 );
 const VALID_FORCA_ATTEMPTS: ReadonlySet<number> = new Set<ForcaAttemptsOption>([5, 6, 8]);
+const VALID_DESENHO_DURATIONS: ReadonlySet<number> = new Set<DesenhoDurationOption>([60, 90, 120]);
 const MIN_ROUNDS = 1;
 const MAX_ROUNDS = 5;
 
@@ -71,6 +78,8 @@ const isQuizQuestionCount = (value: unknown): value is QuizQuestionCountOption =
   typeof value === 'number' && VALID_QUIZ_QUESTION_COUNTS.has(value);
 const isForcaAttempts = (value: unknown): value is ForcaAttemptsOption =>
   typeof value === 'number' && VALID_FORCA_ATTEMPTS.has(value);
+const isDesenhoDuration = (value: unknown): value is DesenhoDurationOption =>
+  typeof value === 'number' && VALID_DESENHO_DURATIONS.has(value);
 const isValidRounds = (value: unknown): value is number =>
   typeof value === 'number' &&
   Number.isInteger(value) &&
@@ -104,6 +113,14 @@ function sanitizeMatchSettings(raw: MatchSettings): MatchSettings {
       totalRounds: isValidRounds(raw.forca?.totalRounds)
         ? raw.forca.totalRounds
         : defaults.forca.totalRounds,
+    },
+    desenho: {
+      durationSeconds: isDesenhoDuration(raw.desenho?.durationSeconds)
+        ? raw.desenho.durationSeconds
+        : defaults.desenho.durationSeconds,
+      totalRounds: isValidRounds(raw.desenho?.totalRounds)
+        ? raw.desenho.totalRounds
+        : defaults.desenho.totalRounds,
     },
   };
 }
@@ -320,6 +337,62 @@ export class PgPlayUseCases implements IPgPlayUseCases {
     return this.teamDataSource.listTeams();
   }
 
+  async listDesenhoCards(categories?: DesenhoCategory[]): Promise<DesenhoCard[]> {
+    if (categories !== undefined && categories.length === 0) {
+      throw new ValidationError(
+        'Selecione pelo menos um pacote de categoria para o Desenho Relâmpago.'
+      );
+    }
+    return this.gameCatalogDataSource.listDesenhoCards(categories);
+  }
+
+  async scoreDesenhoHit(
+    teamId: string,
+    points: number = DEFAULT_DESENHO_HIT_POINTS
+  ): Promise<Team[]> {
+    const cleanTeamId = teamId.trim();
+    if (!cleanTeamId) {
+      throw new ValidationError('Identificador da equipe é obrigatório para pontuar.');
+    }
+    if (points <= 0) {
+      throw new ValidationError('A pontuação por acerto deve ser maior que zero.');
+    }
+
+    const teams = await this.teamDataSource.listTeams();
+    const target = teams.find((team) => team.id === cleanTeamId);
+    if (!target) {
+      throw new ValidationError('Equipe não encontrada na sessão atual.');
+    }
+
+    await this.teamDataSource.addScore(cleanTeamId, points);
+    return this.teamDataSource.listTeams();
+  }
+
+  async scoreDesenhoSkip(
+    teamId: string,
+    penalty: number = DEFAULT_DESENHO_SKIP_PENALTY
+  ): Promise<Team[]> {
+    const cleanTeamId = teamId.trim();
+    if (!cleanTeamId) {
+      throw new ValidationError('Identificador da equipe é obrigatório para registrar o pulo.');
+    }
+    if (penalty < 0) {
+      throw new ValidationError('A penalidade por pulo não pode ser negativa.');
+    }
+
+    const teams = await this.teamDataSource.listTeams();
+    const target = teams.find((team) => team.id === cleanTeamId);
+    if (!target) {
+      throw new ValidationError('Equipe não encontrada na sessão atual.');
+    }
+
+    const deduction = -Math.min(target.score, penalty);
+    if (deduction !== 0) {
+      await this.teamDataSource.addScore(cleanTeamId, deduction);
+    }
+    return this.teamDataSource.listTeams();
+  }
+
   async getScoreboard(): Promise<Team[]> {
     const teams = await this.teamDataSource.listTeams();
     return [...teams].sort((a, b) => b.score - a.score);
@@ -371,6 +444,21 @@ export class PgPlayUseCases implements IPgPlayUseCases {
         throw new ValidationError('A quantidade de palavras da Forca deve estar entre 1 e 5.');
       }
       return { ...current, forca };
+    });
+  }
+
+  updateDesenhoSettings(changes: Partial<DesenhoSettings>): Promise<MatchSettings> {
+    return this.saveSettingsSection((current) => {
+      const desenho: DesenhoSettings = { ...current.desenho, ...changes };
+      if (!isDesenhoDuration(desenho.durationSeconds)) {
+        throw new ValidationError('Duração do Desenho Relâmpago deve ser 60s, 90s ou 120s.');
+      }
+      if (!isValidRounds(desenho.totalRounds)) {
+        throw new ValidationError(
+          'A quantidade de rodadas do Desenho Relâmpago deve estar entre 1 e 5.'
+        );
+      }
+      return { ...current, desenho };
     });
   }
 
