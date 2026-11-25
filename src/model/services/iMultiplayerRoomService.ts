@@ -1,4 +1,8 @@
 import type {
+  DesenhoCategory,
+  DrawingElement,
+} from '@/model/entities/drawingChallenge';
+import type {
   AdedonhaConfig,
   AdedonhaPhase,
   AdedonhaRoom,
@@ -7,7 +11,27 @@ import type {
   CidadeDormeConfig,
   CidadeDormeRole,
   CidadeDormeRoom,
+  DesenhoConfig,
+  DesenhoRoom,
 } from '@/model/entities/multiplayerSession';
+
+export type StartDesenhoTurnInput = {
+  drawerId: string;
+  drawerOrder: string[];
+  currentDrawerIndex: number;
+  currentRound: number;
+  cardId: string;
+  secretWord: string;
+  category: DesenhoCategory;
+  usedCardIds: string[];
+  phaseEndsAt: string;
+};
+
+export type SubmitDesenhoGuessResult = {
+  room: DesenhoRoom;
+  isCorrect: boolean;
+  pointsAwarded: number;
+};
 
 export interface IMultiplayerRoomService {
   getLocalPlayerId(roomId?: string): Promise<string | null>;
@@ -108,5 +132,45 @@ export interface IMultiplayerRoomService {
   subscribeToCidadeDormeRoom(
     roomId: string,
     onRoomUpdated: (room: CidadeDormeRoom) => void
+  ): () => void;
+  getDesenhoRoom(
+    roomId?: string,
+    viewerPlayerId?: string
+  ): Promise<DesenhoRoom>;
+  createDesenhoRoom(
+    hostNickname: string,
+    initialCategories?: DesenhoCategory[]
+  ): Promise<DesenhoRoom>;
+  joinDesenhoRoom(code: string, nickname: string): Promise<DesenhoRoom>;
+  leaveDesenhoRoom(roomId: string, playerId: string): Promise<void>;
+  updateDesenhoConfig(
+    roomId: string,
+    partialConfig: Partial<DesenhoConfig>
+  ): Promise<DesenhoRoom>;
+  startDesenhoTurn(
+    roomId: string,
+    input: StartDesenhoTurnInput
+  ): Promise<DesenhoRoom>;
+  addDesenhoElement(
+    roomId: string,
+    drawerId: string,
+    element: DrawingElement
+  ): Promise<DesenhoRoom>;
+  undoDesenhoElement(roomId: string, drawerId: string): Promise<DesenhoRoom>;
+  clearDesenhoCanvas(roomId: string, drawerId: string): Promise<DesenhoRoom>;
+  submitDesenhoGuess(
+    roomId: string,
+    playerId: string,
+    text: string
+  ): Promise<SubmitDesenhoGuessResult>;
+  finishDesenhoTurn(
+    roomId: string,
+    reason?: 'timeout' | 'all_guessed' | 'drawer_left'
+  ): Promise<DesenhoRoom>;
+  finishDesenhoMatch(roomId: string): Promise<DesenhoRoom>;
+  restartDesenhoLobby(roomId: string): Promise<DesenhoRoom>;
+  subscribeToDesenhoRoom(
+    roomId: string,
+    onRoomUpdated: (room: DesenhoRoom) => void
   ): () => void;
 }
