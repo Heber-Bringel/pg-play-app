@@ -6,8 +6,10 @@ import { MemoryQuemSouEuDataSource } from '@/infra/datasources/memoryQuemSouEuDa
 import { MemoryTeamDataSource } from '@/infra/datasources/memoryTeamDataSource';
 import { MemoryVerseDataSource } from '@/infra/datasources/memoryVerseDataSource';
 import { MemoryHapticService } from '@/infra/services/memoryHapticService';
+import { MemoryMultiplayerRoomService } from '@/infra/services/memoryMultiplayerRoomService';
 import { MemoryScreenOrientationService } from '@/infra/services/memoryScreenOrientationService';
 import { MemoryTiltSensorService } from '@/infra/services/memoryTiltSensorService';
+import { DesenhoUseCases } from '@/usecase/desenhoUseCases';
 import { PgPlayUseCases } from '@/usecase/pgPlayUseCases';
 import { QuemSouEuUseCases } from '@/usecase/quemSouEuUseCases';
 import { GameFeedbackUseCases } from '@/usecase/gameFeedbackUseCases';
@@ -207,18 +209,23 @@ describe('Feedback tátil do cronômetro nas ViewModels (#77)', () => {
 
   it('Desenho Relâmpago: 10 pulsos nos segundos finais e 1 vibração forte ao zerar', async () => {
     const { haptic, feedback } = buildFeedback();
-    const useCases = buildPgPlay();
+    const useCases = new DesenhoUseCases(
+      new MemoryMultiplayerRoomService(),
+      new MemoryGameCatalogDataSource()
+    );
     const hook = renderHook(() => useDesenhoViewModel(useCases, feedback));
     await hook.mount();
 
-    act(() => {
-      hook.actions.handleStartTurn();
+    await act(async () => {
+      await hook.actions.handleJoinDemoRoom();
+    });
+    await act(async () => {
+      await hook.actions.handleStartMatch();
     });
     const duration = hook.state.secondsRemaining;
     advanceSeconds(duration);
 
     expect(hook.state.secondsRemaining).toBe(0);
-    expect(hook.state.phase).toBe('turn-summary');
     expect(haptic.getFeedbackCounts()).toMatchObject({ pulses: 10, expired: 1 });
     hook.unmount();
   });

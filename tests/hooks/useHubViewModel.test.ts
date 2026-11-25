@@ -81,7 +81,7 @@ describe('useHubViewModel — Hook do Hub de Jogos (UC01)', () => {
       await harness.getActions().setSelectedModality('1 Celular');
     });
     expect(harness.getState().selectedModality).toBe('1 Celular');
-    expect(harness.getState().games).toHaveLength(7);
+    expect(harness.getState().games).toHaveLength(6);
 
     await act(async () => {
       await harness.getActions().setSearchQuery('quiz');
