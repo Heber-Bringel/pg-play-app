@@ -12,6 +12,7 @@ export type SoundEffectKey =
   | 'wrong'
   | 'letterWrong'
   | 'pass'
+  | 'timerTick'
   | 'timerCritical'
   | 'timerExpired';
 
@@ -24,6 +25,7 @@ export const DEFAULT_SOUND_SOURCES: SoundSourcesMap = {
   wrong: require('../../../assets/sons/erro.wav') as AudioSource,
   letterWrong: require('../../../assets/sons/letra-errada.wav') as AudioSource,
   pass: require('../../../assets/sons/passe.wav') as AudioSource,
+  timerTick: require('../../../assets/sons/tick-10s.wav') as AudioSource,
   timerCritical: require('../../../assets/sons/alerta-10s.wav') as AudioSource,
   timerExpired: require('../../../assets/sons/tempo-esgotado.wav') as AudioSource,
 };
@@ -34,6 +36,7 @@ const SOUND_KEYS: readonly SoundEffectKey[] = [
   'wrong',
   'letterWrong',
   'pass',
+  'timerTick',
   'timerCritical',
   'timerExpired',
 ];
@@ -132,6 +135,10 @@ export class ExpoAudioSoundService implements ISoundService {
 
   async playPass(): Promise<void> {
     await this.playSound('pass');
+  }
+
+  async playTimerTick(): Promise<void> {
+    await this.playSound('timerTick');
   }
 
   async playTimerCritical(): Promise<void> {

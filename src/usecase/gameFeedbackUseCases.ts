@@ -53,20 +53,26 @@ export class GameFeedbackUseCases implements IGameFeedbackUseCases {
 
     if (currentSeconds === 0) {
       // Aviso único de fim de turno: mantido mesmo com "Reduzir movimento".
-      await this.hapticService.triggerTimerExpired();
-      if (this.soundService && (await this.isSoundEnabled())) {
+      const [, soundEnabled] = await Promise.all([
+        this.hapticService.triggerTimerExpired(),
+        this.isSoundEnabled(),
+      ]);
+      if (this.soundService && soundEnabled) {
         await this.soundService.playTimerExpired();
       }
       return;
     }
 
     if (currentSeconds > 0 && currentSeconds <= TIMER_CRITICAL_SECONDS) {
-      if (!options.reduceMotion) {
-        await this.hapticService.triggerTimerPulse();
-      }
-      // Bipe a cada segundo na contagem regressiva dos 10 segundos finais (10s -> 1s).
-      if (this.soundService && (await this.isSoundEnabled())) {
-        await this.soundService.playTimerCritical();
+      // Dispara pulso tátil e verificação de som em paralelo para zero atraso nos ticks de 1s.
+      const [, soundEnabled] = await Promise.all([
+        !options.reduceMotion
+          ? this.hapticService.triggerTimerPulse()
+          : Promise.resolve(),
+        this.isSoundEnabled(),
+      ]);
+      if (this.soundService && soundEnabled) {
+        await this.soundService.playTimerTick();
       }
     }
   }

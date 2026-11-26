@@ -5,6 +5,7 @@ export type SoundFeedbackCounts = {
   wrong: number;
   letterWrong: number;
   pass: number;
+  timerTick: number;
   timerCritical: number;
   timerExpired: number;
 };
@@ -14,6 +15,7 @@ export class MemorySoundService implements ISoundService {
   private wrong = 0;
   private letterWrong = 0;
   private pass = 0;
+  private timerTick = 0;
   private timerCritical = 0;
   private timerExpired = 0;
 
@@ -33,8 +35,14 @@ export class MemorySoundService implements ISoundService {
     this.pass += 1;
   }
 
+  async playTimerTick(): Promise<void> {
+    this.timerTick += 1;
+    this.timerCritical += 1;
+  }
+
   async playTimerCritical(): Promise<void> {
     this.timerCritical += 1;
+    this.timerTick += 1;
   }
 
   async playTimerExpired(): Promise<void> {
@@ -47,6 +55,7 @@ export class MemorySoundService implements ISoundService {
       wrong: this.wrong,
       letterWrong: this.letterWrong,
       pass: this.pass,
+      timerTick: this.timerTick,
       timerCritical: this.timerCritical,
       timerExpired: this.timerExpired,
     };
