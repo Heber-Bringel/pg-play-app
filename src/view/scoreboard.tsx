@@ -5,6 +5,7 @@ import { ConfirmModal } from '@/view/components/confirmModal';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
 import { ExpressiveTag } from '@/view/components/expressiveTag';
 import { GameCard } from '@/view/components/gameCard';
+import { ShortNavigationBar } from '@/view/components/shortNavigationBar';
 import { useTheme, type AppTokens } from '@/view/theme';
 import { useScoreboardViewModel } from '@/viewmodel/useScoreboardViewModel';
 
@@ -51,33 +52,40 @@ export const ScoreboardScreen = () => {
 
   if (state.teams.length === 0) {
     return (
-      <ScrollView
-        style={styles.screen}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.topBar}>
-          <ExpressiveButton
-            label="Voltar"
-            variant="outlined"
-            icon="arrow-left"
-            onPress={actions.handleBack}
+      <View style={styles.root}>
+        <ScrollView
+          style={styles.screen}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.topBar}>
+            <ExpressiveButton
+              label="Voltar"
+              variant="outlined"
+              icon="arrow-left"
+              onPress={actions.handleBack}
+            />
+            <ExpressiveTag label="0 equipes" tone="neutral" />
+          </View>
+          <GameCard
+            title="Nenhuma Equipe no Placar"
+            description="Cadastre equipes e jogue uma rodada para visualizar o ranking do PG."
+            playersTag="0 equipes"
+            icon="account-group-outline"
           />
-          <ExpressiveTag label="0 equipes" tone="neutral" />
-        </View>
-        <GameCard
-          title="Nenhuma Equipe no Placar"
-          description="Cadastre equipes e jogue uma rodada para visualizar o ranking do PG."
-          playersTag="0 equipes"
-          icon="account-group-outline"
+          <ExpressiveButton
+            label="Escolher Outro Jogo"
+            variant="primaryJumbo"
+            icon="gamepad-variant"
+            onPress={actions.handleChooseAnotherGame}
+          />
+        </ScrollView>
+
+        <ShortNavigationBar
+          activeKey="scoreboard"
+          onSelect={actions.handleSelectNav}
         />
-        <ExpressiveButton
-          label="Escolher Outro Jogo"
-          variant="primaryJumbo"
-          icon="gamepad-variant"
-          onPress={actions.handleChooseAnotherGame}
-        />
-      </ScrollView>
+      </View>
     );
   }
 
@@ -90,105 +98,116 @@ export const ScoreboardScreen = () => {
       : 'Jogue uma dinâmica para começar a pontuar';
 
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={styles.scrollContent}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={styles.topSection}>
-        <View style={styles.topBar}>
-          <ExpressiveButton
-            label="Voltar"
-            variant="outlined"
-            icon="arrow-left"
-            onPress={actions.handleBack}
-          />
-          <ExpressiveTag
-            label={`${teamsCountLabel} · ${state.totalPoints} pts`}
-            tone="neutral"
-          />
-        </View>
-
-        <View style={styles.header}>
-          <View style={styles.trophyBadge}>
-            <MaterialCommunityIcons
-              name="trophy-award"
-              size={activeTokens.semantic.icon.lg}
-              color={activeTokens.semantic.color.onHighlight}
+    <View style={styles.root}>
+      <ScrollView
+        style={styles.screen}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.topSection}>
+          <View style={styles.topBar}>
+            <ExpressiveButton
+              label="Voltar"
+              variant="outlined"
+              icon="arrow-left"
+              onPress={actions.handleBack}
+            />
+            <ExpressiveTag
+              label={`${teamsCountLabel} · ${state.totalPoints} pts`}
+              tone="neutral"
             />
           </View>
-          <Text allowFontScaling style={styles.title}>
-            Ranking do Encontro
-          </Text>
-          <Text allowFontScaling style={styles.subtitle}>
-            Pontuação oficial das dinâmicas de hoje!
-          </Text>
-        </View>
 
-        <View style={styles.summaryCard}>
-          <Text allowFontScaling style={styles.summaryMetric}>
-            {`${teamsCountLabel} · ${state.totalPoints} pts no encontro`}
-          </Text>
-          <Text allowFontScaling style={styles.summaryStatus}>
-            {summaryStatus}
-          </Text>
-        </View>
-
-        <View style={styles.list}>
-          {state.teams.map((team, index) => {
-            const isLeader = state.leaderTeam?.id === team.id;
-            return (
-              <GameCard
-                key={team.id}
-                title={`${index + 1}º · ${team.name} — ${team.score} pts`}
-                playersTag={isLeader ? 'Líder' : `${index + 1}º lugar`}
-                description={
-                  isLeader ? 'Equipe na liderança do encontro' : 'Equipe participante'
-                }
-                icon={isLeader ? 'crown' : 'account-group'}
-                highlightLeader={isLeader}
+          <View style={styles.header}>
+            <View style={styles.trophyBadge}>
+              <MaterialCommunityIcons
+                name="trophy-award"
+                size={activeTokens.semantic.icon.lg}
+                color={activeTokens.semantic.color.onHighlight}
               />
-            );
-          })}
+            </View>
+            <Text allowFontScaling style={styles.title}>
+              Ranking do Encontro
+            </Text>
+            <Text allowFontScaling style={styles.subtitle}>
+              Pontuação oficial das dinâmicas de hoje!
+            </Text>
+          </View>
+
+          <View style={styles.summaryCard}>
+            <Text allowFontScaling style={styles.summaryMetric}>
+              {`${teamsCountLabel} · ${state.totalPoints} pts no encontro`}
+            </Text>
+            <Text allowFontScaling style={styles.summaryStatus}>
+              {summaryStatus}
+            </Text>
+          </View>
+
+          <View style={styles.list}>
+            {state.teams.map((team, index) => {
+              const isLeader = state.leaderTeam?.id === team.id;
+              return (
+                <GameCard
+                  key={team.id}
+                  title={`${index + 1}º · ${team.name} — ${team.score} pts`}
+                  playersTag={isLeader ? 'Líder' : `${index + 1}º lugar`}
+                  description={
+                    isLeader ? 'Equipe na liderança do encontro' : 'Equipe participante'
+                  }
+                  icon={isLeader ? 'crown' : 'account-group'}
+                  highlightLeader={isLeader}
+                />
+              );
+            })}
+          </View>
         </View>
-      </View>
 
-      <View style={styles.actions}>
-        <ExpressiveButton
-          label="Escolher Outro Jogo"
-          icon="gamepad-variant"
-          variant="primaryJumbo"
-          onPress={actions.handleChooseAnotherGame}
-        />
-        <ExpressiveButton
-          label="Zerar Placar do PG"
+        <View style={styles.actions}>
+          <ExpressiveButton
+            label="Escolher Outro Jogo"
+            icon="gamepad-variant"
+            variant="primaryJumbo"
+            onPress={actions.handleChooseAnotherGame}
+          />
+          <ExpressiveButton
+            label="Zerar Placar do PG"
+            icon="refresh"
+            variant="outlined"
+            disabled={state.totalPoints === 0}
+            onPress={actions.handleRequestReset}
+          />
+        </View>
+
+        <ConfirmModal
+          visible={state.confirmingReset}
+          title="Zerar o placar do PG?"
+          description="Todas as equipes voltam a 0 pts. Essa ação não pode ser desfeita."
+          cancelLabel="Cancelar"
+          confirmLabel="Confirmar e Zerar"
+          confirmIcon="refresh"
           icon="refresh"
-          variant="outlined"
-          disabled={state.totalPoints === 0}
-          onPress={actions.handleRequestReset}
+          onCancel={actions.handleCancelReset}
+          onConfirm={() => {
+            void actions.handleResetScoreboard();
+          }}
         />
-      </View>
+      </ScrollView>
 
-      <ConfirmModal
-        visible={state.confirmingReset}
-        title="Zerar o placar do PG?"
-        description="Todas as equipes voltam a 0 pts. Essa ação não pode ser desfeita."
-        cancelLabel="Cancelar"
-        confirmLabel="Confirmar e Zerar"
-        confirmIcon="refresh"
-        icon="refresh"
-        onCancel={actions.handleCancelReset}
-        onConfirm={() => {
-          void actions.handleResetScoreboard();
-        }}
+      <ShortNavigationBar
+        activeKey="scoreboard"
+        onSelect={actions.handleSelectNav}
       />
-    </ScrollView>
+    </View>
   );
 };
 
 const createStyles = (activeTokens: AppTokens) => {
   const { color, font, radius, space } = activeTokens.semantic;
   return StyleSheet.create({
+    root: {
+      flex: 1,
+      backgroundColor: color.surface,
+    },
     screen: {
       flex: 1,
       backgroundColor: color.surface,
