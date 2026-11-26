@@ -16,3 +16,6 @@ Montando um Harness MVVM Sofisticado.pptx
 expo-env.d.ts
 dist/
 web-build/
+
+# Firebase Hosting (cache local do deploy)
+.firebase/
