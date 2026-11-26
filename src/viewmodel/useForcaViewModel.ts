@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { gameFeedbackUseCases, pgPlayUseCases } from '@/di/container';
 import type { ForcaCategory, ForcaPuzzle } from '@/model/entities/arenaChallenge';
@@ -133,6 +133,8 @@ export function useForcaViewModel(
   randomFn: () => number = Math.random
 ): [ForcaState, ForcaActions] {
   const router = useRouter();
+  const randomFnRef = useRef(randomFn);
+  randomFnRef.current = randomFn;
 
   const [phase, setPhase] = useState<ForcaPhase>('pass-turn');
   const [teams, setTeams] = useState<Team[]>([]);
@@ -171,7 +173,7 @@ export function useForcaViewModel(
           useCases.listForcaPuzzles(categoriesToLoad),
           useCases.getMatchSettings(),
         ]);
-        const shuffledPuzzles = shufflePuzzles(loadedPuzzles, randomFn);
+        const shuffledPuzzles = shufflePuzzles(loadedPuzzles, randomFnRef.current);
         setTeams(loadedTeams);
         setFreshDeck(shuffledPuzzles);
         setMaxAttempts(settings.forca.maxAttempts);
@@ -192,7 +194,7 @@ export function useForcaViewModel(
         setLoading(false);
       }
     },
-    [randomFn, useCases]
+    [useCases]
   );
 
   useEffect(() => {
@@ -389,7 +391,7 @@ export function useForcaViewModel(
         setError(null);
         setCategoryWarning(null);
         const loadedPuzzles = await useCases.listForcaPuzzles(updated);
-        const shuffledPuzzles = shufflePuzzles(loadedPuzzles, randomFn);
+        const shuffledPuzzles = shufflePuzzles(loadedPuzzles, randomFnRef.current);
         setSelectedCategories(updated);
         setFreshDeck(shuffledPuzzles);
         setCurrentPuzzle(shuffledPuzzles[0] ?? null);
@@ -401,7 +403,7 @@ export function useForcaViewModel(
         }
       }
     },
-    [randomFn, selectedCategories, useCases]
+    [selectedCategories, useCases]
   );
 
   const handleRequestExit = useCallback(() => {
