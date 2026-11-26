@@ -65,7 +65,6 @@ const createStyles = (activeTokens: AppTokens) =>
     container: {
       flexDirection: 'row',
       alignItems: 'center',
-      alignSelf: 'flex-start',
       gap: activeTokens.semantic.space.xs,
       paddingHorizontal: activeTokens.semantic.space.sm,
       paddingVertical: activeTokens.semantic.space.xs,

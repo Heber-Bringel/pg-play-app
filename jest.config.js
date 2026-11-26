@@ -31,6 +31,8 @@ module.exports = {
     '^expo-sensors$': '<rootDir>/tests/__mocks__/expo-sensors.ts',
     '^expo-screen-orientation$': '<rootDir>/tests/__mocks__/expo-screen-orientation.ts',
     '^expo-haptics$': '<rootDir>/tests/__mocks__/expo-haptics.ts',
+    '^expo-audio$': '<rootDir>/tests/__mocks__/expo-audio.ts',
+    '\\.(wav|mp3|ogg)$': '<rootDir>/tests/__mocks__/soundAssetMock.js',
   },
   collectCoverageFrom: [
     'src/view/theme.ts',

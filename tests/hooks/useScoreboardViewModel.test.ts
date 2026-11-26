@@ -10,7 +10,7 @@ import {
   type ScoreboardActions,
   type ScoreboardState,
 } from '@/viewmodel/useScoreboardViewModel';
-import { mockPush } from '../__mocks__/expo-router';
+import { mockBack, mockPush, mockReplace } from '../__mocks__/expo-router';
 import { MemoryMatchSettingsDataSource } from '@/infra/datasources/memoryMatchSettingsDataSource';
 
 function createHookHarness(useCases: IPgPlayUseCases) {
@@ -44,6 +44,8 @@ function createHookHarness(useCases: IPgPlayUseCases) {
 describe('useScoreboardViewModel — Hook do Placar e Ranking Geral do PG (UC06)', () => {
   beforeEach(() => {
     mockPush.mockClear();
+    mockBack.mockClear();
+    mockReplace.mockClear();
   });
 
   it('deve carregar o ranking ordenado, identificar a equipe líder e somar o total de pontos (RF16)', async () => {
@@ -93,8 +95,10 @@ describe('useScoreboardViewModel — Hook do Placar e Ranking Geral do PG (UC06)
 
     act(() => {
       harness.getActions().handleChooseAnotherGame();
+      harness.getActions().handleBack();
     });
-    expect(mockPush).toHaveBeenCalledWith('/');
+    expect(mockReplace).toHaveBeenCalledWith('/');
+    expect(mockBack).toHaveBeenCalledTimes(1);
 
     harness.unmount();
   });

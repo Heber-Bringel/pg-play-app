@@ -20,7 +20,7 @@ O **PG PLAY** é um aplicativo móvel de minigames presenciais (Mímica, Quiz, F
 | Plataforma | Nativo na linguagem visual do Android, familiar no iOS e responsivo na Web com tema claro/escuro automático via `useColorScheme()`. |
 | Tecnologia | Os tokens em três níveis mapeiam diretamente para `src/view/theme.ts` (`ThemeProvider` + `useTheme()`) sem duplicatas nem valores literais. |
 
-## 3. Mapa dos arquivos (11 componentes documentados na v1.3.0)
+## 3. Mapa dos arquivos (12 componentes documentados na v1.3.0)
 
 | Arquivo | Conteúdo |
 | --- | --- |
@@ -37,6 +37,7 @@ O **PG PLAY** é um aplicativo móvel de minigames presenciais (Mímica, Quiz, F
 | [04-componentes/tag.md](04-componentes/tag.md) | `ExpressiveTag` para metadados e badges em 6 tons legíveis (`14 dp`, ≥ 3:1) |
 | [04-componentes/modal-confirmacao.md](04-componentes/modal-confirmacao.md) | `ConfirmModal` com suporte a 1 botão (encerramento) ou 2 botões (confirmação) |
 | [04-componentes/item-selecionavel.md](04-componentes/item-selecionavel.md) | `SelectableOptionItem` para listas de seleção exclusiva (Noite/Dia) |
+| [04-componentes/barra-de-navegacao.md](04-componentes/barra-de-navegacao.md) | `ShortNavigationBar` oficial do M3 Expressive (2025) para destinos globais |
 | [04-componentes/tela-de-desenho.md](04-componentes/tela-de-desenho.md) | `DrawingCanvas` expandido com pincel livre, 4 formas geométricas (contorno/preenchido), 4 cores, 2 espessuras e modo `readOnly` (`UC12`) |
 | [05-padroes.md](05-padroes.md) | Fluxos completos: Configuração de Equipes, Rodada com Tempo e Busca no Hub |
 | [06-acessibilidade.md](06-acessibilidade.md) | Contraste de textos (≥ 4,5:1) e componentes (≥ 3:1), alvos, foco `:focus-visible`, leitor de tela e movimento reduzido |

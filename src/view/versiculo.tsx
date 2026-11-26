@@ -208,7 +208,7 @@ const VersiculoScreen = () => {
 
             <View style={styles.card}>
               <Text allowFontScaling style={styles.sectionLabel}>
-                Pacotes de Passagens (RF28)
+                Pacotes de Passagens
               </Text>
               <View style={styles.chipWrap}>
                 {ALL_VERSE_PACKS.map((pack) => (
@@ -222,7 +222,7 @@ const VersiculoScreen = () => {
               </View>
 
               <Text allowFontScaling style={styles.sectionLabel}>
-                Tempo por Passagem (RF29)
+                Tempo por Passagem
               </Text>
               <View style={styles.chipWrap}>
                 {VERSE_DURATION_OPTIONS.map((seconds) => (
@@ -236,7 +236,7 @@ const VersiculoScreen = () => {
               </View>
 
               <Text allowFontScaling style={styles.sectionLabel}>
-                Passagens por Equipe (RF29)
+                Passagens por Equipe
               </Text>
               <View style={styles.chipWrap}>
                 {VERSE_ROUNDS_OPTIONS.map((count) => (

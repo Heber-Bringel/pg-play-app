@@ -22,6 +22,9 @@ import {
   quiz,
   key,
   canvas,
+  navBar,
+  podium,
+  splash,
 } from '@/view/theme';
 
 function relativeLuminance(hex: string): number {
@@ -158,6 +161,22 @@ describe('Sistema de Design PG Play Expressive v1.1.0 - Tokens (02-tokens.md)', 
     expect(canvas.tool.size).toBe(48);
     expect(canvas.tool.radius).toBe(9999);
     expect(canvas.tool.radiusSelected).toBe(16);
+    expect(navBar.itemMinHeight).toBe(48);
+    expect(navBar.indicatorWidth).toBe(56);
+    expect(navBar.indicatorHeight).toBe(32);
+    expect(podium.firstMinHeight).toBe(192);
+    expect(podium.secondMinHeight).toBe(152);
+    expect(podium.thirdMinHeight).toBe(128);
+    expect(splash.bg).toBe('#5B21B6');
+    expect(darkTokens.component.splash.bg).toBe('#141218');
+    expect(splash.ambientTopSize).toBe(260);
+    expect(splash.haloSize).toBe(210);
+    expect(splash.orbitalSparkleBg).toBe(color.actionContainer);
+    expect(splash.titleSize).toBe(40);
+    expect(splash.displayDuration).toBe(2000);
+    expect(splash.orbitDelay).toBe(350);
+    expect(splash.subtitleDelay).toBe(800);
+    expect(splash.fadeOutStart).toBe(1700);
   });
 
   it('deve cumprir WCAG 1.4.11 (>= 3:1) em contornos/componentes e >= 4,5:1 em textos nos modos claro e escuro', () => {

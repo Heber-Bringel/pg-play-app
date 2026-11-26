@@ -5,8 +5,10 @@ import { MemoryMatchSettingsDataSource } from '@/infra/datasources/memoryMatchSe
 import { MemoryQuemSouEuDataSource } from '@/infra/datasources/memoryQuemSouEuDataSource';
 import { MemoryTeamDataSource } from '@/infra/datasources/memoryTeamDataSource';
 import { MemoryVerseDataSource } from '@/infra/datasources/memoryVerseDataSource';
+import { MemorySoundPreferenceDataSource } from '@/infra/datasources/memorySoundPreferenceDataSource';
 import { MemoryHapticService } from '@/infra/services/memoryHapticService';
 import { MemoryMultiplayerRoomService } from '@/infra/services/memoryMultiplayerRoomService';
+import { MemorySoundService } from '@/infra/services/memorySoundService';
 import { MemoryScreenOrientationService } from '@/infra/services/memoryScreenOrientationService';
 import { MemoryTiltSensorService } from '@/infra/services/memoryTiltSensorService';
 import { DesenhoUseCases } from '@/usecase/desenhoUseCases';
@@ -71,9 +73,18 @@ function advanceSeconds(seconds: number) {
   }
 }
 
-function buildFeedback() {
+function buildFeedback(soundEnabled = true) {
   const haptic = new MemoryHapticService();
-  return { haptic, feedback: new GameFeedbackUseCases(haptic) };
+  const sound = new MemorySoundService();
+  const soundPref = new MemorySoundPreferenceDataSource({
+    enabled: soundEnabled,
+  });
+  return {
+    haptic,
+    sound,
+    soundPref,
+    feedback: new GameFeedbackUseCases(haptic, sound, soundPref),
+  };
 }
 
 function buildPgPlay() {
@@ -415,5 +426,61 @@ describe('Vibração de acerto e erro nas ViewModels (#77)', () => {
       expired: 1,
     });
     hook.unmount();
+  });
+
+  it('Mímica e Quem Sou Eu: acerto toca playCorrect, pular/passar toca playPass e alerta de 10s toca uma vez (#84)', async () => {
+    const { haptic, sound, feedback } = buildFeedback(true);
+    const pgPlay = buildPgPlay();
+    const mimicaHook = renderHook(() => useMimicaViewModel(pgPlay, feedback));
+    await mimicaHook.mount();
+
+    act(() => {
+      mimicaHook.actions.handleStartTurn();
+    });
+    await act(async () => {
+      await mimicaHook.actions.handleHit();
+      await mimicaHook.actions.handleSkip();
+    });
+
+    expect(sound.getSoundCounts()).toMatchObject({
+      correct: 1,
+      pass: 1,
+    });
+
+    const quemSouEuUc = new QuemSouEuUseCases(
+      new MemoryQuemSouEuDataSource(),
+      twoTeams(),
+      new MemoryTiltSensorService(true, () => 10000),
+      new MemoryScreenOrientationService()
+    );
+    const qseHook = renderHook(() =>
+      useQuemSouEuViewModel(quemSouEuUc, feedback)
+    );
+    await qseHook.mount();
+
+    await act(async () => {
+      await qseHook.actions.startMatch();
+    });
+    act(() => {
+      qseHook.actions.startTurn();
+    });
+    advanceSeconds(3);
+
+    await act(async () => {
+      qseHook.actions.registerHit();
+    });
+    advanceSeconds(1);
+    await act(async () => {
+      qseHook.actions.registerPass();
+    });
+
+    expect(sound.getSoundCounts()).toMatchObject({
+      correct: 2,
+      pass: 2,
+    });
+    expect(haptic.getCounts()).toEqual({ hits: 2, passes: 2 });
+
+    mimicaHook.unmount();
+    qseHook.unmount();
   });
 });

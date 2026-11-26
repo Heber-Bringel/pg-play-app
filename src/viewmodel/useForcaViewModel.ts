@@ -68,6 +68,7 @@ export type ForcaActions = {
   handleRequestExit: () => void;
   handleCancelExit: () => void;
   handleConfirmExit: () => void;
+  handleGoToTeams: () => void;
   handleGoToScoreboard: () => void;
   handleRetry: () => Promise<void>;
 };
@@ -398,6 +399,10 @@ export function useForcaViewModel(
     router.replace('/');
   }, [router]);
 
+  const handleGoToTeams = useCallback(() => {
+    router.push('/teams');
+  }, [router]);
+
   const handleGoToScoreboard = useCallback(() => {
     router.replace('/scoreboard');
   }, [router]);
@@ -441,6 +446,7 @@ export function useForcaViewModel(
       handleRequestExit,
       handleCancelExit,
       handleConfirmExit,
+      handleGoToTeams,
       handleGoToScoreboard,
       handleRetry,
     },
