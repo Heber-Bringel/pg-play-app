@@ -1,4 +1,5 @@
 import type { IGameCatalogDataSource } from '@/model/datasources/iGameCatalogDataSource';
+import type { IIbgeForcaDataSource } from '@/model/datasources/iIbgeForcaDataSource';
 import type {
   ForcaCategory,
   ForcaPuzzle,
@@ -11,6 +12,15 @@ import type { ContentPack, ContentPackGameId } from '@/model/entities/contentPac
 import type { DesenhoCard, DesenhoCategory } from '@/model/entities/drawingChallenge';
 import type { Minigame } from '@/model/entities/minigame';
 import { DataSourceError } from '@/model/errors';
+
+function normalizeWordKey(word: string): string {
+  return word
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
 const DEFAULT_MINIGAMES: Minigame[] = [
   {
@@ -612,6 +622,7 @@ export class MemoryGameCatalogDataSource implements IGameCatalogDataSource {
   private quizQuestions: QuizQuestion[];
   private contentPacks: ContentPack[];
   private desenhoCards: DesenhoCard[];
+  private readonly ibgeForcaDataSource?: IIbgeForcaDataSource;
 
   constructor(
     initialCards: MimicaCard[] = DEFAULT_MIMICA_CARDS,
@@ -619,7 +630,8 @@ export class MemoryGameCatalogDataSource implements IGameCatalogDataSource {
     initialQuestions: QuizQuestion[] = DEFAULT_QUIZ_QUESTIONS,
     initialMinigames: Minigame[] = DEFAULT_MINIGAMES,
     initialContentPacks: ContentPack[] = DEFAULT_CONTENT_PACKS,
-    initialDesenhoCards: DesenhoCard[] = DEFAULT_DESENHO_CARDS
+    initialDesenhoCards: DesenhoCard[] = DEFAULT_DESENHO_CARDS,
+    ibgeForcaDataSource?: IIbgeForcaDataSource
   ) {
     this.minigames = initialMinigames.map((game) => ({
       ...game,
@@ -633,6 +645,21 @@ export class MemoryGameCatalogDataSource implements IGameCatalogDataSource {
     }));
     this.contentPacks = initialContentPacks.map((pack) => ({ ...pack }));
     this.desenhoCards = initialDesenhoCards.map((card) => ({ ...card }));
+    this.ibgeForcaDataSource = ibgeForcaDataSource;
+  }
+
+  static withIbgeLocalidades(
+    ibgeForcaDataSource: IIbgeForcaDataSource
+  ): MemoryGameCatalogDataSource {
+    return new MemoryGameCatalogDataSource(
+      DEFAULT_MIMICA_CARDS,
+      DEFAULT_FORCA_PUZZLES,
+      DEFAULT_QUIZ_QUESTIONS,
+      DEFAULT_MINIGAMES,
+      DEFAULT_CONTENT_PACKS,
+      DEFAULT_DESENHO_CARDS,
+      ibgeForcaDataSource
+    );
   }
 
   async listContentPacks(gameId?: ContentPackGameId): Promise<ContentPack[]> {
@@ -673,11 +700,33 @@ export class MemoryGameCatalogDataSource implements IGameCatalogDataSource {
 
   async listForcaPuzzles(categories?: ForcaCategory[]): Promise<ForcaPuzzle[]> {
     try {
+      const mergedPuzzles: ForcaPuzzle[] = [];
+      const seenWords = new Set<string>();
+
+      for (const puzzle of this.forcaPuzzles) {
+        const key = normalizeWordKey(puzzle.word);
+        if (!seenWords.has(key)) {
+          seenWords.add(key);
+          mergedPuzzles.push(puzzle);
+        }
+      }
+
+      if (this.ibgeForcaDataSource) {
+        const ibgePuzzles = await this.ibgeForcaDataSource.listForcaPuzzles();
+        for (const puzzle of ibgePuzzles) {
+          const key = normalizeWordKey(puzzle.word);
+          if (!seenWords.has(key)) {
+            seenWords.add(key);
+            mergedPuzzles.push(puzzle);
+          }
+        }
+      }
+
       if (!categories || categories.length === 0) {
-        return this.forcaPuzzles.map((puzzle) => ({ ...puzzle }));
+        return mergedPuzzles.map((puzzle) => ({ ...puzzle }));
       }
       const allowed = new Set(categories);
-      return this.forcaPuzzles
+      return mergedPuzzles
         .filter((puzzle) => allowed.has(puzzle.category))
         .map((puzzle) => ({ ...puzzle }));
     } catch {

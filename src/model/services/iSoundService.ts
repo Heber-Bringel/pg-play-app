@@ -7,7 +7,9 @@ export interface ISoundService {
   playLetterWrong(): Promise<void>;
   // Passe / Pular (Mímica e Quem Sou Eu): "whoosh" curto.
   playPass(): Promise<void>;
-  // Cronômetro ao entrar nos 10 segundos finais (11s -> 10s): bipe único de atenção.
+  // Cronômetro nos últimos 10 segundos (10s -> 1s): pulso sonoro ritmado curto (< 200ms) a cada segundo.
+  playTimerTick(): Promise<void>;
+  // Cronômetro ao entrar nos 10 segundos finais: bipe curto de atenção (compatibilidade).
   playTimerCritical(): Promise<void>;
   // Cronômetro ao esgotar (1s -> 0s): apito/buzina curta.
   playTimerExpired(): Promise<void>;

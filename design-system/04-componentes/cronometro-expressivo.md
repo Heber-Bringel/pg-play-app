@@ -50,9 +50,9 @@ Origem no sistema base: Não existe no Material 3 base; construído com os subsi
   - Implementação: `GameFeedbackUseCases` (regra) e `IHapticService` (`triggerTimerPulse` / `triggerTimerExpired`); spec `specs/026-ds-feedback-haptico-cronometro/`.
   - Acerto e erro das respostas (Quiz, Forca e Versículo) seguem a mesma lógica: ver [alternativa-quiz.md](alternativa-quiz.md) e [teclado-forca.md](teclado-forca.md).
 - **Feedback sonoro (sons de jogo):** nos jogos de 1 celular com contagem regressiva (Mímica, Quiz, Quem Sou Eu e Complete o Versículo), o cronômetro também emite avisos sonoros curtos quando o som de jogo está ligado (`SoundPreference.enabled = true`, botão `volume-high` / `volume-off` no cabeçalho):
-  - **Crítico (`10s` → `1s`):** um bipe curto por segundo (`alerta-10s.wav`, `playTimerCritical`), acompanhando cada segundo da contagem regressiva final.
+  - **Crítico (`10s` → `1s`):** um pulso sonoro ritmado curto (`< 200 ms`) por segundo (`tick-10s.wav`, `playTimerTick`), sincronizado com a pulsação visual elástica e a vibração tátil da contagem regressiva final.
   - **Tempo esgotado (`1s → 0s`):** um apito curto de encerramento (`tempo-esgotado.wav`, `playTimerExpired`).
-  - **Silêncio e degradação:** respeita o botão de som do cabeçalho e o modo silencioso do iOS (`playsInSilentMode: false`). Fora do Termômetro de Pedidos, Cidade Dorme e Adedonha. Implementação: `GameFeedbackUseCases` + `ISoundService`; spec `specs/027-ds-sons-de-jogo/`.
+  - **Silêncio e degradação:** respeita o botão de som do cabeçalho e o modo silencioso do iOS (`playsInSilentMode: false`). Fora do Termômetro de Pedidos, Cidade Dorme e Adedonha. Implementação: `GameFeedbackUseCases` + `ISoundService`; specs `specs/027-ds-sons-de-jogo/` e `specs/028-ds-som-contagem-regressiva/`.
 
 ## Faça e evite
 

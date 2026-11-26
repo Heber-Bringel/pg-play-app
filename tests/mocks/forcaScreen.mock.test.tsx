@@ -258,4 +258,42 @@ describe('ForcaScreen — Testes de Tela com Mocks de ViewModel (UC05)', () => {
     const texts = tree.root.findAllByType('Text' as any);
     expect(texts.some((t) => t.props.children === 'Parâmetros da Partida')).toBe(false);
   });
+
+  it('deve agrupar palavras compostas por espaço, renderizar hífen sem sublinhado e expor accessibilityLabel dinâmico (RF28, RNF06)', () => {
+    const actions = createMockActions();
+    jest.spyOn(forcaVmModule, 'useForcaViewModel').mockReturnValue([
+      {
+        ...baseState,
+        phase: 'playing',
+        currentPuzzle: {
+          id: 'forca-ibge-pais-624',
+          word: 'GUINÉ-BISSAU',
+          hint: 'País do Oeste da África',
+          category: 'Países e Cidades',
+        },
+        guessedLetters: ['G'],
+        maskedWord: [
+          { original: 'G', normalized: 'G', revealed: true, isSpecial: false },
+          { original: 'U', normalized: 'U', revealed: false, isSpecial: false },
+          { original: '-', normalized: '-', revealed: true, isSpecial: true },
+          { original: ' ', normalized: ' ', revealed: true, isSpecial: true },
+          { original: 'B', normalized: 'B', revealed: false, isSpecial: false },
+        ],
+      },
+      actions,
+    ]);
+
+    let tree!: renderer.ReactTestRenderer;
+    act(() => {
+      tree = renderer.create(<ForcaScreen />);
+    });
+
+    const slotsContainer = tree.root.findByProps({
+      accessibilityLabel: 'Palavra secreta: G, lacuna, hífen, espaço, lacuna',
+    } as any);
+    expect(slotsContainer).toBeDefined();
+
+    const texts = tree.root.findAllByType('Text' as any);
+    expect(texts.some((t) => t.props.children === '-')).toBe(true);
+  });
 });

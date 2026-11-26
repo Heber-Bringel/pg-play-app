@@ -102,6 +102,9 @@ function twoTeams() {
   ]);
 }
 
+// Mantém a ordem determinística dos puzzles da Forca após o embaralhamento shufflePuzzles (RF28/RF30).
+const IDENTITY_RANDOM_FN = () => 0.999999;
+
 describe('Feedback tátil do cronômetro nas ViewModels (#77)', () => {
   beforeEach(() => {
     jest.useFakeTimers();
@@ -111,8 +114,8 @@ describe('Feedback tátil do cronômetro nas ViewModels (#77)', () => {
     jest.useRealTimers();
   });
 
-  it('Mímica: 10 pulsos nos segundos finais e 1 vibração forte ao zerar', async () => {
-    const { haptic, feedback } = buildFeedback();
+  it('Mímica: 10 pulsos táteis e 10 ticks sonoros nos segundos finais e 1 aviso ao zerar (#77, #92)', async () => {
+    const { haptic, sound, feedback } = buildFeedback();
     const useCases = buildPgPlay();
     const hook = renderHook(() => useMimicaViewModel(useCases, feedback));
     await hook.mount();
@@ -121,10 +124,18 @@ describe('Feedback tátil do cronômetro nas ViewModels (#77)', () => {
       hook.actions.handleStartTurn();
     });
     const duration = hook.state.secondsRemaining;
-    advanceSeconds(duration);
+    for (let i = 0; i < duration; i += 1) {
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
+    }
 
     expect(hook.state.secondsRemaining).toBe(0);
     expect(haptic.getFeedbackCounts()).toMatchObject({ pulses: 10, expired: 1 });
+    expect(sound.getSoundCounts()).toMatchObject({
+      timerTick: 10,
+      timerExpired: 1,
+    });
     hook.unmount();
   });
 
@@ -303,7 +314,7 @@ describe('Vibração de acerto e erro nas ViewModels (#77)', () => {
   it('Forca: letra certa não vibra, letra errada vibra curto e palavra completa vibra sucesso', async () => {
     const { haptic, feedback } = buildFeedback();
     const useCases = buildPgPlay();
-    const hook = renderHook(() => useForcaViewModel(useCases, feedback));
+    const hook = renderHook(() => useForcaViewModel(useCases, feedback, IDENTITY_RANDOM_FN));
     await hook.mount();
 
     act(() => {
@@ -347,7 +358,7 @@ describe('Vibração de acerto e erro nas ViewModels (#77)', () => {
   it('Forca: a última tentativa vibra só o erro, sem o toque curto junto', async () => {
     const { haptic, feedback } = buildFeedback();
     const useCases = buildPgPlay();
-    const hook = renderHook(() => useForcaViewModel(useCases, feedback));
+    const hook = renderHook(() => useForcaViewModel(useCases, feedback, IDENTITY_RANDOM_FN));
     await hook.mount();
 
     act(() => {
