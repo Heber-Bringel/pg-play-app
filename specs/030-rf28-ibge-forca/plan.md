@@ -2,7 +2,7 @@
 
 - **Branch:** `feat/026-rf28-ibge-forca`
 - **Data:** 2026-11-24
-- **Especificação de Origem:** `specs/026-rf28-ibge-forca/spec.md`
+- **Especificação de Origem:** `specs/030-rf28-ibge-forca/spec.md`
 - **Constituição de Referência:** `.specify/memory/constitution.md`
 - **Issue vinculada:** `#78`
 

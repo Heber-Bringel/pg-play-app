@@ -1,6 +1,6 @@
 # ✅ Lista de Tarefas (`tasks.md`): Importar Capitais do Brasil e Países do IBGE para o Pacote da Forca (`RF28`)
 
-- **Input:** `specs/026-rf28-ibge-forca/spec.md` e `specs/026-rf28-ibge-forca/plan.md`
+- **Input:** `specs/030-rf28-ibge-forca/spec.md` e `specs/030-rf28-ibge-forca/plan.md`
 - **Issue vinculada:** `#78`
 - **Ordem de Execução Obrigatória:** De dentro para fora (`model` → `scripts/harness` → `infra` → `di` → `viewmodel` → `view` → `docs` → `tests` → verificação)
 - **Receitas do Harness:** `/nova-funcionalidade`, `/revisar-arquitetura`, `/commit-e-pr`
@@ -65,4 +65,4 @@
 
 - [x] **T013** Executar `npm run check` (`node scripts/check-arquitetura.mjs && node scripts/check-design-system.mjs && tsc --noEmit && jest --passWithNoTests`) e confirmar **0 violações e 100% dos testes passando**.
 - [x] **T014** Criar branch `feat/026-rf28-ibge-forca`, realizar commits convencionais usando exclusivamente escopos oficiais de `CONTRIBUTING.md` (`model`, `harness` para `scripts/`, `infra`, `di`, `viewmodel`, `view`, `docs`, `tests`) e abrir Pull Request vinculando `Closes #78` (`/commit-e-pr`).
-- [x] **T015** Resolver conflitos com `develop`, estabilizar `randomFn` com `useRef` em `useForcaViewModel`, sincronizar documentação (`spec.md`, `plan.md`, `tasks.md`, `docs/jogos/jogo-da-forca.md`) e atualizar descrição/revisão do PR `#87`.
+- [x] **T015** Resolver conflitos com `develop`, estabilizar `randomFn` com `useRef` em `useForcaViewModel`, sincronizar documentação (`spec.md`, `plan.md`, `tasks.md`, `docs/jogos/jogo-da-forca.md`), renumerar a pasta para `specs/030-rf28-ibge-forca/` e atualizar descrição/revisão do PR `#87`.

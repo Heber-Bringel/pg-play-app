@@ -2,7 +2,7 @@
 
 - **Branch da Feature:** `feat/026-rf28-ibge-forca`
 - **Criado em:** 2026-11-24
-- **Atualizado em:** 2026-11-26 (Pós-merge com develop e revisão do PR #87)
+- **Atualizado em:** 2026-11-26 (Pós-merge com develop, revisão do PR #87 e renumeração para specs/030-rf28-ibge-forca)
 - **Status:** Implementado e Validado (PR #87)
 - **Caso(s) de Uso / Requisito(s):** `UC05` (`RF15`, `RF28`, `RF30`, `RNF02`, `RNF03`, `RNF06`) — Ref.: `docs/requisitos/requisitos-e-casos-de-uso-pg-play.md` e `docs/jogos/jogo-da-forca.md`
 - **Issue vinculada:** `#78` (`v0.2.0 — Núcleo & Jogos em 1 Celular (UC01–UC06)`)
