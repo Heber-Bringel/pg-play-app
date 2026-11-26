@@ -7,7 +7,7 @@ import {
 } from '@/view/components/useKeyboardFocus';
 import { useTheme, type AppTokens, type ThemeMode } from '@/view/theme';
 
-export type NavDestinationKey = 'welcome' | 'games' | 'teams';
+export type NavDestinationKey = 'games' | 'teams' | 'scoreboard';
 
 export type ShortNavigationBarProps = {
   activeKey: NavDestinationKey;
@@ -25,18 +25,11 @@ type NavDestinationItem = {
 
 const NAV_DESTINATIONS: NavDestinationItem[] = [
   {
-    key: 'welcome',
+    key: 'games',
     label: 'Início',
     activeIcon: 'home',
     inactiveIcon: 'home-outline',
     accessibilityLabel: 'Ir para Início',
-  },
-  {
-    key: 'games',
-    label: 'Jogos',
-    activeIcon: 'gamepad-variant',
-    inactiveIcon: 'gamepad-variant-outline',
-    accessibilityLabel: 'Ir para Jogos',
   },
   {
     key: 'teams',
@@ -44,6 +37,13 @@ const NAV_DESTINATIONS: NavDestinationItem[] = [
     activeIcon: 'account-group',
     inactiveIcon: 'account-group-outline',
     accessibilityLabel: 'Ir para Equipes',
+  },
+  {
+    key: 'scoreboard',
+    label: 'Placar',
+    activeIcon: 'trophy',
+    inactiveIcon: 'trophy-outline',
+    accessibilityLabel: 'Ir para Placar',
   },
 ];
 

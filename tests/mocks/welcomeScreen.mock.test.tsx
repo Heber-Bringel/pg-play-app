@@ -13,7 +13,6 @@ const createMockActions = (): WelcomeActions => ({
   handleOpenMultiplayer: jest.fn(),
   handleOpenTeams: jest.fn(),
   handleOpenScoreboard: jest.fn(),
-  handleSelectNav: jest.fn(),
   handleRequestReset: jest.fn(),
   handleCancelReset: jest.fn(),
   handleResetScoreboard: jest.fn(async () => {}),
@@ -115,6 +114,7 @@ describe('WelcomeScreen — Testes de Tela com Mocks de ViewModel (Issue #80)', 
     await render(<WelcomeScreen />);
 
     expect(screen.queryByText('3 equipes · 140 pts')).toBeNull();
+    expect(screen.queryByLabelText('Ir para Início')).toBeNull();
     expect(screen.getByLabelText('Alternar para tema escuro')).toBeTruthy();
     expect(screen.getByText('Pódio do Encontro')).toBeTruthy();
     expect(screen.getByText('Leões de Judá')).toBeTruthy();

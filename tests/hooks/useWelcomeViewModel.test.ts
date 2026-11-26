@@ -7,6 +7,8 @@ import { DataSourceError } from '@/model/errors';
 import type { IPgPlayUseCases } from '@/usecase/iPgPlayUseCases';
 import { PgPlayUseCases } from '@/usecase/pgPlayUseCases';
 import {
+  hasStartedEncounterInSession,
+  resetWelcomeSessionForTests,
   useWelcomeViewModel,
   type WelcomeActions,
   type WelcomeState,
@@ -41,8 +43,9 @@ function createHookHarness(useCases: IPgPlayUseCases) {
   };
 }
 
-describe('useWelcomeViewModel — Hook da Tela Inicial (Issue #80)', () => {
+describe('useWelcomeViewModel — Hook da Tela Inicial (Issue #80 / Issue #93)', () => {
   beforeEach(() => {
+    resetWelcomeSessionForTests();
     mockPush.mockClear();
     mockReplace.mockClear();
   });
@@ -79,7 +82,7 @@ describe('useWelcomeViewModel — Hook da Tela Inicial (Issue #80)', () => {
     harness.unmount();
   });
 
-  it('executa navegações principais e troca de abas via ShortNavigationBar', async () => {
+  it('executa navegações principais com replace e marca o encontro como iniciado na sessão', async () => {
     const useCases = new PgPlayUseCases(
       new MemoryTeamDataSource(),
       new MemoryGameCatalogDataSource(),
@@ -89,6 +92,8 @@ describe('useWelcomeViewModel — Hook da Tela Inicial (Issue #80)', () => {
     const harness = createHookHarness(useCases);
     await harness.mount();
 
+    expect(hasStartedEncounterInSession()).toBe(false);
+
     act(() => {
       harness.getActions().handleStartGames();
       harness.getActions().handleOpenMultiplayer();
@@ -96,22 +101,41 @@ describe('useWelcomeViewModel — Hook da Tela Inicial (Issue #80)', () => {
       harness.getActions().handleOpenScoreboard();
     });
 
+    expect(hasStartedEncounterInSession()).toBe(true);
     expect(mockReplace).toHaveBeenNthCalledWith(1, '/');
-    expect(mockReplace).toHaveBeenNthCalledWith(2, '/teams');
-    expect(mockPush).toHaveBeenNthCalledWith(1, '/?modality=Multi-Celular');
-    expect(mockPush).toHaveBeenNthCalledWith(2, '/scoreboard');
-
-    mockReplace.mockClear();
-    act(() => {
-      harness.getActions().handleSelectNav('games');
-      harness.getActions().handleSelectNav('teams');
-      harness.getActions().handleSelectNav('welcome');
-    });
-    expect(mockReplace).toHaveBeenNthCalledWith(1, '/');
-    expect(mockReplace).toHaveBeenNthCalledWith(2, '/teams');
-    expect(mockReplace).toHaveBeenCalledTimes(2);
+    expect(mockReplace).toHaveBeenNthCalledWith(2, '/?modality=Multi-Celular');
+    expect(mockReplace).toHaveBeenNthCalledWith(3, '/teams');
+    expect(mockReplace).toHaveBeenNthCalledWith(4, '/scoreboard');
+    expect(mockPush).not.toHaveBeenCalled();
 
     harness.unmount();
+  });
+
+  it('redireciona imediatamente para o Hub e omite splash se /welcome abrir após o encontro iniciado (Issue #93)', async () => {
+    const useCases = new PgPlayUseCases(
+      new MemoryTeamDataSource(),
+      new MemoryGameCatalogDataSource(),
+      new MemoryMatchSettingsDataSource()
+    );
+
+    const firstMount = createHookHarness(useCases);
+    await firstMount.mount();
+
+    expect(firstMount.getState().splashVisible).toBe(true);
+    act(() => {
+      firstMount.getActions().handleStartGames();
+    });
+    firstMount.unmount();
+
+    mockReplace.mockClear();
+
+    const secondMount = createHookHarness(useCases);
+    await secondMount.mount();
+
+    expect(secondMount.getState().splashVisible).toBe(false);
+    expect(mockReplace).toHaveBeenCalledWith('/');
+
+    secondMount.unmount();
   });
 
   it('zera o placar após confirmação e converte DomainError em mensagem legível', async () => {

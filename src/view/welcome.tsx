@@ -6,7 +6,6 @@ import { ConfirmModal } from '@/view/components/confirmModal';
 import { EncounterPodium } from '@/view/components/encounterPodium';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
 import { GameCard } from '@/view/components/gameCard';
-import { ShortNavigationBar } from '@/view/components/shortNavigationBar';
 import { WelcomeSplashOverlay } from '@/view/components/welcomeSplashOverlay';
 import { useTheme, type AppTokens } from '@/view/theme';
 import { useWelcomeViewModel } from '@/viewmodel/useWelcomeViewModel';
@@ -107,11 +106,6 @@ const WelcomeScreen = () => {
           />
         </View>
       </ScrollView>
-
-      <ShortNavigationBar
-        activeKey="welcome"
-        onSelect={actions.handleSelectNav}
-      />
 
       <ConfirmModal
         visible={state.confirmingReset}
