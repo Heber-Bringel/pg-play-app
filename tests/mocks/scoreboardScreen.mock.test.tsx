@@ -11,6 +11,7 @@ const createMockActions = (): ScoreboardActions => ({
   handleResetScoreboard: jest.fn(async () => {}),
   handleChooseAnotherGame: jest.fn(),
   handleBack: jest.fn(),
+  handleSelectNav: jest.fn(),
   handleRetry: jest.fn(async () => {}),
 });
 
@@ -131,6 +132,21 @@ describe('ScoreboardScreen — Testes de Tela com Mocks de ViewModel (UC06)', ()
     expect(actions.handleChooseAnotherGame).toHaveBeenCalledTimes(1);
     expect(actions.handleRequestReset).toHaveBeenCalledTimes(1);
     expect(actions.handleResetScoreboard).not.toHaveBeenCalled();
+
+    const homeTab = tree.root.findByProps({
+      accessibilityLabel: 'Ir para Início',
+    } as any);
+    const teamsTab = tree.root.findByProps({
+      accessibilityLabel: 'Ir para Equipes',
+    } as any);
+
+    act(() => {
+      homeTab.props.onPress();
+      teamsTab.props.onPress();
+    });
+
+    expect(actions.handleSelectNav).toHaveBeenNthCalledWith(1, 'games');
+    expect(actions.handleSelectNav).toHaveBeenNthCalledWith(2, 'teams');
   });
 
   it('deve pedir confirmação antes de zerar o placar e permitir cancelar (RF17)', () => {

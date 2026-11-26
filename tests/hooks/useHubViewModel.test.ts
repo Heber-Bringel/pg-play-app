@@ -134,15 +134,16 @@ describe('useHubViewModel — Hook do Hub de Jogos (UC01)', () => {
     act(() => {
       harness.getActions().handleOpenTeams();
       harness.getActions().handleOpenScoreboard();
-      harness.getActions().handleOpenWelcome();
-      harness.getActions().handleSelectNav('welcome');
+      harness.getActions().handleSelectNav('games');
       harness.getActions().handleSelectNav('teams');
+      harness.getActions().handleSelectNav('scoreboard');
     });
     expect(mockPush).toHaveBeenCalledWith('/teams');
     expect(mockPush).toHaveBeenCalledWith('/scoreboard');
-    expect(mockPush).toHaveBeenCalledWith('/welcome');
-    expect(mockReplace).toHaveBeenNthCalledWith(1, '/welcome');
-    expect(mockReplace).toHaveBeenNthCalledWith(2, '/teams');
+    expect(mockPush).not.toHaveBeenCalledWith('/welcome');
+    expect(mockReplace).toHaveBeenNthCalledWith(1, '/teams');
+    expect(mockReplace).toHaveBeenNthCalledWith(2, '/scoreboard');
+    expect(mockReplace).toHaveBeenCalledTimes(2);
 
     harness.unmount();
   });

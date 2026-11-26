@@ -184,11 +184,14 @@ describe('useTeamsViewModel — Hook de Configuração e Gestão de Equipes (UC0
 
     mockReplace.mockClear();
     act(() => {
-      harness.getActions().handleSelectNav('welcome');
       harness.getActions().handleSelectNav('games');
+      harness.getActions().handleSelectNav('scoreboard');
+      harness.getActions().handleSelectNav('teams');
     });
-    expect(mockReplace).toHaveBeenNthCalledWith(1, '/welcome');
-    expect(mockReplace).toHaveBeenNthCalledWith(2, '/');
+    expect(mockReplace).toHaveBeenNthCalledWith(1, '/');
+    expect(mockReplace).toHaveBeenNthCalledWith(2, '/scoreboard');
+    expect(mockReplace).toHaveBeenCalledTimes(2);
+    expect(mockReplace).not.toHaveBeenCalledWith('/welcome');
 
     harness.unmount();
   });

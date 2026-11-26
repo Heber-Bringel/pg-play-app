@@ -40,7 +40,6 @@ const createMockActions = (): HubActions => ({
   handleSelectGame: jest.fn(),
   handleOpenTeams: jest.fn(),
   handleOpenScoreboard: jest.fn(),
-  handleOpenWelcome: jest.fn(),
   handleSelectNav: jest.fn(),
   handleRetry: jest.fn(async () => {}),
 });
@@ -176,18 +175,23 @@ describe('HubScreen — Testes de Tela com Mocks de ViewModel (UC01)', () => {
     });
     expect(disabledCard.props.disabled).toBe(true);
 
-    const welcomeTab = tree.root.findByProps({
+    const homeTab = tree.root.findByProps({
       accessibilityLabel: 'Ir para Início',
     });
     const teamsTab = tree.root.findByProps({
       accessibilityLabel: 'Ir para Equipes',
     });
-    act(() => {
-      welcomeTab.props.onPress();
-      teamsTab.props.onPress();
+    const scoreboardTab = tree.root.findByProps({
+      accessibilityLabel: 'Ir para Placar',
     });
-    expect(actions.handleSelectNav).toHaveBeenNthCalledWith(1, 'welcome');
+    act(() => {
+      homeTab.props.onPress();
+      teamsTab.props.onPress();
+      scoreboardTab.props.onPress();
+    });
+    expect(actions.handleSelectNav).toHaveBeenNthCalledWith(1, 'games');
     expect(actions.handleSelectNav).toHaveBeenNthCalledWith(2, 'teams');
+    expect(actions.handleSelectNav).toHaveBeenNthCalledWith(3, 'scoreboard');
   });
 
   it('alterna tema claro e escuro com 1 toque pelo botão do cabeçalho', () => {

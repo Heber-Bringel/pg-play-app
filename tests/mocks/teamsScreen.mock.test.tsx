@@ -151,16 +151,16 @@ describe('TeamsScreen — Testes de Tela com Mocks de ViewModel (UC01 / UC02)', 
     const homeTab = tree.root.findByProps({
       accessibilityLabel: 'Ir para Início',
     });
-    const gamesTab = tree.root.findByProps({
-      accessibilityLabel: 'Ir para Jogos',
+    const scoreboardTab = tree.root.findByProps({
+      accessibilityLabel: 'Ir para Placar',
     });
 
     act(() => {
       homeTab.props.onPress();
-      gamesTab.props.onPress();
+      scoreboardTab.props.onPress();
     });
 
-    expect(actions.handleSelectNav).toHaveBeenNthCalledWith(1, 'welcome');
-    expect(actions.handleSelectNav).toHaveBeenNthCalledWith(2, 'games');
+    expect(actions.handleSelectNav).toHaveBeenNthCalledWith(1, 'games');
+    expect(actions.handleSelectNav).toHaveBeenNthCalledWith(2, 'scoreboard');
   });
 });
