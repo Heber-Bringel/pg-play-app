@@ -16,6 +16,7 @@ import {
   getFocusRingStyle,
   useKeyboardFocus,
 } from '@/view/components/useKeyboardFocus';
+import { useReduceMotion } from '@/view/components/useReduceMotion';
 import { useTheme, type AppTokens } from '@/view/theme';
 import {
   ALL_VERSE_PACKS,
@@ -104,6 +105,7 @@ const VersiculoOptionTile = ({
 
 const VersiculoScreen = () => {
   const [state, actions] = useVersiculoViewModel();
+  useReduceMotion(actions.setReduceMotion);
   const activeTokens = useTheme();
   const styles = useMemo(() => createStyles(activeTokens), [activeTokens]);
 
@@ -206,7 +208,7 @@ const VersiculoScreen = () => {
 
             <View style={styles.card}>
               <Text allowFontScaling style={styles.sectionLabel}>
-                Pacotes de Passagens (RF28)
+                Pacotes de Passagens
               </Text>
               <View style={styles.chipWrap}>
                 {ALL_VERSE_PACKS.map((pack) => (
@@ -220,7 +222,7 @@ const VersiculoScreen = () => {
               </View>
 
               <Text allowFontScaling style={styles.sectionLabel}>
-                Tempo por Passagem (RF29)
+                Tempo por Passagem
               </Text>
               <View style={styles.chipWrap}>
                 {VERSE_DURATION_OPTIONS.map((seconds) => (
@@ -234,7 +236,7 @@ const VersiculoScreen = () => {
               </View>
 
               <Text allowFontScaling style={styles.sectionLabel}>
-                Passagens por Equipe (RF29)
+                Passagens por Equipe
               </Text>
               <View style={styles.chipWrap}>
                 {VERSE_ROUNDS_OPTIONS.map((count) => (
@@ -293,7 +295,10 @@ const VersiculoScreen = () => {
                 label={`Equipe ${state.currentTeam.name} · ${state.currentPassageIndex + 1}/${state.passages.length}`}
                 tone="action"
               />
-              <ExpressiveTimer secondsRemaining={state.secondsRemaining} />
+              <ExpressiveTimer
+                secondsRemaining={state.secondsRemaining}
+                reduceMotion={state.reduceMotion}
+              />
             </View>
 
             <View

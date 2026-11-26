@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { quemSouEuUseCases as defaultQuemSouEuUseCases } from '@/di/container';
+import {
+  quemSouEuUseCases as defaultQuemSouEuUseCases,
+  gameFeedbackUseCases,
+} from '@/di/container';
 import type {
   QuemSouEuCard,
   QuemSouEuCardResult,
@@ -11,6 +14,7 @@ import type {
 import type { Team } from '@/model/entities/team';
 import { DomainError } from '@/model/errors';
 import type { IQuemSouEuUseCases } from '@/usecase/iQuemSouEuUseCases';
+import type { IGameFeedbackUseCases } from '@/usecase/iGameFeedbackUseCases';
 
 export const ALL_QUEM_SOU_EU_PACKS: QuemSouEuPack[] = [
   'Famosos',
@@ -42,6 +46,7 @@ export type QuemSouEuFeedback = {
 };
 
 export type QuemSouEuState = {
+  reduceMotion: boolean;
   loading: boolean;
   error: string | null;
   phase: QuemSouEuPhase;
@@ -69,6 +74,7 @@ export type QuemSouEuState = {
 };
 
 export type QuemSouEuActions = {
+  setReduceMotion: (enabled: boolean) => void;
   reloadTeams: () => Promise<void>;
   togglePack: (pack: QuemSouEuPack) => void;
   selectDuration: (seconds: QuemSouEuDurationOption) => void;
@@ -93,7 +99,8 @@ function sumTurnPoints(results: QuemSouEuCardResult[]): number {
 }
 
 export function useQuemSouEuViewModel(
-  useCase: IQuemSouEuUseCases = defaultQuemSouEuUseCases
+  useCase: IQuemSouEuUseCases = defaultQuemSouEuUseCases,
+  gameFeedback: IGameFeedbackUseCases = gameFeedbackUseCases
 ): [QuemSouEuState, QuemSouEuActions] {
   const router = useRouter();
 
@@ -116,6 +123,24 @@ export function useQuemSouEuViewModel(
     PREP_COUNTDOWN_SECONDS
   );
   const [secondsRemaining, setSecondsRemaining] = useState<number>(60);
+
+  // Feedback tátil do cronômetro (issue #77): a regra de quando vibrar fica
+  // no GameFeedbackUseCases; aqui só informamos o segundo anterior e o atual.
+  const [reduceMotion, setReduceMotionState] = useState<boolean>(false);
+  const previousSecondsRef = useRef<number>(secondsRemaining);
+
+  useEffect(() => {
+    const previousSeconds = previousSecondsRef.current;
+    previousSecondsRef.current = secondsRemaining;
+    // Mudar só o reduceMotion repete o mesmo segundo, e o UseCase ignora.
+    void gameFeedback.notifyTimerTick(previousSeconds, secondsRemaining, {
+      reduceMotion,
+    });
+  }, [secondsRemaining, reduceMotion, gameFeedback]);
+
+  const setReduceMotionValue = useCallback((enabled: boolean) => {
+    setReduceMotionState(enabled);
+  }, []);
   const [turnResults, setTurnResults] = useState<QuemSouEuCardResult[]>([]);
   const [lastFeedback, setLastFeedback] = useState<QuemSouEuFeedback | null>(
     null
@@ -215,6 +240,11 @@ export function useQuemSouEuViewModel(
 
       const result = useCase.recordCardOutcome(card, outcome);
       setTurnResults((prev) => [...prev, result]);
+      if (outcome === 'hit') {
+        void gameFeedback.notifyAnswer('correct');
+      } else {
+        void gameFeedback.notifyPass();
+      }
 
       feedbackSeqRef.current += 1;
       setLastFeedback({ outcome, seq: feedbackSeqRef.current });
@@ -233,7 +263,7 @@ export function useQuemSouEuViewModel(
         }
       }, FEEDBACK_DISPLAY_MS);
     },
-    [cards, exitConfirmVisible, phase, updateCardIndex, useCase]
+    [cards, exitConfirmVisible, gameFeedback, phase, updateCardIndex, useCase]
   );
 
   // Mantém sempre a versão mais recente de registerOutcome acessível ao
@@ -516,6 +546,7 @@ export function useQuemSouEuViewModel(
 
   return [
     {
+      reduceMotion,
       loading,
       error,
       phase,
@@ -542,6 +573,7 @@ export function useQuemSouEuViewModel(
       exitConfirmVisible,
     },
     {
+      setReduceMotion: setReduceMotionValue,
       reloadTeams,
       togglePack,
       selectDuration,

@@ -18,6 +18,7 @@ const createMockActions = (): ForcaActions => ({
   handleRequestExit: jest.fn(),
   handleCancelExit: jest.fn(),
   handleConfirmExit: jest.fn(),
+  handleGoToTeams: jest.fn(),
   handleGoToScoreboard: jest.fn(),
   handleRetry: jest.fn(async () => {}),
 });

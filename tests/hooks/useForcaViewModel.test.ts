@@ -24,7 +24,7 @@ function createHookHarness(
   let latestActions!: ForcaActions;
 
   const Host = () => {
-    const [state, actions] = useForcaViewModel(useCases, randomFn);
+    const [state, actions] = useForcaViewModel(useCases, undefined, randomFn);
     latestState = state;
     latestActions = actions;
     return null;

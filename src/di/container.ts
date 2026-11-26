@@ -1,4 +1,5 @@
 import { AsyncStorageMatchSettingsDataSource } from '@/infra/datasources/asyncStorageMatchSettingsDataSource';
+import { AsyncStorageSoundPreferenceDataSource } from '@/infra/datasources/asyncStorageSoundPreferenceDataSource';
 import { AsyncStorageTeamDataSource } from '@/infra/datasources/asyncStorageTeamDataSource';
 import { AsyncStorageThemePreferenceDataSource } from '@/infra/datasources/asyncStorageThemePreferenceDataSource';
 import { HelloAoVerseDataSource } from '@/infra/datasources/helloAoVerseDataSource';
@@ -6,6 +7,7 @@ import { MemoryGameCatalogDataSource } from '@/infra/datasources/memoryGameCatal
 import { MemoryIbgeForcaDataSource } from '@/infra/datasources/memoryIbgeForcaDataSource';
 import { MemoryQuemSouEuDataSource } from '@/infra/datasources/memoryQuemSouEuDataSource';
 import { MemoryVerseDataSource } from '@/infra/datasources/memoryVerseDataSource';
+import { ExpoAudioSoundService } from '@/infra/services/expoAudioSoundService';
 import { ExpoHapticService } from '@/infra/services/expoHapticService';
 import { ExpoScreenOrientationService } from '@/infra/services/expoScreenOrientationService';
 import { ExpoSensorsTiltSensorService } from '@/infra/services/expoSensorsTiltSensorService';
@@ -16,18 +18,23 @@ import type { IHapticService } from '@/model/services/iHapticService';
 import type { IMultiplayerRoomService } from '@/model/services/iMultiplayerRoomService';
 import type { INarratorAudioService } from '@/model/services/iNarratorAudioService';
 import type { IScreenOrientationService } from '@/model/services/iScreenOrientationService';
+import type { ISoundService } from '@/model/services/iSoundService';
 import type { ITiltSensorService } from '@/model/services/iTiltSensorService';
 import { AdedonhaUseCases } from '@/usecase/adedonhaUseCases';
 import { CidadeDormeUseCases } from '@/usecase/cidadeDormeUseCases';
+import { GameFeedbackUseCases } from '@/usecase/gameFeedbackUseCases';
 import type { IAdedonhaUseCases } from '@/usecase/iAdedonhaUseCases';
 import type { ICidadeDormeUseCases } from '@/usecase/iCidadeDormeUseCases';
+import type { IGameFeedbackUseCases } from '@/usecase/iGameFeedbackUseCases';
 import type { IPgPlayUseCases } from '@/usecase/iPgPlayUseCases';
 import type { IQuemSouEuUseCases } from '@/usecase/iQuemSouEuUseCases';
+import type { ISoundPreferenceUseCases } from '@/usecase/iSoundPreferenceUseCases';
 import type { ITermometroUseCases } from '@/usecase/iTermometroUseCases';
 import type { IThemePreferenceUseCases } from '@/usecase/iThemePreferenceUseCases';
 import type { IVersiculoUseCases } from '@/usecase/iVersiculoUseCases';
 import { PgPlayUseCases } from '@/usecase/pgPlayUseCases';
 import { QuemSouEuUseCases } from '@/usecase/quemSouEuUseCases';
+import { SoundPreferenceUseCases } from '@/usecase/soundPreferenceUseCases';
 import { TermometroUseCases } from '@/usecase/termometroUseCases';
 import { ThemePreferenceUseCases } from '@/usecase/themePreferenceUseCases';
 import { VersiculoUseCases } from '@/usecase/versiculoUseCases';
@@ -35,6 +42,7 @@ import { VersiculoUseCases } from '@/usecase/versiculoUseCases';
 // Equipes e placar persistem no aparelho (RF04–RF06); MemoryTeamDataSource segue para testes.
 const teamDataSource = new AsyncStorageTeamDataSource();
 const themePreferenceDataSource = new AsyncStorageThemePreferenceDataSource();
+const soundPreferenceDataSource = new AsyncStorageSoundPreferenceDataSource();
 const gameCatalogDataSource = MemoryGameCatalogDataSource.withIbgeLocalidades(
   new MemoryIbgeForcaDataSource()
 );
@@ -46,6 +54,7 @@ const tiltSensorService: ITiltSensorService =
 const screenOrientationService: IScreenOrientationService =
   new ExpoScreenOrientationService();
 const hapticService: IHapticService = new ExpoHapticService();
+const soundService: ISoundService = new ExpoAudioSoundService();
 const narratorAudioService: INarratorAudioService =
   new ExpoSpeechNarratorAudioService();
 
@@ -88,12 +97,22 @@ export const quemSouEuUseCases: IQuemSouEuUseCases = new QuemSouEuUseCases(
   quemSouEuDataSource,
   teamDataSource,
   tiltSensorService,
-  screenOrientationService,
-  hapticService
+  screenOrientationService
 );
+
+// Feedback tátil e sonoro nos jogos de 1 celular (issues #77 e #84).
+export const gameFeedbackUseCases: IGameFeedbackUseCases =
+  new GameFeedbackUseCases(
+    hapticService,
+    soundService,
+    soundPreferenceDataSource
+  );
 
 export const themePreferenceUseCases: IThemePreferenceUseCases =
   new ThemePreferenceUseCases(themePreferenceDataSource);
+
+export const soundPreferenceUseCases: ISoundPreferenceUseCases =
+  new SoundPreferenceUseCases(soundPreferenceDataSource);
 
 export const termometroUseCases: ITermometroUseCases =
   new TermometroUseCases();

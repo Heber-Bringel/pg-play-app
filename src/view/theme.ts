@@ -381,6 +381,98 @@ export function createTokens(mode: ThemeMode = 'light') {
         bg: semantic.color.errorContainer,
       },
     },
+    navBar: {
+      bg: semantic.color.surfaceContainer,
+      borderTop: semantic.color.outline,
+      indicatorBg: semantic.color.actionContainer,
+      activeIcon: semantic.color.onActionContainer,
+      activeLabel: semantic.color.onSurface,
+      inactiveIcon: semantic.color.onSurfaceMuted,
+      inactiveLabel: semantic.color.onSurfaceMuted,
+      indicatorWidth: semantic.space.container,
+      indicatorHeight: semantic.space.xl,
+      itemMinHeight: semantic.space['2xl'],
+      radius: semantic.radius.full,
+      borderWidth: 1,
+    },
+    podium: {
+      firstBg: semantic.color.highlightContainer,
+      firstText: semantic.color.onHighlightContainer,
+      firstBadgeBg: semantic.color.highlight,
+      firstBadgeText: semantic.color.onHighlight,
+      secondBg: semantic.color.actionContainer,
+      secondText: semantic.color.onActionContainer,
+      secondBadgeBg: semantic.color.action,
+      secondBadgeText: semantic.color.onAction,
+      thirdBg: semantic.color.secondaryContainer,
+      thirdText: semantic.color.onSecondaryContainer,
+      thirdBadgeBg: semantic.color.secondary,
+      thirdBadgeText: semantic.color.onSecondary,
+      firstMinHeight: 192,
+      secondMinHeight: 152,
+      thirdMinHeight: 128,
+      firstBadgeSize: 42,
+      badgeSize: 34,
+      radiusFirst: semantic.radius.xl,
+      radiusOther: semantic.radius.lg,
+    },
+    splash: {
+      bg: isDark ? semantic.color.surface : semantic.color.action,
+      accentShapeTop: isDark
+        ? semantic.color.actionContainer
+        : semantic.color.actionHover,
+      accentShapeBottom: isDark
+        ? semantic.color.actionContainer
+        : semantic.color.actionPressed,
+      emblemBg: semantic.color.surfaceContainer,
+      emblemBorder: isDark
+        ? semantic.color.action
+        : semantic.color.transparent,
+      emblemIcon: semantic.color.action,
+      emblemIconSize: 52,
+      titleColor: isDark ? semantic.color.onSurface : semantic.color.onAction,
+      subtitleColor: isDark
+        ? semantic.color.onSurfaceMuted
+        : semantic.color.onAction,
+      dotActive: semantic.color.highlight,
+      dotInactive: isDark
+        ? semantic.color.surfaceVariant
+        : semantic.color.actionContainer,
+      emblemSize: 104,
+      emblemRadius: 32,
+      haloSize: 210,
+      stageWidth: 260,
+      stageHeight: 192,
+      ambientTopSize: 260,
+      ambientTopRadius: 96,
+      ambientTopOffsetY: -70,
+      ambientTopOffsetX: -80,
+      ambientBottomSize: 280,
+      ambientBottomRadius: 140,
+      ambientBottomOffsetX: -95,
+      ambientBottomOffsetY: -66,
+      orbitalLarge: 52,
+      orbitalMedium: 48,
+      orbitalSmall: 34,
+      orbitalRadiusLarge: 18,
+      orbitalRadiusSmall: 12,
+      orbitalTrophyTop: 8,
+      orbitalTrophyLeft: 10,
+      orbitalGroupTop: 20,
+      orbitalGroupRight: 12,
+      orbitalSparkleBottom: 16,
+      orbitalSparkleRight: 24,
+      orbitalSparkleBg: semantic.color.actionContainer,
+      orbitalSparkleIcon: semantic.color.onActionContainer,
+      titleSize: 40,
+      titleLineHeight: 46,
+      displayDuration: 2000,
+      orbitDelay: 350,
+      subtitleDelay: 800,
+      fadeOutStart: 1700,
+      dotActiveWidth: 24,
+      dotSize: 8,
+    },
   };
 
   return {
@@ -402,6 +494,12 @@ type ThemePreferenceContextValue = {
   setPreference: (preference: ThemePreference) => void;
 };
 
+type SoundPreferenceContextValue = {
+  soundEnabled: boolean;
+  setSoundEnabled: (enabled: boolean) => void;
+  toggleSoundEnabled: () => void;
+};
+
 const ThemeModeContext = createContext<ThemeMode | null>(null);
 const ThemeOverrideSetterContext = createContext<ThemeOverrideSetter | null>(
   null
@@ -409,11 +507,16 @@ const ThemeOverrideSetterContext = createContext<ThemeOverrideSetter | null>(
 const ThemePreferenceContext = createContext<ThemePreferenceContextValue | null>(
   null
 );
+const SoundPreferenceContext = createContext<SoundPreferenceContextValue | null>(
+  null
+);
 
 export type ThemeProviderProps = {
   mode?: ThemeMode;
   preference?: ThemePreference;
   onChangePreference?: (preference: ThemePreference) => void;
+  soundEnabled?: boolean;
+  onChangeSoundEnabled?: (enabled: boolean) => void;
   children: React.ReactNode;
 };
 
@@ -421,6 +524,8 @@ export const ThemeProvider = ({
   mode,
   preference,
   onChangePreference,
+  soundEnabled,
+  onChangeSoundEnabled,
   children,
 }: ThemeProviderProps) => {
   const systemScheme = useColorScheme();
@@ -429,8 +534,12 @@ export const ThemeProvider = ({
   const [overrideMode, setOverrideMode] = useState<ThemeMode | null>(null);
   const [internalPreference, setInternalPreference] =
     useState<ThemePreference>(preference ?? 'auto');
+  const [internalSoundEnabled, setInternalSoundEnabled] = useState<boolean>(
+    soundEnabled ?? true
+  );
 
   const activePreference: ThemePreference = preference ?? internalPreference;
+  const activeSoundEnabled: boolean = soundEnabled ?? internalSoundEnabled;
 
   const handleSetPreference = useCallback(
     (next: ThemePreference) => {
@@ -440,12 +549,33 @@ export const ThemeProvider = ({
     [onChangePreference]
   );
 
+  const handleSetSoundEnabled = useCallback(
+    (next: boolean) => {
+      setInternalSoundEnabled(next);
+      onChangeSoundEnabled?.(next);
+    },
+    [onChangeSoundEnabled]
+  );
+
+  const handleToggleSoundEnabled = useCallback(() => {
+    handleSetSoundEnabled(!activeSoundEnabled);
+  }, [activeSoundEnabled, handleSetSoundEnabled]);
+
   const preferenceContextValue = useMemo<ThemePreferenceContextValue>(
     () => ({
       preference: activePreference,
       setPreference: handleSetPreference,
     }),
     [activePreference, handleSetPreference]
+  );
+
+  const soundContextValue = useMemo<SoundPreferenceContextValue>(
+    () => ({
+      soundEnabled: activeSoundEnabled,
+      setSoundEnabled: handleSetSoundEnabled,
+      toggleSoundEnabled: handleToggleSoundEnabled,
+    }),
+    [activeSoundEnabled, handleSetSoundEnabled, handleToggleSoundEnabled]
   );
 
   const isRootAutoProvider = parentMode === null && mode === undefined;
@@ -472,9 +602,13 @@ export const ThemeProvider = ({
       ThemePreferenceContext.Provider,
       { value: preferenceContextValue },
       React.createElement(
-        ThemeOverrideSetterContext.Provider,
-        { value: setOverrideMode },
-        modeElement
+        SoundPreferenceContext.Provider,
+        { value: soundContextValue },
+        React.createElement(
+          ThemeOverrideSetterContext.Provider,
+          { value: setOverrideMode },
+          modeElement
+        )
       )
     );
   }
@@ -501,6 +635,19 @@ export function useThemePreference(): ThemePreferenceContextValue {
       context ?? {
         preference: 'auto',
         setPreference: () => {},
+      },
+    [context]
+  );
+}
+
+export function useSoundPreference(): SoundPreferenceContextValue {
+  const context = useContext(SoundPreferenceContext);
+  return useMemo(
+    () =>
+      context ?? {
+        soundEnabled: true,
+        setSoundEnabled: () => {},
+        toggleSoundEnabled: () => {},
       },
     [context]
   );
@@ -545,4 +692,7 @@ export const {
   timer,
   quiz,
   key,
+  navBar,
+  podium,
+  splash,
 } = tokens.component;

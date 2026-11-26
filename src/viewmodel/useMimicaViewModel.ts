@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { pgPlayUseCases } from '@/di/container';
+import { pgPlayUseCases, gameFeedbackUseCases } from '@/di/container';
 import type { MimicaCard, MimicaCategory } from '@/model/entities/arenaChallenge';
 import {
   DEFAULT_MATCH_SETTINGS,
@@ -10,6 +10,7 @@ import {
 import type { Team } from '@/model/entities/team';
 import { DomainError } from '@/model/errors';
 import type { IPgPlayUseCases } from '@/usecase/iPgPlayUseCases';
+import type { IGameFeedbackUseCases } from '@/usecase/iGameFeedbackUseCases';
 
 export type MimicaPhase = 'pass-turn' | 'playing' | 'turn-summary' | 'finished';
 
@@ -26,6 +27,7 @@ export const ALL_MIMICA_CATEGORIES: MimicaCategory[] = [
 ];
 
 export type MimicaState = {
+  reduceMotion: boolean;
   phase: MimicaPhase;
   teams: Team[];
   currentTeamIndex: number;
@@ -49,6 +51,7 @@ export type MimicaState = {
 };
 
 export type MimicaActions = {
+  handleSetReduceMotion: (enabled: boolean) => void;
   handleStartTurn: () => void;
   handleToggleWordVisibility: () => void;
   handleHit: () => Promise<void>;
@@ -61,12 +64,14 @@ export type MimicaActions = {
   handleRequestExit: () => void;
   handleCancelExit: () => void;
   handleConfirmExit: () => void;
+  handleGoToTeams: () => void;
   handleGoToScoreboard: () => void;
   handleRetry: () => Promise<void>;
 };
 
 export function useMimicaViewModel(
-  useCases: IPgPlayUseCases = pgPlayUseCases
+  useCases: IPgPlayUseCases = pgPlayUseCases,
+  gameFeedback: IGameFeedbackUseCases = gameFeedbackUseCases
 ): [MimicaState, MimicaActions] {
   const router = useRouter();
 
@@ -83,6 +88,24 @@ export function useMimicaViewModel(
   const [secondsRemaining, setSecondsRemaining] = useState<number>(
     DEFAULT_MATCH_SETTINGS.mimica.durationSeconds
   );
+
+  // Feedback tátil do cronômetro (issue #77): a regra de quando vibrar fica
+  // no GameFeedbackUseCases; aqui só informamos o segundo anterior e o atual.
+  const [reduceMotion, setReduceMotionState] = useState<boolean>(false);
+  const previousSecondsRef = useRef<number>(secondsRemaining);
+
+  useEffect(() => {
+    const previousSeconds = previousSecondsRef.current;
+    previousSecondsRef.current = secondsRemaining;
+    // Mudar só o reduceMotion repete o mesmo segundo, e o UseCase ignora.
+    void gameFeedback.notifyTimerTick(previousSeconds, secondsRemaining, {
+      reduceMotion,
+    });
+  }, [secondsRemaining, reduceMotion, gameFeedback]);
+
+  const handleSetReduceMotion = useCallback((enabled: boolean) => {
+    setReduceMotionState(enabled);
+  }, []);
   const [selectedCategories, setSelectedCategories] = useState<MimicaCategory[]>(ALL_MIMICA_CATEGORIES);
   const [freshDeck, setFreshDeck] = useState<MimicaCard[]>([]);
   const [skippedDeck, setSkippedDeck] = useState<MimicaCard[]>([]);
@@ -204,6 +227,7 @@ export function useMimicaViewModel(
       setTurnHits((prev) => prev + 1);
       setTurnPointsDelta((prev) => prev + gained);
       setWordVisible(true);
+      void gameFeedback.notifyAnswer('correct');
 
       const nextFresh = freshDeck.length > 0 ? freshDeck.slice(1) : freshDeck;
       const nextSkipped =
@@ -224,7 +248,7 @@ export function useMimicaViewModel(
         setError('Erro ao registrar acerto na rodada.');
       }
     }
-  }, [phase, currentTeam, currentCard, useCases, freshDeck, skippedDeck]);
+  }, [phase, currentTeam, currentCard, useCases, gameFeedback, freshDeck, skippedDeck]);
 
   const handleSkip = useCallback(async () => {
     if (phase !== 'playing' || !currentTeam || !currentCard) {
@@ -241,6 +265,7 @@ export function useMimicaViewModel(
       setTurnSkips((prev) => prev + 1);
       setTurnPointsDelta((prev) => prev + diff);
       setWordVisible(true);
+      void gameFeedback.notifyPass();
 
       if (freshDeck.length > 0) {
         const [skippedCard, ...restFresh] = freshDeck;
@@ -257,7 +282,7 @@ export function useMimicaViewModel(
         setError('Erro ao pular palavra na rodada.');
       }
     }
-  }, [phase, currentTeam, currentCard, useCases, freshDeck, skippedDeck]);
+  }, [phase, currentTeam, currentCard, useCases, gameFeedback, freshDeck, skippedDeck]);
 
   const handleNextTurn = useCallback(() => {
     if (remainingCardsCount === 0) {
@@ -367,6 +392,10 @@ export function useMimicaViewModel(
     router.replace('/');
   }, [router]);
 
+  const handleGoToTeams = useCallback(() => {
+    router.push('/teams');
+  }, [router]);
+
   const handleGoToScoreboard = useCallback(() => {
     router.push('/scoreboard');
   }, [router]);
@@ -376,6 +405,7 @@ export function useMimicaViewModel(
   }, [loadSession, selectedCategories]);
 
   const state: MimicaState = {
+    reduceMotion,
     phase,
     teams,
     currentTeamIndex,
@@ -399,6 +429,7 @@ export function useMimicaViewModel(
   };
 
   const actions: MimicaActions = {
+    handleSetReduceMotion,
     handleStartTurn,
     handleToggleWordVisibility,
     handleHit,
@@ -411,6 +442,7 @@ export function useMimicaViewModel(
     handleRequestExit,
     handleCancelExit,
     handleConfirmExit,
+    handleGoToTeams,
     handleGoToScoreboard,
     handleRetry,
   };

@@ -41,6 +41,18 @@ Origem no sistema base: Não existe no Material 3 base; construído com os subsi
 - **Alvo de toque mínimo:** `48 dp` de altura por `136 dp` de largura mínima.
 - **Contraste:** estado normal (`#1D1B20` sobre `#FACC15`) com razão de **11,30:1**; estado crítico com razão de **6,47:1** no claro e **8,90:1** no escuro (ver [06-acessibilidade.md](../06-acessibilidade.md)).
 - **Leitor de tela e Movimento:** para não interromper o leitor de tela a cada segundo, o anúncio automático ocorre apenas no início da rodada, ao atingir `10 segundos` e ao chegar a `0 segundos`. Se `isReduceMotionEnabled` estiver ativo, a pulsação elástica é desativada mantendo a troca de cor, forma e ícone.
+- **Feedback tátil (vibração):** nos jogos de 1 celular com contagem regressiva (Mímica, Quiz, Quem Sou Eu e Complete o Versículo), o estado crítico também é sentido no corpo, para quem não está olhando a tela (celular na testa, na mão de quem faz a mímica):
+  - **Crítico (`10s` → `1s`):** um pulso leve por segundo (`impacto leve`), no mesmo ritmo da pulsação visual.
+  - **Esgotado (`0s`):** uma vibração forte (`notificação de erro`).
+  - **Reduzir movimento:** sem pulsos (assim como sem pulsação visual); a vibração de tempo esgotado continua, por ser um aviso único de fim de turno.
+  - O cronômetro só vibra quando desce de 1 em 1 segundo: reiniciar o turno, abrir o modal "Sair" ou terminar antes do tempo não vibra. Em aparelhos sem motor de vibração (web, emuladores), nada acontece.
+  - Fica fora do Termômetro de Pedidos (momento de oração) e dos jogos em rede (Adedonha e Cidade Dorme).
+  - Implementação: `GameFeedbackUseCases` (regra) e `IHapticService` (`triggerTimerPulse` / `triggerTimerExpired`); spec `specs/026-ds-feedback-haptico-cronometro/`.
+  - Acerto e erro das respostas (Quiz, Forca e Versículo) seguem a mesma lógica: ver [alternativa-quiz.md](alternativa-quiz.md) e [teclado-forca.md](teclado-forca.md).
+- **Feedback sonoro (sons de jogo):** nos jogos de 1 celular com contagem regressiva (Mímica, Quiz, Quem Sou Eu e Complete o Versículo), o cronômetro também emite avisos sonoros curtos quando o som de jogo está ligado (`SoundPreference.enabled = true`, botão `volume-high` / `volume-off` no cabeçalho):
+  - **Crítico (`10s` → `1s`):** um bipe curto por segundo (`alerta-10s.wav`, `playTimerCritical`), acompanhando cada segundo da contagem regressiva final.
+  - **Tempo esgotado (`1s → 0s`):** um apito curto de encerramento (`tempo-esgotado.wav`, `playTimerExpired`).
+  - **Silêncio e degradação:** respeita o botão de som do cabeçalho e o modo silencioso do iOS (`playsInSilentMode: false`). Fora do Termômetro de Pedidos, Cidade Dorme e Adedonha. Implementação: `GameFeedbackUseCases` + `ISoundService`; spec `specs/027-ds-sons-de-jogo/`.
 
 ## Faça e evite
 

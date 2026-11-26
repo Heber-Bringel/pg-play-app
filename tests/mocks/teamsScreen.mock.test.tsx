@@ -11,6 +11,7 @@ const createMockActions = (): TeamsActions => ({
   handleRemoveTeam: jest.fn(async () => {}),
   handleStartRound: jest.fn(),
   handleBack: jest.fn(),
+  handleSelectNav: jest.fn(),
   clearError: jest.fn(),
   handleRetry: jest.fn(async () => {}),
 });
@@ -48,11 +49,13 @@ describe('TeamsScreen — Testes de Tela com Mocks de ViewModel (UC01 / UC02)', 
 
     const texts = tree.root.findAllByType('Text' as any);
     expect(
-      texts.some((t) => t.props.children === 'Carregando equipes do Pequeno Grupo...')
+      texts.some(
+        (t) => t.props.children === 'Carregando equipes do Pequeno Grupo...'
+      )
     ).toBe(true);
   });
 
-  it('deve renderizar o estado com equipes cadastradas e botão Começar Rodada habilitado', () => {
+  it('deve renderizar o estado com equipes cadastradas, contador 2/6 e botão Escolher Jogo habilitado', () => {
     const actions = createMockActions();
     jest
       .spyOn(teamsVmModule, 'useTeamsViewModel')
@@ -66,7 +69,8 @@ describe('TeamsScreen — Testes de Tela com Mocks de ViewModel (UC01 / UC02)', 
     const texts = tree.root.findAllByType('Text' as any);
     expect(texts.some((t) => t.props.children === 'Tribo de Judá')).toBe(true);
     expect(texts.some((t) => t.props.children === 'Leões da Fé')).toBe(true);
-    expect(texts.some((t) => t.props.children === 'Começar Rodada!')).toBe(true);
+    expect(texts.some((t) => t.props.children === '2/6')).toBe(true);
+    expect(texts.some((t) => t.props.children === 'Escolher Jogo')).toBe(true);
   });
 
   it('deve renderizar o estado vazio quando não houver equipes', () => {
@@ -111,7 +115,7 @@ describe('TeamsScreen — Testes de Tela com Mocks de ViewModel (UC01 / UC02)', 
     expect(actions.handleRemoveTeam).toHaveBeenCalledWith('t1');
   });
 
-  it('deve acionar handleStartRound ao tocar no botão Começar Rodada', () => {
+  it('deve acionar handleStartRound ao tocar no botão Escolher Jogo', () => {
     const actions = createMockActions();
     jest
       .spyOn(teamsVmModule, 'useTeamsViewModel')
@@ -123,7 +127,7 @@ describe('TeamsScreen — Testes de Tela com Mocks de ViewModel (UC01 / UC02)', 
     });
 
     const startBtn = tree.root.findByProps({
-      accessibilityLabel: 'Começar Rodada!',
+      accessibilityLabel: 'Escolher Jogo',
     });
 
     act(() => {
@@ -133,7 +137,7 @@ describe('TeamsScreen — Testes de Tela com Mocks de ViewModel (UC01 / UC02)', 
     expect(actions.handleStartRound).toHaveBeenCalled();
   });
 
-  it('deve acionar handleBack ao tocar no botão Voltar', () => {
+  it('deve navegar pelas abas da ShortNavigationBar', () => {
     const actions = createMockActions();
     jest
       .spyOn(teamsVmModule, 'useTeamsViewModel')
@@ -144,14 +148,19 @@ describe('TeamsScreen — Testes de Tela com Mocks de ViewModel (UC01 / UC02)', 
       tree = renderer.create(<TeamsScreen />);
     });
 
-    const backBtn = tree.root.findByProps({
-      accessibilityLabel: 'Voltar',
+    const homeTab = tree.root.findByProps({
+      accessibilityLabel: 'Ir para Início',
+    });
+    const gamesTab = tree.root.findByProps({
+      accessibilityLabel: 'Ir para Jogos',
     });
 
     act(() => {
-      backBtn.props.onPress();
+      homeTab.props.onPress();
+      gamesTab.props.onPress();
     });
 
-    expect(actions.handleBack).toHaveBeenCalled();
+    expect(actions.handleSelectNav).toHaveBeenNthCalledWith(1, 'welcome');
+    expect(actions.handleSelectNav).toHaveBeenNthCalledWith(2, 'games');
   });
 });

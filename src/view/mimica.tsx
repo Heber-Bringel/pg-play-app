@@ -6,6 +6,7 @@ import { ExpressiveChip } from '@/view/components/expressiveChip';
 import { ExpressiveTag } from '@/view/components/expressiveTag';
 import { ExpressiveTimer } from '@/view/components/expressiveTimer';
 import { GameCard } from '@/view/components/gameCard';
+import { useReduceMotion } from '@/view/components/useReduceMotion';
 import { useTheme, type AppTokens } from '@/view/theme';
 import {
   ALL_MIMICA_CATEGORIES,
@@ -18,6 +19,7 @@ const MIMICA_ROUNDS = [1, 2, 3, 4, 5];
 
 export const MimicaScreen = () => {
   const [state, actions] = useMimicaViewModel();
+  useReduceMotion(actions.handleSetReduceMotion);
   const activeTokens = useTheme();
   const styles = useMemo(() => createStyles(activeTokens), [activeTokens]);
 
@@ -67,8 +69,15 @@ export const MimicaScreen = () => {
           icon="account-multiple-plus"
         />
         <ExpressiveButton
-          label="Voltar ao Início"
+          label="Cadastrar Equipes"
+          variant="primaryJumbo"
+          icon="account-group"
+          onPress={actions.handleGoToTeams}
+        />
+        <ExpressiveButton
+          label="Voltar aos Jogos"
           variant="outlined"
+          icon="arrow-left"
           onPress={actions.handleConfirmExit}
         />
       </View>
@@ -212,7 +221,10 @@ export const MimicaScreen = () => {
 
       {state.phase === 'playing' && (
         <View style={styles.phaseContainer}>
-          <ExpressiveTimer secondsRemaining={state.secondsRemaining} />
+          <ExpressiveTimer
+            secondsRemaining={state.secondsRemaining}
+            reduceMotion={state.reduceMotion}
+          />
 
           <View
             style={styles.wordCard}

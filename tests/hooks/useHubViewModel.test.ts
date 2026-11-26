@@ -10,7 +10,7 @@ import {
   type HubActions,
   type HubState,
 } from '@/viewmodel/useHubViewModel';
-import { mockPush } from '../__mocks__/expo-router';
+import { mockPush, mockReplace } from '../__mocks__/expo-router';
 import { MemoryMatchSettingsDataSource } from '@/infra/datasources/memoryMatchSettingsDataSource';
 
 function createHookHarness(useCases: IPgPlayUseCases) {
@@ -44,6 +44,7 @@ function createHookHarness(useCases: IPgPlayUseCases) {
 describe('useHubViewModel — Hook do Hub de Jogos (UC01)', () => {
   beforeEach(() => {
     mockPush.mockClear();
+    mockReplace.mockClear();
   });
 
   it('deve carregar os 5 minigames e a equipe líder ordenada ao montar (RF01, RF02)', async () => {
@@ -133,9 +134,15 @@ describe('useHubViewModel — Hook do Hub de Jogos (UC01)', () => {
     act(() => {
       harness.getActions().handleOpenTeams();
       harness.getActions().handleOpenScoreboard();
+      harness.getActions().handleOpenWelcome();
+      harness.getActions().handleSelectNav('welcome');
+      harness.getActions().handleSelectNav('teams');
     });
     expect(mockPush).toHaveBeenCalledWith('/teams');
     expect(mockPush).toHaveBeenCalledWith('/scoreboard');
+    expect(mockPush).toHaveBeenCalledWith('/welcome');
+    expect(mockReplace).toHaveBeenNthCalledWith(1, '/welcome');
+    expect(mockReplace).toHaveBeenNthCalledWith(2, '/teams');
 
     harness.unmount();
   });
