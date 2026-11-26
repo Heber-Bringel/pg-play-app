@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { gameFeedbackUseCases, pgPlayUseCases } from '@/di/container';
 import type { ForcaCategory, ForcaPuzzle } from '@/model/entities/arenaChallenge';
@@ -113,11 +113,28 @@ export function isWordCompleted(word: string, guessedLetters: string[]): boolean
   return true;
 }
 
+export function shufflePuzzles(
+  puzzles: ForcaPuzzle[],
+  randomFn: () => number = Math.random
+): ForcaPuzzle[] {
+  const copy = puzzles.map((puzzle) => ({ ...puzzle }));
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(randomFn() * (i + 1));
+    const temp = copy[i];
+    copy[i] = copy[j];
+    copy[j] = temp;
+  }
+  return copy;
+}
+
 export function useForcaViewModel(
   useCases: IPgPlayUseCases = pgPlayUseCases,
-  gameFeedback: IGameFeedbackUseCases = gameFeedbackUseCases
+  gameFeedback: IGameFeedbackUseCases = gameFeedbackUseCases,
+  randomFn: () => number = Math.random
 ): [ForcaState, ForcaActions] {
   const router = useRouter();
+  const randomFnRef = useRef(randomFn);
+  randomFnRef.current = randomFn;
 
   const [phase, setPhase] = useState<ForcaPhase>('pass-turn');
   const [teams, setTeams] = useState<Team[]>([]);
@@ -156,13 +173,14 @@ export function useForcaViewModel(
           useCases.listForcaPuzzles(categoriesToLoad),
           useCases.getMatchSettings(),
         ]);
+        const shuffledPuzzles = shufflePuzzles(loadedPuzzles, randomFnRef.current);
         setTeams(loadedTeams);
-        setFreshDeck(loadedPuzzles);
+        setFreshDeck(shuffledPuzzles);
         setMaxAttempts(settings.forca.maxAttempts);
         setRemainingAttempts(settings.forca.maxAttempts);
         setTotalRounds(settings.forca.totalRounds);
-        if (loadedPuzzles.length > 0) {
-          setCurrentPuzzle(loadedPuzzles[0]);
+        if (shuffledPuzzles.length > 0) {
+          setCurrentPuzzle(shuffledPuzzles[0]);
         } else {
           setCurrentPuzzle(null);
         }
@@ -373,9 +391,10 @@ export function useForcaViewModel(
         setError(null);
         setCategoryWarning(null);
         const loadedPuzzles = await useCases.listForcaPuzzles(updated);
+        const shuffledPuzzles = shufflePuzzles(loadedPuzzles, randomFnRef.current);
         setSelectedCategories(updated);
-        setFreshDeck(loadedPuzzles);
-        setCurrentPuzzle(loadedPuzzles[0] ?? null);
+        setFreshDeck(shuffledPuzzles);
+        setCurrentPuzzle(shuffledPuzzles[0] ?? null);
       } catch (err: unknown) {
         if (err instanceof DomainError) {
           setCategoryWarning(err.message);

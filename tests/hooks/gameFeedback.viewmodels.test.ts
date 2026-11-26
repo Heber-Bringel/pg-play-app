@@ -99,6 +99,9 @@ function twoTeams() {
   ]);
 }
 
+// Mantém a ordem determinística dos puzzles da Forca após o embaralhamento shufflePuzzles (RF28/RF30).
+const IDENTITY_RANDOM_FN = () => 0.999999;
+
 describe('Feedback tátil do cronômetro nas ViewModels (#77)', () => {
   beforeEach(() => {
     jest.useFakeTimers();
@@ -277,7 +280,7 @@ describe('Vibração de acerto e erro nas ViewModels (#77)', () => {
   it('Forca: letra certa não vibra, letra errada vibra curto e palavra completa vibra sucesso', async () => {
     const { haptic, feedback } = buildFeedback();
     const useCases = buildPgPlay();
-    const hook = renderHook(() => useForcaViewModel(useCases, feedback));
+    const hook = renderHook(() => useForcaViewModel(useCases, feedback, IDENTITY_RANDOM_FN));
     await hook.mount();
 
     act(() => {
@@ -321,7 +324,7 @@ describe('Vibração de acerto e erro nas ViewModels (#77)', () => {
   it('Forca: a última tentativa vibra só o erro, sem o toque curto junto', async () => {
     const { haptic, feedback } = buildFeedback();
     const useCases = buildPgPlay();
-    const hook = renderHook(() => useForcaViewModel(useCases, feedback));
+    const hook = renderHook(() => useForcaViewModel(useCases, feedback, IDENTITY_RANDOM_FN));
     await hook.mount();
 
     act(() => {

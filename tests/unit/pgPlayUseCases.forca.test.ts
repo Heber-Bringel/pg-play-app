@@ -1,4 +1,8 @@
 import { MemoryGameCatalogDataSource } from '@/infra/datasources/memoryGameCatalogDataSource';
+import {
+  IBGE_FORCA_PUZZLES,
+  MemoryIbgeForcaDataSource,
+} from '@/infra/datasources/memoryIbgeForcaDataSource';
 import { MemoryTeamDataSource } from '@/infra/datasources/memoryTeamDataSource';
 import { ValidationError } from '@/model/errors';
 import {
@@ -95,5 +99,33 @@ describe('PgPlayUseCases — Regras de Negócio do Jogo da Forca (UC05)', () => 
     const useCases = new PgPlayUseCases(teamDs, catalogDs, new MemoryMatchSettingsDataSource());
 
     await expect(useCases.scoreForcaWord('team-1', -1)).rejects.toThrow(ValidationError);
+  });
+
+  it('deve mesclar localidades do IBGE no pacote Países e Cidades preservando PORTUGAL sem duplicata (RF28)', async () => {
+    const teamDs = new MemoryTeamDataSource();
+    const catalogDs = MemoryGameCatalogDataSource.withIbgeLocalidades(
+      new MemoryIbgeForcaDataSource()
+    );
+    const useCases = new PgPlayUseCases(
+      teamDs,
+      catalogDs,
+      new MemoryMatchSettingsDataSource()
+    );
+
+    const paisesECidades = await useCases.listForcaPuzzles(['Países e Cidades']);
+
+    // PORTUGAL já existe tanto no catálogo manual ('forca-6') quanto no IBGE ('forca-ibge-pais-620')
+    expect(paisesECidades).toHaveLength(IBGE_FORCA_PUZZLES.length);
+
+    const portugalMatches = paisesECidades.filter((p) => p.word === 'PORTUGAL');
+    expect(portugalMatches).toHaveLength(1);
+    expect(portugalMatches[0].id).toBe('forca-6');
+    expect(portugalMatches[0].hint).toBe(
+      'País europeu de onde partiu Pedro Álvares Cabral'
+    );
+
+    const teresina = paisesECidades.find((p) => p.word === 'TERESINA');
+    expect(teresina).toBeDefined();
+    expect(teresina?.hint).toBe('Capital do estado do Piauí');
   });
 });

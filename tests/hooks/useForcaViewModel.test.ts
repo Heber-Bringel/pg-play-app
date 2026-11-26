@@ -6,6 +6,7 @@ import { ValidationError } from '@/model/errors';
 import type { IPgPlayUseCases } from '@/usecase/iPgPlayUseCases';
 import { PgPlayUseCases } from '@/usecase/pgPlayUseCases';
 import {
+  shufflePuzzles,
   useForcaViewModel,
   type ForcaActions,
   type ForcaState,
@@ -13,12 +14,17 @@ import {
 import { mockPush, mockReplace } from '../__mocks__/expo-router';
 import { MemoryMatchSettingsDataSource } from '@/infra/datasources/memoryMatchSettingsDataSource';
 
-function createHookHarness(useCases: IPgPlayUseCases) {
+const IDENTITY_RANDOM_FN = () => 0.999999;
+
+function createHookHarness(
+  useCases: IPgPlayUseCases,
+  randomFn: () => number = IDENTITY_RANDOM_FN
+) {
   let latestState!: ForcaState;
   let latestActions!: ForcaActions;
 
   const Host = () => {
-    const [state, actions] = useForcaViewModel(useCases);
+    const [state, actions] = useForcaViewModel(useCases, undefined, randomFn);
     latestState = state;
     latestActions = actions;
     return null;
@@ -372,5 +378,28 @@ describe('useForcaViewModel — Hook da Arena do Jogo da Forca (UC05)', () => {
     expect(harness.getState().categoryWarning).toContain('Selecione pelo menos um pacote');
 
     harness.unmount();
+  });
+
+  it('deve embaralhar uniformemente os puzzles com shufflePuzzles e variar o sorteio na sessão (RF30)', async () => {
+    const useCases = new PgPlayUseCases(
+      new MemoryTeamDataSource(),
+      new MemoryGameCatalogDataSource(),
+      new MemoryMatchSettingsDataSource()
+    );
+
+    const samplePuzzles = await useCases.listForcaPuzzles();
+    const reversedOrder = shufflePuzzles(samplePuzzles, () => 0);
+
+    // Com randomFn() === 0 em Fisher-Yates reverso, o elemento inicial original vai para outra posição
+    expect(reversedOrder).toHaveLength(samplePuzzles.length);
+    expect(reversedOrder[0].word).not.toBe(samplePuzzles[0].word);
+
+    const harnessZero = createHookHarness(useCases, () => 0);
+    await harnessZero.mount();
+
+    expect(harnessZero.getState().currentPuzzle?.word).toBe(reversedOrder[0].word);
+    expect(harnessZero.getState().currentPuzzle?.word).not.toBe('COMUNHÃO');
+
+    harnessZero.unmount();
   });
 });
