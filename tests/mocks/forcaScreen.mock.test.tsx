@@ -1,9 +1,11 @@
 import React from 'react';
 import renderer, { act } from 'react-test-renderer';
 import * as ReactNative from 'react-native';
+import { StyleSheet, useColorScheme } from 'react-native';
 import ForcaRoute from '@/app/forca';
 import { LetterKey } from '@/view/components/letterKey';
 import ForcaScreen from '@/view/forca';
+import { darkTokens, ThemeProvider, tokens } from '@/view/theme';
 import * as forcaVmModule from '@/viewmodel/useForcaViewModel';
 import type { ForcaActions, ForcaState } from '@/viewmodel/useForcaViewModel';
 
@@ -73,7 +75,7 @@ describe('ForcaScreen — Testes de Tela com Mocks de ViewModel (UC05)', () => {
     expect(ForcaRoute).toBe(ForcaScreen);
   });
 
-  it('deve renderizar o estado de carregamento (loading)', () => {
+  it('deve renderizar o estado de carregamento (loading) centralizado com padding e gap do tema (#97)', () => {
     const actions = createMockActions();
     jest
       .spyOn(forcaVmModule, 'useForcaViewModel')
@@ -88,9 +90,17 @@ describe('ForcaScreen — Testes de Tela com Mocks de ViewModel (UC05)', () => {
       accessibilityLabel: 'Carregando Arena do Jogo da Forca',
     } as any);
     expect(root).toBeDefined();
+    const flattened = StyleSheet.flatten(root.props.style);
+    expect(flattened).toMatchObject({
+      flex: 1,
+      backgroundColor: tokens.semantic.color.surface,
+      padding: tokens.semantic.space.lg,
+      gap: tokens.semantic.space.md,
+      justifyContent: 'center',
+    });
   });
 
-  it('deve renderizar o estado de erro e acionar handleRetry', () => {
+  it('deve renderizar o estado de erro com espaçamento centerScreen e acionar handleRetry (#97)', () => {
     const actions = createMockActions();
     jest
       .spyOn(forcaVmModule, 'useForcaViewModel')
@@ -99,6 +109,17 @@ describe('ForcaScreen — Testes de Tela com Mocks de ViewModel (UC05)', () => {
     let tree!: renderer.ReactTestRenderer;
     act(() => {
       tree = renderer.create(<ForcaScreen />);
+    });
+
+    const errorContainer = tree.root.findByProps({
+      accessibilityLiveRegion: 'assertive',
+    } as any);
+    expect(StyleSheet.flatten(errorContainer.props.style)).toMatchObject({
+      flex: 1,
+      backgroundColor: tokens.semantic.color.surface,
+      padding: tokens.semantic.space.lg,
+      gap: tokens.semantic.space.md,
+      justifyContent: 'center',
     });
 
     const retryBtn = tree.root.findByProps({
@@ -110,19 +131,69 @@ describe('ForcaScreen — Testes de Tela com Mocks de ViewModel (UC05)', () => {
     expect(actions.handleRetry).toHaveBeenCalledTimes(1);
   });
 
-  it('deve renderizar o estado de equipes insuficientes quando houver menos de 2 equipes', () => {
+  it('deve renderizar o estado de equipes insuficientes com espaçamento centerScreen nos temas Claro e Escuro (#97)', () => {
     const actions = createMockActions();
     jest
       .spyOn(forcaVmModule, 'useForcaViewModel')
       .mockReturnValue([{ ...baseState, teams: [] }, actions]);
 
+    (useColorScheme as jest.Mock).mockReturnValue('light');
     let tree!: renderer.ReactTestRenderer;
     act(() => {
-      tree = renderer.create(<ForcaScreen />);
+      tree = renderer.create(
+        <ThemeProvider>
+          <ForcaScreen />
+        </ThemeProvider>
+      );
     });
 
     const texts = tree.root.findAllByType('Text' as any);
     expect(texts.some((t) => t.props.children === 'Equipes Insuficientes')).toBe(true);
+
+    const containerLight = tree.root.findByProps({
+      accessibilityLabel: 'Aviso de equipes insuficientes no Jogo da Forca',
+    } as any);
+    expect(StyleSheet.flatten(containerLight.props.style)).toMatchObject({
+      flex: 1,
+      backgroundColor: tokens.semantic.color.surface,
+      padding: tokens.semantic.space.lg,
+      gap: tokens.semantic.space.md,
+      justifyContent: 'center',
+    });
+
+    const teamsBtn = tree.root.findByProps({
+      accessibilityLabel: 'Cadastrar Equipes',
+    } as any);
+    const backBtn = tree.root.findByProps({
+      accessibilityLabel: 'Voltar aos Jogos',
+    } as any);
+    act(() => {
+      teamsBtn.props.onPress();
+      backBtn.props.onPress();
+    });
+    expect(actions.handleGoToTeams).toHaveBeenCalledTimes(1);
+    expect(actions.handleConfirmExit).toHaveBeenCalledTimes(1);
+
+    // Verifica também no Tema Escuro
+    (useColorScheme as jest.Mock).mockReturnValue('dark');
+    act(() => {
+      tree = renderer.create(
+        <ThemeProvider>
+          <ForcaScreen />
+        </ThemeProvider>
+      );
+    });
+    const containerDark = tree.root.findByProps({
+      accessibilityLabel: 'Aviso de equipes insuficientes no Jogo da Forca',
+    } as any);
+    expect(StyleSheet.flatten(containerDark.props.style)).toMatchObject({
+      flex: 1,
+      backgroundColor: darkTokens.semantic.color.surface,
+      padding: darkTokens.semantic.space.lg,
+      gap: darkTokens.semantic.space.md,
+      justifyContent: 'center',
+    });
+    (useColorScheme as jest.Mock).mockReturnValue('light');
   });
 
   it('deve renderizar as fases pass-turn, playing, word-result, finished e ações de jogo', () => {
