@@ -87,7 +87,7 @@ export const ForcaScreen = () => {
   if (state.loading) {
     return (
       <View
-        style={styles.screen}
+        style={styles.centerScreen}
         accessibilityRole="progressbar"
         accessibilityLabel="Carregando Arena do Jogo da Forca"
       >
@@ -100,7 +100,7 @@ export const ForcaScreen = () => {
 
   if (state.error) {
     return (
-      <View style={styles.screen} accessibilityLiveRegion="assertive">
+      <View style={styles.centerScreen} accessibilityLiveRegion="assertive">
         <GameCard
           title="Atenção na Arena"
           description={state.error}
@@ -122,7 +122,10 @@ export const ForcaScreen = () => {
 
   if (state.teams.length < 2) {
     return (
-      <View style={styles.screen}>
+      <View
+        style={styles.centerScreen}
+        accessibilityLabel="Aviso de equipes insuficientes no Jogo da Forca"
+      >
         <GameCard
           title="Equipes Insuficientes"
           description="Cadastre pelo menos 2 equipes para iniciar o Jogo da Forca."
@@ -409,7 +412,15 @@ const createStyles = (activeTokens: AppTokens) => {
       flex: 1,
       backgroundColor: color.surface,
     },
+    centerScreen: {
+      flex: 1,
+      backgroundColor: color.surface,
+      padding: space.lg,
+      gap: space.md,
+      justifyContent: 'center',
+    },
     scrollContent: {
+      flexGrow: 1,
       padding: space.md,
       gap: space.md,
       paddingBottom: space['2xl'],
