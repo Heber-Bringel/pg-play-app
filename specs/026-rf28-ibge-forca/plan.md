@@ -12,7 +12,7 @@
 
 Um script offline de desenvolvimento (`scripts/importar-pacotes-ibge.mjs`) consulta `/api/v1/localidades/estados` e `/api/v1/localidades/paises` da API do IBGE, aplica renomeações canônicas (`RÚSSIA`, `ESTADOS UNIDOS`, `COREIA DO SUL`, `COREIA DO NORTE`, `NÍGER`, `BIELORRÚSSIA`), curadoria de exclusão de microestados, mapeamento fechado de regiões e auto-validação anti-vazamento de tokens antes de gerar `src/infra/datasources/memoryIbgeForcaDataSource.ts` (`implements IIbgeForcaDataSource`).
 
-Em `src/di/container.ts`, o catálogo principal é instanciado via `MemoryGameCatalogDataSource.withIbgeLocalidades(new MemoryIbgeForcaDataSource())`, mesclando e deduplicando de forma assíncrona em `listForcaPuzzles()` (preservando entradas manuais como `PORTUGAL` e convertendo erros em `DataSourceError`). Na camada de apresentação, `useForcaViewModel` passa a embaralhar uniformemente os puzzles carregados (`shufflePuzzles` com `randomFn` injetável para testes determinísticos), e `src/view/forca.tsx` recebe ajuste de IHC para agrupar lacunas por palavra (`wordGroup`), renderizar hífen sem sublinhado e expor `accessibilityLabel` dinâmico.
+Em `src/di/container.ts`, o catálogo principal é instanciado via `MemoryGameCatalogDataSource.withIbgeLocalidades(new MemoryIbgeForcaDataSource())` preservando `soundPreferenceDataSource` (preferência de som da `develop`), mesclando e deduplicando de forma assíncrona em `listForcaPuzzles()` (preservando entradas manuais como `PORTUGAL` e convertendo erros em `DataSourceError`). Na camada de apresentação, `useForcaViewModel` combina `gameFeedback` (feedback tátil/sonoro) e `randomFn` (3º parâmetro opcional estabilizado via `useRef` como `randomFnRef`) para embaralhar uniformemente os puzzles carregados (`shufflePuzzles`), e `src/view/forca.tsx` recebe ajuste de IHC para agrupar lacunas por palavra (`wordGroup`), renderizar hífen sem sublinhado e expor `accessibilityLabel` dinâmico.
 
 ---
 
@@ -48,7 +48,7 @@ src/
 ├─ di/
 │  └─ container.ts                                    # [ALTERAR] MemoryGameCatalogDataSource.withIbgeLocalidades(new MemoryIbgeForcaDataSource())
 ├─ viewmodel/
-│  └─ useForcaViewModel.ts                            # [ALTERAR] Exporta shufflePuzzles e adiciona randomFn: () => number = Math.random no hook
+│  └─ useForcaViewModel.ts                            # [ALTERAR] Exporta shufflePuzzles e adiciona randomFn (3º parâmetro opcional após gameFeedback) estabilizado com useRef
 ├─ view/
 │  └─ forca.tsx                                       # [ALTERAR] Agrupamento por palavra (wordGroup), hífen sem sublinhado e accessibilityLabel
 └─ app/
@@ -65,6 +65,7 @@ tests/
 │  ├─ ibgeForcaSnapshot.test.ts                       # [NOVO] Integridade das 27 capitais + países (ids, tamanho <= 20, regex, anti-vazamento por token)
 │  └─ pgPlayUseCases.forca.test.ts                    # [ALTERAR] Integração MemoryGameCatalogDataSource.withIbgeLocalidades + deduplicação de PORTUGAL
 ├─ hooks/
+│  ├─ gameFeedback.viewmodels.test.ts                 # [ALTERAR] Injeta IDENTITY_RANDOM_FN nos testes de feedback da Forca
 │  └─ useForcaViewModel.test.ts                       # [ALTERAR] Preserva determinismo com randomFn fixo no harness + novo teste de embaralhamento
 └─ mocks/
    └─ forcaScreen.mock.test.tsx                       # [ALTERAR] Testa renderização de palavras compostas com espaço, hífen e accessibilityLabel
@@ -90,11 +91,12 @@ tests/
   ```ts
   export function useForcaViewModel(
     useCases: IPgPlayUseCases = pgPlayUseCases,
+    gameFeedback: IGameFeedbackUseCases = gameFeedbackUseCases,
     randomFn: () => number = Math.random
   ): [ForcaState, ForcaActions]
   ```
-- Aplica `shufflePuzzles(loadedPuzzles, randomFn)` em `loadSession` e em `handleToggleCategory`.
-- Nos testes existentes em `tests/hooks/useForcaViewModel.test.ts`, `createHookHarness` passa `randomFn = () => 0.999999` por padrão (no Fisher-Yates reverso, `Math.floor(0.999999 * (i + 1)) === i`, preservando a ordem exata `['COMUNHÃO', ...]`), além de um teste dedicado provando que valores distintos de `randomFn` embaralham o baralho.
+- Estabiliza `randomFn` em `randomFnRef` (`useRef(randomFn)`) para evitar reexecuções do `useEffect` inicial ou de callbacks quando consumidores passarem funções inline, aplicando `shufflePuzzles(loadedPuzzles, randomFnRef.current)` em `loadSession` e em `handleToggleCategory`.
+- Nos testes existentes em `tests/hooks/useForcaViewModel.test.ts`, `createHookHarness` passa `useForcaViewModel(useCases, undefined, randomFn)` com `randomFn = () => 0.999999` por padrão (no Fisher-Yates reverso, `Math.floor(0.999999 * (i + 1)) === i`, preservando a ordem exata `['COMUNHÃO', ...]`), além de um teste dedicado provando que valores distintos de `randomFn` embaralham o baralho. Em `tests/hooks/gameFeedback.viewmodels.test.ts`, os testes da Forca também usam `useForcaViewModel(useCases, feedback, IDENTITY_RANDOM_FN)` para manter a palavra inicial determinística.
 
 ### 4.3. `ForcaScreen` (`src/view/forca.tsx`)
 - Divide `state.maskedWord` em blocos separados por `' '` (palavras) para renderizar cada palavra dentro de `<View style={styles.wordGroup}>`, com `slotsRow` usando `columnGap: space.md` e `rowGap: space.sm`. Assim, palavras compostas quebram de linha preferencialmente nos espaços entre palavras.
@@ -126,9 +128,9 @@ tests/
    - Valida imutabilidade (cópia defensiva) de `MemoryIbgeForcaDataSource.listForcaPuzzles()`.
 2. **`tests/unit/pgPlayUseCases.forca.test.ts`**:
    - Valida `MemoryGameCatalogDataSource.withIbgeLocalidades(new MemoryIbgeForcaDataSource())` integrado a `PgPlayUseCases.listForcaPuzzles(['Países e Cidades'])`, verificando total expandido e ausência de duplicata para `PORTUGAL` (mantendo dica manual).
-3. **`tests/hooks/useForcaViewModel.test.ts`**:
-   - Mantém todos os testes existentes passando com `randomFn` injetável + adiciona teste unitário de `shufflePuzzles` e sorteio em `useForcaViewModel`.
+3. **`tests/hooks/useForcaViewModel.test.ts` e `tests/hooks/gameFeedback.viewmodels.test.ts`**:
+   - Mantém todos os testes existentes passando com `randomFn` injetável (`useForcaViewModel(useCases, undefined, randomFn)` e `useForcaViewModel(useCases, feedback, IDENTITY_RANDOM_FN)`) + adiciona teste unitário de `shufflePuzzles` e sorteio em `useForcaViewModel`.
 4. **`tests/mocks/forcaScreen.mock.test.tsx`**:
    - Testa renderização de palavra composta com espaço e hífen (ex.: `GUINÉ-BISSAU` / `RIO BRANCO`), garantindo presença do hífen sem sublinhado extra e `accessibilityLabel` dinâmico.
 5. **Portão de Qualidade (`npm run check`)**:
-   - `node scripts/check-arquitetura.mjs && node scripts/check-design-system.mjs && tsc --noEmit && jest --passWithNoTests` com **0 erros e 0 avisos**.
+   - `node scripts/check-arquitetura.mjs && node scripts/check-design-system.mjs && tsc --noEmit && jest --passWithNoTests` com **0 erros** e **73 suítes / 470 testes aprovados** (apenas 1 aviso pré-existente em `src/view/versiculo.tsx:56`, fora do escopo deste PR).

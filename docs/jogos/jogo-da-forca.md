@@ -9,7 +9,7 @@ Referências: `UC05` e `RF09`, `RF11`, `RF12`, `RF15` em [`requisitos-e-casos-de
 ## 1. Visão Geral no Domínio PG PLAY
 
 - **Formato:** 1 celular compartilhado; a **equipe da vez** discute e escolhe as letras de sua palavra.
-- **Conteúdo:** banco local de palavras com **dica/tema** **misto** (bíblico e geral), organizado em pacotes de temas: *Bíblico* (ex.: tema *Personagem*, palavra `ESTER`; tema *Livro da Bíblia*, palavra `SALMOS`), *Animais*, *Países e Cidades* (capitais brasileiras e países do mundo em português — **Fonte: IBGE**), *Frutas e Comidas*, *Filmes*, *Profissões* e *Esportes*. O grupo pode combinar vários pacotes.
+- **Conteúdo:** banco local de palavras com **dica/tema** **misto** (bíblico e geral), organizado em pacotes de temas: *Bíblico* (ex.: tema *Personagem*, palavra `ESTER`; tema *Livro da Bíblia*, palavra `SALMOS`), *Animais*, *Países e Cidades* (27 capitais brasileiras e 165 países do mundo em português — **Fonte: IBGE**), *Frutas e Comidas*, *Filmes*, *Profissões* e *Esportes*. O grupo pode combinar vários pacotes.
 - **Sem cadastro e offline** (**RNF02**, **RNF03**).
 
 ---
@@ -53,9 +53,9 @@ Ao cumprir o número de palavras por equipe ou esgotar o banco, o card de conclu
 ## 4. Regras
 
 - Acentos e cedilha são normalizados: digitar `A` revela `Á`, `Ã`, `Â`; `C` revela `Ç`. A palavra é exibida com a grafia correta ao final.
-- Espaços e hífens em expressões compostas aparecem já revelados.
+- Espaços e hífens em expressões compostas aparecem já revelados (hífens sem sublinhado e lacunas agrupadas por palavra para evitar quebra no meio de uma palavra).
 - Cada letra só pode ser escolhida uma vez por palavra.
-- Palavras não se repetem na mesma partida.
+- O baralho é embaralhado uniformemente a cada sessão e palavras não se repetem na mesma partida.
 
 ---
 

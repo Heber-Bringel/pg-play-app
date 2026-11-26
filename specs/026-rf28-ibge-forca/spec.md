@@ -2,8 +2,8 @@
 
 - **Branch da Feature:** `feat/026-rf28-ibge-forca`
 - **Criado em:** 2026-11-24
-- **Atualizado em:** 2026-11-24 (Pós-auditoria de integridade e fechamento de decisões)
-- **Status:** Aprovado para Revisão Final
+- **Atualizado em:** 2026-11-26 (Pós-merge com develop e revisão do PR #87)
+- **Status:** Implementado e Validado (PR #87)
 - **Caso(s) de Uso / Requisito(s):** `UC05` (`RF15`, `RF28`, `RF30`, `RNF02`, `RNF03`, `RNF06`) — Ref.: `docs/requisitos/requisitos-e-casos-de-uso-pg-play.md` e `docs/jogos/jogo-da-forca.md`
 - **Issue vinculada:** `#78` (`v0.2.0 — Núcleo & Jogos em 1 Celular (UC01–UC06)`)
 - **Fonte dos Dados:** [API de Localidades do IBGE](https://servicodados.ibge.gov.br/api/docs/localidades) (pública, gratuita, sem chave e em português)
@@ -154,7 +154,7 @@ Os nomes brutos da API do IBGE trazem parênteses redundantes, espaços duplos (
 
 ## 5. Critérios de Sucesso e Acessibilidade *(Obrigatório)*
 
-- **`CS-01` (Conteúdo & Sorteio — `UC05` / `RF28`)**: Selecionando `"Países e Cidades"`, a Forca sorteia aleatoriamente entre as 27 capitais brasileiras e `~160` países curados do IBGE sem repetir na mesma partida e sem revelar a resposta na dica.
+- **`CS-01` (Conteúdo & Sorteio — `UC05` / `RF28`)**: Selecionando `"Países e Cidades"`, a Forca sorteia aleatoriamente entre as 27 capitais brasileiras e 165 países curados (192 localidades no total) do IBGE sem repetir na mesma partida e sem revelar a resposta na dica.
 - **`CS-02` (Offline-First — `RNF02` / `RNF03`)**: Zero chamadas HTTP durante a execução do app.
 - **`CS-03` (IHC / Acessibilidade — `RNF06`)**: Palavras compostas não quebram sílabas entre linhas quando cabem na largura útil, hífens são distinguíveis de lacunas e `slotsRow` possui `accessibilityLabel` dinâmico; zero números mágicos ou cores literais (`check:ds` com 0 erros).
 - **`CS-04` (Arquitetura MVVM & Qualidade)**: `npm run check` (`check-arquitetura.mjs` + `check-design-system.mjs` + `tsc --noEmit` + `jest`) executa com **0 violações**.

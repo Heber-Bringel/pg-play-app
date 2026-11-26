@@ -31,14 +31,14 @@
 *Objetivo: Integrar e deduplicar os dados do IBGE no catálogo preservando entradas manuais e isolamento de infra.*
 
 - [x] **T004** Atualizar `src/infra/datasources/memoryGameCatalogDataSource.ts` adicionando `MemoryGameCatalogDataSource.withIbgeLocalidades(ibgeForcaDataSource: IIbgeForcaDataSource)` e mesclando/deduplicando de forma assíncrona dentro de `listForcaPuzzles()` (preservando entradas manuais como `PORTUGAL` e convertendo erros em `DataSourceError`).
-- [x] **T005** Atualizar `src/di/container.ts` para instanciar `MemoryGameCatalogDataSource.withIbgeLocalidades(new MemoryIbgeForcaDataSource())`.
+- [x] **T005** Atualizar `src/di/container.ts` para instanciar `MemoryGameCatalogDataSource.withIbgeLocalidades(new MemoryIbgeForcaDataSource())`, preservando `soundPreferenceDataSource` da `develop`.
 
 ---
 
 ## Fase 4: Apresentação — Sorteio na ViewModel e Compostas/Hífen na View (`src/viewmodel/` e `src/view/`)
 *Objetivo: Garantir sorteio real entre capitais/países e renderização acessível de nomes compostos e hifenizados.*
 
-- [x] **T006** Atualizar `src/viewmodel/useForcaViewModel.ts` exportando `shufflePuzzles(puzzles, randomFn)` e adicionando o parâmetro opcional `randomFn: () => number = Math.random` em `useForcaViewModel` para embaralhar uniformemente os puzzles em `loadSession` e `handleToggleCategory`.
+- [x] **T006** Atualizar `src/viewmodel/useForcaViewModel.ts` exportando `shufflePuzzles(puzzles, randomFn)` e adicionando o 3º parâmetro opcional `randomFn: () => number = Math.random` (após `gameFeedback`, estabilizado via `randomFnRef` com `useRef`) em `useForcaViewModel` para embaralhar uniformemente os puzzles em `loadSession` e `handleToggleCategory`.
 - [x] **T007** Atualizar `src/view/forca.tsx` (usando apenas tokens de `useTheme()`, zero números mágicos) para agrupar `state.maskedWord` por palavra (`wordGroup`), renderizar hífen `'-'` sem `slotUnderline` (`hyphenSlot`) e adicionar `accessibilityLabel` dinâmico nas lacunas.
 
 ---
@@ -55,7 +55,7 @@
 
 - [x] **T009** Criar `tests/unit/ibgeForcaSnapshot.test.ts` validando as 27 capitais, países renomeados, unicidade de `id` e `word`, limite `<= 20` caracteres, regex de caracteres válidos, anti-vazamento completo (palavra inteira + vocábulos `>= 3` letras) e cópia defensiva de `MemoryIbgeForcaDataSource`.
 - [x] **T010** Atualizar `tests/unit/pgPlayUseCases.forca.test.ts` testando `MemoryGameCatalogDataSource.withIbgeLocalidades(new MemoryIbgeForcaDataSource())` em `PgPlayUseCases.listForcaPuzzles(['Países e Cidades'])` e confirmando que `PORTUGAL` não duplica e preserva a dica manual.
-- [x] **T011** Atualizar `tests/hooks/useForcaViewModel.test.ts` injetando `randomFn` determinístico (`() => 0.999999`) no harness padrão e adicionando teste dedicado de embaralhamento (`shufflePuzzles` / `useForcaViewModel`).
+- [x] **T011** Atualizar `tests/hooks/useForcaViewModel.test.ts` e `tests/hooks/gameFeedback.viewmodels.test.ts` injetando `IDENTITY_RANDOM_FN` (`() => 0.999999`) para manter o determinismo na assinatura `(useCases, gameFeedback, randomFn)` e adicionando teste dedicado de embaralhamento (`shufflePuzzles` / `useForcaViewModel`).
 - [x] **T012** Atualizar `tests/mocks/forcaScreen.mock.test.tsx` adicionando teste de renderização para palavras compostas com espaço e hífen e validação do `accessibilityLabel` das lacunas.
 
 ---
@@ -65,3 +65,4 @@
 
 - [x] **T013** Executar `npm run check` (`node scripts/check-arquitetura.mjs && node scripts/check-design-system.mjs && tsc --noEmit && jest --passWithNoTests`) e confirmar **0 violações e 100% dos testes passando**.
 - [x] **T014** Criar branch `feat/026-rf28-ibge-forca`, realizar commits convencionais usando exclusivamente escopos oficiais de `CONTRIBUTING.md` (`model`, `harness` para `scripts/`, `infra`, `di`, `viewmodel`, `view`, `docs`, `tests`) e abrir Pull Request vinculando `Closes #78` (`/commit-e-pr`).
+- [x] **T015** Resolver conflitos com `develop`, estabilizar `randomFn` com `useRef` em `useForcaViewModel`, sincronizar documentação (`spec.md`, `plan.md`, `tasks.md`, `docs/jogos/jogo-da-forca.md`) e atualizar descrição/revisão do PR `#87`.
