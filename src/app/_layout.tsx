@@ -1,10 +1,6 @@
 import React, { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 import { Stack } from 'expo-router';
-
-export const unstable_settings = {
-  anchor: 'welcome',
-};
 import Head from 'expo-router/head';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
@@ -19,6 +15,10 @@ import {
 import { ThemeProvider, useTheme, type AppTokens } from '@/view/theme';
 import { useSoundPreferenceViewModel } from '@/viewmodel/useSoundPreferenceViewModel';
 import { useThemePreferenceViewModel } from '@/viewmodel/useThemePreferenceViewModel';
+
+export const unstable_settings = {
+  anchor: 'welcome',
+};
 
 const LayoutShell = () => {
   const activeTokens = useTheme();
