@@ -10,7 +10,8 @@ export type MinigameRoute =
   | '/cidade-dorme'
   | '/versiculo'
   | '/quem-sou-eu'
-  | '/termometro';
+  | '/termometro'
+  | '/desenho';
 
 export type MinigameIconName =
   | 'drama-masks'
@@ -20,7 +21,8 @@ export type MinigameIconName =
   | 'weather-night'
   | 'book-open-variant'
   | 'account-question-outline'
-  | 'thermometer-lines';
+  | 'thermometer-lines'
+  | 'palette';
 
 export type Minigame = {
   id: string;

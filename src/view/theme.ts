@@ -105,6 +105,11 @@ export function createTokens(mode: ThemeMode = 'light') {
     disabledText: isDark ? primitive.color.neutral400 : primitive.color.neutral600,
     scrim: primitive.color.scrim,
     transparent: primitive.color.transparent,
+    canvasPaper: primitive.color.neutral50,
+    canvasInk: primitive.color.neutral900,
+    canvasPurple: primitive.color.purple600,
+    canvasCoral: primitive.color.coral700,
+    canvasGreen: primitive.color.green700,
   };
 
   const semanticSpace = {
@@ -379,6 +384,34 @@ export function createTokens(mode: ThemeMode = 'light') {
       },
       miss: {
         bg: semantic.color.errorContainer,
+      },
+    },
+    canvas: {
+      paperBg: semantic.color.canvasPaper,
+      border: semantic.color.outline,
+      radius: semantic.radius.lg,
+      minHeight: semantic.space['3xl'] * 5,
+      expandedMinHeight: semantic.space['3xl'] * 6,
+      pen: {
+        ink: semantic.color.canvasInk,
+        purple: semantic.color.canvasPurple,
+        coral: semantic.color.canvasCoral,
+        green: semantic.color.canvasGreen,
+        onPen: semantic.color.canvasPaper,
+      },
+      stroke: {
+        thin: semantic.space.xs,
+        thick: semantic.space.sm,
+      },
+      tool: {
+        size: semantic.space['2xl'],
+        radius: semantic.radius.full,
+        radiusSelected: semantic.radius.md,
+        border: {
+          default: semantic.color.outline,
+          selected: semantic.color.action,
+          focus: semantic.color.focus,
+        },
       },
     },
     navBar: {
@@ -692,6 +725,7 @@ export const {
   timer,
   quiz,
   key,
+  canvas,
   navBar,
   podium,
   splash,

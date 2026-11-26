@@ -12,6 +12,7 @@ Modalidades em que os participantes entram na mesma sala via código curto ou QR
 | :--- | :---: | :--- | :--- |
 | 🌙 **Cidade Dorme** | 5 a 16 | [`cidade-dorme.md`](cidade-dorme.md) | Papéis de **Cidadão**, **Assassino**, **Anjo** e **Detetive**; **Narrador do próprio app por áudio** (voz masculina ou feminina clonada dos líderes) para que 100% da roda jogue; alternância automática entre Tema Escuro (Noite) e Tema Claro (Dia). |
 | ✍️📖 **Adedonha Bíblica** | 2 a 16 | [`adedonha-biblica.md`](adedonha-biblica.md) | **Roleta Expressiva do Alfabeto** (física de mola M3 Expressive); colunas/categorias bíblicas criadas pelo **Moderador**; validação instantânea da letra inicial e apuração assistida com botão **"Levantar Dúvida ✋"**. |
+| 🎨 **Desenho Relâmpago** | 2 a 16 | [`desenho-relampago.md`](desenho-relampago.md) | **Desenho em tempo real** (estilo *Gartic*) com pincel livre e **formas geométricas** (linha, retângulo, círculo, triângulo — contorno ou preenchido); tema visível por `5s` e canvas expandido; adivinhação digitada no app com validação automática. |
 
 ---
 

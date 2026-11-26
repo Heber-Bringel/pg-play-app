@@ -4,10 +4,24 @@ Versões no formato `MAIOR.MENOR.CORREÇÃO` (Semantic Versioning). Mudanças qu
 
 ---
 
+## 1.3.0 · 25/11/2026
+
+- Evolução do componente `DrawingCanvas` e dos tokens `canvas.*` para a refatoração multiplayer do **Desenho Relâmpago** (`UC12`, Issue `#83`):
+  - **Canvas expandido (`02-tokens.md`):** atualização de `canvas.minHeight` para `320 dp` (`space.3xl * 5`) e criação do token `canvas.expandedMinHeight` (`384 dp` = `space.3xl * 6`) para ocupar a área liberada quando o tema temporário de `5s` desaparece.
+  - **Formas geométricas e preenchimento (`04-componentes/tela-de-desenho.md`):** adição das ferramentas `Pincel Livre`, `Linha`, `Retângulo`, `Círculo` e `Triângulo` com alternador `Contorno` / `Preenchido` e pré-visualização em tempo real durante o gesto.
+  - **Modo somente leitura (`readOnly`):** suporte à visualização em tempo real pelos adivinhadores da sala multiplayer sem exibir barra de ferramentas nem opacidade de bloqueio.
+
+---
+
 ## 1.2.0 · 25/11/2026
 
-- Adição do 11º componente oficial do sistema **PG Play Expressive**: **`ShortNavigationBar`** ([barra-de-navegacao.md](04-componentes/barra-de-navegacao.md)), seguindo as diretrizes oficiais do **Material 3 Expressive (2025)** (*edge-to-edge*, pílula indicadora `56 × 32 dp` em `color.actionContainer`, ícone + rótulo visíveis em todos os 4 destinos).
+- Adição do componente oficial **`ShortNavigationBar`** ([barra-de-navegacao.md](04-componentes/barra-de-navegacao.md)), seguindo as diretrizes oficiais do **Material 3 Expressive (2025)** (*edge-to-edge*, pílula indicadora `56 × 32 dp` em `color.actionContainer`, ícone + rótulo visíveis em todos os 4 destinos).
 - Adição dos tokens de componente `navBar`, `podium` (Pódio do Encontro em 3 colunas sem bordas amarelas duplicadas) e `splash` (abertura animada com `motion.spring.spatial` em modos Claro e Escuro) em `src/view/theme.ts` e [02-tokens.md](02-tokens.md) (Issue `#80`).
+- Adição do componente `DrawingCanvas` e dos tokens de desenho para o minigame **Desenho Relâmpago** (`UC12`, Issue `#83`).
+- **Mudanças de desenho incluídas nesta versão:**
+  - **Superfície de papel e 4 canetas acessíveis (`02-tokens.md`):** criação dos tokens semânticos `color.canvas-paper` (`neutral-50` `#FDF8FF`, fixo nos dois temas) e `color.canvas-ink` (`#1D1B20`, **16,42:1**), `color.canvas-purple` (`#5B21B6`, **8,84:1**), `color.canvas-coral` (`#C2410C`, **4,90:1**) e `color.canvas-green` (`#15803D`, **4,88:1**), reaproveitando 100% os primitivos existentes.
+  - **Tokens de componente `canvas.*`:** definição de `canvas.paperBg`, `canvas.border`, `canvas.radius`, `canvas.minHeight`, `canvas.pen.*`, `canvas.stroke.{thin,thick}` (`4 dp` / `8 dp`) e `canvas.tool.*` (`48 dp`, *shape morphing* `radius.full` → `radius.md`).
+  - **Novo componente `DrawingCanvas` ([04-componentes/tela-de-desenho.md](04-componentes/tela-de-desenho.md)):** especificação da área `Svg` + `PanResponder` e barra de ferramentas acessível com confirmação múltipla (cor + forma + ícone `check` + borda ativa).
 
 ---
 

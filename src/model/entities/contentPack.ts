@@ -3,10 +3,15 @@ import type {
   MimicaCategory,
   QuizCategory,
 } from '@/model/entities/arenaChallenge';
+import type { DesenhoCategory } from '@/model/entities/drawingChallenge';
 
-export type ContentPackGameId = 'mimica' | 'quiz' | 'forca';
+export type ContentPackGameId = 'mimica' | 'quiz' | 'forca' | 'desenho';
 
-export type ContentPackCategory = MimicaCategory | QuizCategory | ForcaCategory;
+export type ContentPackCategory =
+  | MimicaCategory
+  | QuizCategory
+  | ForcaCategory
+  | DesenhoCategory;
 
 export type ContentPack = {
   id: string;

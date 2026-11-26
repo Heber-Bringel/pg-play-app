@@ -24,6 +24,7 @@ module.exports = {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^react-native$': '<rootDir>/tests/__mocks__/react-native.tsx',
     '^react-native-safe-area-context$': '<rootDir>/tests/__mocks__/react-native-safe-area-context.tsx',
+    '^react-native-svg$': '<rootDir>/tests/__mocks__/react-native-svg.tsx',
     '^@expo/vector-icons$': '<rootDir>/tests/__mocks__/expo-vector-icons.tsx',
     '^expo-router$': '<rootDir>/tests/__mocks__/expo-router.ts',
     '^expo-speech$': '<rootDir>/tests/__mocks__/expo-speech.ts',

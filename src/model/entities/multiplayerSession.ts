@@ -1,3 +1,8 @@
+import type {
+  DesenhoCategory,
+  DrawingElement,
+} from '@/model/entities/drawingChallenge';
+
 export type AdedonhaPhase =
   | 'lobby'
   | 'roulette'
@@ -177,4 +182,61 @@ export type CidadeDormeRoom = {
   dawnReport: CidadeDormeDawnReport | null;
   voteReport: CidadeDormeVoteReport | null;
   winner: CidadeDormeAlignment | null;
+};
+
+export type DesenhoPhase = 'lobby' | 'drawing' | 'turn_summary' | 'finished';
+
+export type DesenhoTurnDuration = 60 | 90 | 120;
+
+export type DesenhoConfig = {
+  turnDurationSeconds: DesenhoTurnDuration;
+  totalRounds: number;
+  categories: DesenhoCategory[];
+};
+
+export type DesenhoPlayer = {
+  id: string;
+  nickname: string;
+  isHost: boolean;
+  score: number;
+  drawingScore: number;
+  firstGuessCount: number;
+  hasGuessedCurrentTurn: boolean;
+};
+
+export type DesenhoGuess = {
+  id: string;
+  playerId: string;
+  playerNickname: string;
+  text: string;
+  isCorrect: boolean;
+  pointsAwarded: number;
+  createdAt: string;
+};
+
+export type DesenhoAwards = {
+  generalChampion: DesenhoPlayer | null;
+  bestArtist: DesenhoPlayer | null;
+  eagleEye: DesenhoPlayer | null;
+};
+
+export type DesenhoRoom = {
+  id: string;
+  code: string;
+  gameType: 'desenho';
+  hostId: string;
+  phase: DesenhoPhase;
+  version: number;
+  phaseEndsAt: string | null;
+  config: DesenhoConfig;
+  currentRound: number;
+  drawerOrder: string[];
+  currentDrawerIndex: number;
+  currentDrawerId: string | null;
+  currentCardCategory: DesenhoCategory | null;
+  currentSecretWord: string | null;
+  usedCardIds: string[];
+  elements: DrawingElement[];
+  guesses: DesenhoGuess[];
+  players: DesenhoPlayer[];
 };

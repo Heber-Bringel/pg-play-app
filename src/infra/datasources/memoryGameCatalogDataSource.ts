@@ -9,6 +9,7 @@ import type {
   QuizQuestion,
 } from '@/model/entities/arenaChallenge';
 import type { ContentPack, ContentPackGameId } from '@/model/entities/contentPack';
+import type { DesenhoCard, DesenhoCategory } from '@/model/entities/drawingChallenge';
 import type { Minigame } from '@/model/entities/minigame';
 import { DataSourceError } from '@/model/errors';
 
@@ -116,6 +117,18 @@ const DEFAULT_MINIGAMES: Minigame[] = [
     route: '/termometro',
     icon: 'thermometer-lines',
     themes: ['oracao', 'pedidos', 'encerramento', 'termometro', 'comunhao'],
+    available: true,
+  },
+  {
+    id: 'desenho',
+    title: 'Desenho Relâmpago',
+    description:
+      'Desenhe em tempo real com pincel e formas geométricas enquanto a sala tenta adivinhar no próprio celular.',
+    modality: 'Multi-Celular',
+    playersTag: 'Multi-Celular · 2–16 jogadores',
+    route: '/desenho',
+    icon: 'palette',
+    themes: ['desenho', 'criatividade', 'biblico', 'animais', 'multiplayer', 'sala'],
     available: true,
   },
 ];
@@ -532,6 +545,74 @@ const DEFAULT_CONTENT_PACKS: ContentPack[] = [
     description: 'Esportes olímpicos e populares',
     icon: 'basketball',
   },
+  {
+    id: 'desenho-biblico',
+    gameId: 'desenho',
+    category: 'Bíblico',
+    label: 'Bíblico',
+    description: 'Cenas e símbolos bíblicos fáceis de desenhar',
+    icon: 'book-open-variant',
+  },
+  {
+    id: 'desenho-animais',
+    gameId: 'desenho',
+    category: 'Animais',
+    label: 'Animais',
+    description: 'Animais marcantes para traçar rapidamente',
+    icon: 'paw',
+  },
+  {
+    id: 'desenho-objetos',
+    gameId: 'desenho',
+    category: 'Objetos',
+    label: 'Objetos',
+    description: 'Objetos concretos do dia a dia',
+    icon: 'lightbulb-outline',
+  },
+  {
+    id: 'desenho-comidas',
+    gameId: 'desenho',
+    category: 'Comidas',
+    label: 'Comidas',
+    description: 'Frutas, lanches e sobremesas desenháveis',
+    icon: 'food-apple',
+  },
+  {
+    id: 'desenho-lugares-natureza',
+    gameId: 'desenho',
+    category: 'Lugares e Natureza',
+    label: 'Lugares e Natureza',
+    description: 'Paisagens, construções e fenômenos naturais',
+    icon: 'pine-tree',
+  },
+];
+
+const DEFAULT_DESENHO_CARDS: DesenhoCard[] = [
+  { id: 'desenho-1', word: 'Arca de Noé', category: 'Bíblico', points: 20 },
+  { id: 'desenho-2', word: 'Tábua dos Dez Mandamentos', category: 'Bíblico', points: 20 },
+  { id: 'desenho-3', word: 'Cova dos Leões', category: 'Bíblico', points: 20 },
+  { id: 'desenho-4', word: 'Jonas e a Baleia', category: 'Bíblico', points: 20 },
+  { id: 'desenho-5', word: 'Pães e Peixes', category: 'Bíblico', points: 20 },
+  { id: 'desenho-6', word: 'Girafa', category: 'Animais', points: 20 },
+  { id: 'desenho-7', word: 'Polvo', category: 'Animais', points: 20 },
+  { id: 'desenho-8', word: 'Borboleta', category: 'Animais', points: 20 },
+  { id: 'desenho-9', word: 'Elefante', category: 'Animais', points: 20 },
+  { id: 'desenho-10', word: 'Tartaruga', category: 'Animais', points: 20 },
+  { id: 'desenho-11', word: 'Guarda-chuva', category: 'Objetos', points: 20 },
+  { id: 'desenho-12', word: 'Violão', category: 'Objetos', points: 20 },
+  { id: 'desenho-13', word: 'Lanterna', category: 'Objetos', points: 20 },
+  { id: 'desenho-14', word: 'Relógio', category: 'Objetos', points: 20 },
+  { id: 'desenho-15', word: 'Bicicleta', category: 'Objetos', points: 20 },
+  { id: 'desenho-16', word: 'Melancia', category: 'Comidas', points: 20 },
+  { id: 'desenho-17', word: 'Pipoca', category: 'Comidas', points: 20 },
+  { id: 'desenho-18', word: 'Sorvete', category: 'Comidas', points: 20 },
+  { id: 'desenho-19', word: 'Abacaxi', category: 'Comidas', points: 20 },
+  { id: 'desenho-20', word: 'Hambúrguer', category: 'Comidas', points: 20 },
+  { id: 'desenho-21', word: 'Vulcão', category: 'Lugares e Natureza', points: 20 },
+  { id: 'desenho-22', word: 'Farol', category: 'Lugares e Natureza', points: 20 },
+  { id: 'desenho-23', word: 'Ilha Deserta', category: 'Lugares e Natureza', points: 20 },
+  { id: 'desenho-24', word: 'Cachoeira', category: 'Lugares e Natureza', points: 20 },
+  { id: 'desenho-25', word: 'Arco-íris', category: 'Lugares e Natureza', points: 20 },
 ];
 
 export class MemoryGameCatalogDataSource implements IGameCatalogDataSource {
@@ -540,6 +621,7 @@ export class MemoryGameCatalogDataSource implements IGameCatalogDataSource {
   private forcaPuzzles: ForcaPuzzle[];
   private quizQuestions: QuizQuestion[];
   private contentPacks: ContentPack[];
+  private desenhoCards: DesenhoCard[];
   private readonly ibgeForcaDataSource?: IIbgeForcaDataSource;
 
   constructor(
@@ -548,6 +630,7 @@ export class MemoryGameCatalogDataSource implements IGameCatalogDataSource {
     initialQuestions: QuizQuestion[] = DEFAULT_QUIZ_QUESTIONS,
     initialMinigames: Minigame[] = DEFAULT_MINIGAMES,
     initialContentPacks: ContentPack[] = DEFAULT_CONTENT_PACKS,
+    initialDesenhoCards: DesenhoCard[] = DEFAULT_DESENHO_CARDS,
     ibgeForcaDataSource?: IIbgeForcaDataSource
   ) {
     this.minigames = initialMinigames.map((game) => ({
@@ -561,6 +644,7 @@ export class MemoryGameCatalogDataSource implements IGameCatalogDataSource {
       options: q.options.map((opt) => ({ ...opt })),
     }));
     this.contentPacks = initialContentPacks.map((pack) => ({ ...pack }));
+    this.desenhoCards = initialDesenhoCards.map((card) => ({ ...card }));
     this.ibgeForcaDataSource = ibgeForcaDataSource;
   }
 
@@ -573,6 +657,7 @@ export class MemoryGameCatalogDataSource implements IGameCatalogDataSource {
       DEFAULT_QUIZ_QUESTIONS,
       DEFAULT_MINIGAMES,
       DEFAULT_CONTENT_PACKS,
+      DEFAULT_DESENHO_CARDS,
       ibgeForcaDataSource
     );
   }
@@ -666,6 +751,20 @@ export class MemoryGameCatalogDataSource implements IGameCatalogDataSource {
         }));
     } catch {
       throw new DataSourceError('Não foi possível carregar o banco de perguntas do Quiz.');
+    }
+  }
+
+  async listDesenhoCards(categories?: DesenhoCategory[]): Promise<DesenhoCard[]> {
+    try {
+      if (!categories || categories.length === 0) {
+        return this.desenhoCards.map((card) => ({ ...card }));
+      }
+      const allowed = new Set(categories);
+      return this.desenhoCards
+        .filter((card) => allowed.has(card.category))
+        .map((card) => ({ ...card }));
+    } catch {
+      throw new DataSourceError('Não foi possível carregar o banco de palavras do Desenho Relâmpago.');
     }
   }
 }

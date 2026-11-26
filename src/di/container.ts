@@ -22,9 +22,11 @@ import type { ISoundService } from '@/model/services/iSoundService';
 import type { ITiltSensorService } from '@/model/services/iTiltSensorService';
 import { AdedonhaUseCases } from '@/usecase/adedonhaUseCases';
 import { CidadeDormeUseCases } from '@/usecase/cidadeDormeUseCases';
+import { DesenhoUseCases } from '@/usecase/desenhoUseCases';
 import { GameFeedbackUseCases } from '@/usecase/gameFeedbackUseCases';
 import type { IAdedonhaUseCases } from '@/usecase/iAdedonhaUseCases';
 import type { ICidadeDormeUseCases } from '@/usecase/iCidadeDormeUseCases';
+import type { IDesenhoUseCases } from '@/usecase/iDesenhoUseCases';
 import type { IGameFeedbackUseCases } from '@/usecase/iGameFeedbackUseCases';
 import type { IPgPlayUseCases } from '@/usecase/iPgPlayUseCases';
 import type { IQuemSouEuUseCases } from '@/usecase/iQuemSouEuUseCases';
@@ -116,3 +118,8 @@ export const soundPreferenceUseCases: ISoundPreferenceUseCases =
 
 export const termometroUseCases: ITermometroUseCases =
   new TermometroUseCases();
+
+export const desenhoUseCases: IDesenhoUseCases = new DesenhoUseCases(
+  multiplayerRoomService,
+  gameCatalogDataSource
+);

@@ -7,13 +7,16 @@ import { MemoryTeamDataSource } from '@/infra/datasources/memoryTeamDataSource';
 import { MemoryVerseDataSource } from '@/infra/datasources/memoryVerseDataSource';
 import { MemorySoundPreferenceDataSource } from '@/infra/datasources/memorySoundPreferenceDataSource';
 import { MemoryHapticService } from '@/infra/services/memoryHapticService';
+import { MemoryMultiplayerRoomService } from '@/infra/services/memoryMultiplayerRoomService';
 import { MemorySoundService } from '@/infra/services/memorySoundService';
 import { MemoryScreenOrientationService } from '@/infra/services/memoryScreenOrientationService';
 import { MemoryTiltSensorService } from '@/infra/services/memoryTiltSensorService';
+import { DesenhoUseCases } from '@/usecase/desenhoUseCases';
 import { PgPlayUseCases } from '@/usecase/pgPlayUseCases';
 import { QuemSouEuUseCases } from '@/usecase/quemSouEuUseCases';
 import { GameFeedbackUseCases } from '@/usecase/gameFeedbackUseCases';
 import { VersiculoUseCases } from '@/usecase/versiculoUseCases';
+import { useDesenhoViewModel } from '@/viewmodel/useDesenhoViewModel';
 import { useForcaViewModel } from '@/viewmodel/useForcaViewModel';
 import { useMimicaViewModel } from '@/viewmodel/useMimicaViewModel';
 import { useQuemSouEuViewModel } from '@/viewmodel/useQuemSouEuViewModel';
@@ -220,6 +223,29 @@ describe('Feedback tátil do cronômetro nas ViewModels (#77)', () => {
       hook.actions.startTurn();
     });
     advanceSeconds(30);
+
+    expect(hook.state.secondsRemaining).toBe(0);
+    expect(haptic.getFeedbackCounts()).toMatchObject({ pulses: 10, expired: 1 });
+    hook.unmount();
+  });
+
+  it('Desenho Relâmpago: 10 pulsos nos segundos finais e 1 vibração forte ao zerar', async () => {
+    const { haptic, feedback } = buildFeedback();
+    const useCases = new DesenhoUseCases(
+      new MemoryMultiplayerRoomService(),
+      new MemoryGameCatalogDataSource()
+    );
+    const hook = renderHook(() => useDesenhoViewModel(useCases, feedback));
+    await hook.mount();
+
+    await act(async () => {
+      await hook.actions.handleJoinDemoRoom();
+    });
+    await act(async () => {
+      await hook.actions.handleStartMatch();
+    });
+    const duration = hook.state.secondsRemaining;
+    advanceSeconds(duration);
 
     expect(hook.state.secondsRemaining).toBe(0);
     expect(haptic.getFeedbackCounts()).toMatchObject({ pulses: 10, expired: 1 });

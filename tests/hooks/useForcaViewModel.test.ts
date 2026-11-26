@@ -326,12 +326,16 @@ describe('useForcaViewModel — Hook da Arena do Jogo da Forca (UC05)', () => {
       scoreForcaWord: async () => [],
       listQuizQuestions: async () => [],
       scoreQuizAnswer: async () => [],
+      listDesenhoCards: async () => [],
+      scoreDesenhoHit: async () => [],
+      scoreDesenhoSkip: async () => [],
       getScoreboard: async () => [],
       resetScoreboard: async () => [],
       getMatchSettings: async () => ({
         mimica: { durationSeconds: 60, totalRounds: 3 },
         quiz: { durationSeconds: 20, questionCount: 5 },
         forca: { maxAttempts: 5, totalRounds: 3 },
+        desenho: { durationSeconds: 90, totalRounds: 3 },
       }),
       updateMimicaSettings: async () => {
         throw new ValidationError('Erro simulado.');
@@ -340,6 +344,9 @@ describe('useForcaViewModel — Hook da Arena do Jogo da Forca (UC05)', () => {
         throw new ValidationError('Erro simulado.');
       },
       updateForcaSettings: async () => {
+        throw new ValidationError('Erro simulado.');
+      },
+      updateDesenhoSettings: async () => {
         throw new ValidationError('Erro simulado.');
       },
       planQuizMatch: () => ({ totalQuestions: 0, questionsPerTeam: 0, limitedByBank: false }),

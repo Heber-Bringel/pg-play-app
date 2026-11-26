@@ -7,6 +7,7 @@ import type {
   QuizQuestion,
 } from '@/model/entities/arenaChallenge';
 import type { ContentPack, ContentPackGameId } from '@/model/entities/contentPack';
+import type { DesenhoCard, DesenhoCategory } from '@/model/entities/drawingChallenge';
 import type { Minigame } from '@/model/entities/minigame';
 
 export interface IGameCatalogDataSource {
@@ -15,4 +16,5 @@ export interface IGameCatalogDataSource {
   listMimicaCards(categories?: MimicaCategory[]): Promise<MimicaCard[]>;
   listForcaPuzzles(categories?: ForcaCategory[]): Promise<ForcaPuzzle[]>;
   listQuizQuestions(categories?: QuizCategory[]): Promise<QuizQuestion[]>;
+  listDesenhoCards(categories?: DesenhoCategory[]): Promise<DesenhoCard[]>;
 }

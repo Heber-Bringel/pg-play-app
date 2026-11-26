@@ -58,8 +58,8 @@ describe('useHubViewModel — Hook do Hub de Jogos (UC01)', () => {
     const state = harness.getState();
     expect(state.loading).toBe(false);
     expect(state.error).toBeNull();
-    expect(state.games).toHaveLength(8);
-    expect(state.allGamesCount).toBe(8);
+    expect(state.games).toHaveLength(9);
+    expect(state.allGamesCount).toBe(9);
     expect(state.totalTeams).toBe(2);
     expect(state.leaderTeam?.id).toBe('team-2');
     expect(state.leaderTeam?.score).toBe(40);
@@ -95,7 +95,7 @@ describe('useHubViewModel — Hook do Hub de Jogos (UC01)', () => {
     });
     expect(harness.getState().searchQuery).toBe('');
     expect(harness.getState().selectedModality).toBe('Todos');
-    expect(harness.getState().games).toHaveLength(8);
+    expect(harness.getState().games).toHaveLength(9);
 
     harness.unmount();
   });
@@ -174,12 +174,16 @@ describe('useHubViewModel — Hook do Hub de Jogos (UC01)', () => {
       scoreForcaWord: (id, rem) => baseUseCases.scoreForcaWord(id, rem),
       listQuizQuestions: (c) => baseUseCases.listQuizQuestions(c),
       scoreQuizAnswer: (id, ok, pts) => baseUseCases.scoreQuizAnswer(id, ok, pts),
+      listDesenhoCards: (c) => baseUseCases.listDesenhoCards(c),
+      scoreDesenhoHit: (id, pts) => baseUseCases.scoreDesenhoHit(id, pts),
+      scoreDesenhoSkip: (id, pen) => baseUseCases.scoreDesenhoSkip(id, pen),
       getScoreboard: () => baseUseCases.getScoreboard(),
       resetScoreboard: () => baseUseCases.resetScoreboard(),
       getMatchSettings: () => baseUseCases.getMatchSettings(),
       updateMimicaSettings: (s) => baseUseCases.updateMimicaSettings(s),
       updateQuizSettings: (s) => baseUseCases.updateQuizSettings(s),
       updateForcaSettings: (s) => baseUseCases.updateForcaSettings(s),
+      updateDesenhoSettings: (s) => baseUseCases.updateDesenhoSettings(s),
       planQuizMatch: (count, available, teamCount) =>
         baseUseCases.planQuizMatch(count, available, teamCount),
       listAvailableQuizQuestionCounts: (available) =>
@@ -198,7 +202,7 @@ describe('useHubViewModel — Hook do Hub de Jogos (UC01)', () => {
     });
 
     expect(harness.getState().error).toBeNull();
-    expect(harness.getState().games).toHaveLength(8);
+    expect(harness.getState().games).toHaveLength(9);
 
     harness.unmount();
   });

@@ -1,6 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type {
+  DesenhoCategory,
+  DrawingElement,
+} from '@/model/entities/drawingChallenge';
+import type {
   AdedonhaConfig,
   AdedonhaPhase,
   AdedonhaPlayer,
@@ -15,9 +19,19 @@ import type {
   CidadeDormeDetectiveVerdict,
   CidadeDormeRole,
   CidadeDormeRoom,
+  DesenhoConfig,
+  DesenhoGuess,
+  DesenhoPhase,
+  DesenhoPlayer,
+  DesenhoRoom,
+  DesenhoTurnDuration,
 } from '@/model/entities/multiplayerSession';
 import { AuthError, ConflictError, DataSourceError, ValidationError } from '@/model/errors';
-import type { IMultiplayerRoomService } from '@/model/services/iMultiplayerRoomService';
+import type {
+  IMultiplayerRoomService,
+  StartDesenhoTurnInput,
+  SubmitDesenhoGuessResult,
+} from '@/model/services/iMultiplayerRoomService';
 
 export type SupabaseServiceConfig = {
   supabaseUrl: string;
@@ -148,6 +162,14 @@ function generatePinCode(): string {
   return code;
 }
 
+type DesenhoCanvasDeltaPayload = {
+  roomId: string;
+  senderId: string;
+  op: 'append' | 'undo' | 'clear';
+  element?: DrawingElement;
+  version?: number;
+};
+
 export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
   private readonly delegateService?: IMultiplayerRoomService;
   private readonly supabaseUrl: string;
@@ -157,6 +179,7 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
   private cachedUserId: string | null = null;
   private activeChannels: Map<string, ReturnType<SupabaseClient['channel']>> =
     new Map();
+  private desenhoRoomCache: Map<string, DesenhoRoom> = new Map();
 
   constructor(
     config: SupabaseServiceConfig = {
@@ -241,6 +264,7 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
   private wrapError(err: unknown, fallbackMessage: string): never {
     if (
       err instanceof AuthError ||
+      err instanceof ConflictError ||
       err instanceof DataSourceError ||
       err instanceof ValidationError
     ) {
@@ -2356,6 +2380,871 @@ export class SupabaseMultiplayerRoomService implements IMultiplayerRoomService {
 
     return () => {
       clearReconnectTimer();
+      if (this.activeChannels.get(channelName) === channel) {
+        this.activeChannels.delete(channelName);
+      }
+      void client.removeChannel(channel);
+    };
+  }
+
+  private async broadcastDesenhoUpdate(roomId: string): Promise<void> {
+    const channel = this.activeChannels.get(`desenho-room-${roomId}`);
+    if (!channel) return;
+    try {
+      await channel.send({
+        type: 'broadcast',
+        event: 'room_updated',
+        payload: { roomId, updatedAt: Date.now() },
+      });
+    } catch {
+      // Falha transitória de broadcast não bloqueia a operação persistida.
+    }
+  }
+
+  private async broadcastDesenhoCanvasDelta(
+    payload: DesenhoCanvasDeltaPayload
+  ): Promise<void> {
+    const channel = this.activeChannels.get(`desenho-room-${payload.roomId}`);
+    if (!channel) return;
+    try {
+      await channel.send({
+        type: 'broadcast',
+        event: 'canvas_delta',
+        payload,
+      });
+    } catch {
+      // Falha transitória de broadcast não bloqueia a operação persistida.
+    }
+  }
+
+  private mapDesenhoRpcError(message: string, fallbackMessage: string): never {
+    if (message.includes('CONFLICT_PHASE')) {
+      throw new ConflictError(message.replace(/^CONFLICT_PHASE:\s*/, ''));
+    }
+    if (message.includes('VALIDATION_ERROR')) {
+      throw new ValidationError(message.replace(/^VALIDATION_ERROR:\s*/, ''));
+    }
+    throw new DataSourceError(message || fallbackMessage);
+  }
+
+  private applyDesenhoCanvasDelta(
+    snapshot: DesenhoRoom,
+    delta: DesenhoCanvasDeltaPayload
+  ): DesenhoRoom {
+    let nextElements = snapshot.elements;
+    if (delta.op === 'append' && delta.element) {
+      const incoming = delta.element;
+      nextElements = snapshot.elements.some((el) => el.id === incoming.id)
+        ? snapshot.elements
+        : [...snapshot.elements, incoming];
+    } else if (delta.op === 'undo') {
+      nextElements =
+        snapshot.elements.length > 0
+          ? snapshot.elements.slice(0, -1)
+          : snapshot.elements;
+    } else if (delta.op === 'clear') {
+      nextElements = [];
+    }
+
+    const nextVersion =
+      typeof delta.version === 'number'
+        ? Math.max(snapshot.version, delta.version)
+        : snapshot.version + 1;
+
+    return {
+      ...snapshot,
+      version: nextVersion,
+      elements: nextElements,
+    };
+  }
+
+  private async loadDesenhoSnapshot(
+    roomId: string,
+    viewerPlayerId?: string
+  ): Promise<DesenhoRoom> {
+    const client = this.getClient();
+    const uid = viewerPlayerId ?? (await this.ensureAuthenticatedUserId());
+
+    const [
+      { data: roomRow, error: roomError },
+      { data: playerRows, error: playersError },
+      { data: allGuessRows },
+      { data: secretRow },
+    ] = await Promise.all([
+      client
+        .from('rooms')
+        .select('*')
+        .eq('id', roomId)
+        .eq('game_type', 'desenho')
+        .single(),
+      client
+        .from('room_players')
+        .select('id, room_id, user_id, nickname, is_host, score')
+        .eq('room_id', roomId)
+        .order('is_host', { ascending: false })
+        .order('id', { ascending: true }),
+      client
+        .from('desenho_guesses')
+        .select('*')
+        .eq('room_id', roomId)
+        .order('created_at', { ascending: true }),
+      client
+        .from('desenho_secrets')
+        .select('secret_word, category, drawer_id')
+        .eq('room_id', roomId)
+        .maybeSingle(),
+    ]);
+
+    if (roomError || !roomRow) {
+      throw new DataSourceError('Sala de Desenho Relâmpago não encontrada.');
+    }
+
+    if (playersError) {
+      throw new DataSourceError(
+        'Não foi possível carregar os jogadores da sala de Desenho Relâmpago.'
+      );
+    }
+
+    const rawConfig = (roomRow.config ?? {}) as Record<string, unknown>;
+    const currentDrawerIndex =
+      typeof rawConfig.currentDrawerIndex === 'number'
+        ? rawConfig.currentDrawerIndex
+        : 0;
+    const currentDrawerId =
+      typeof rawConfig.currentDrawerId === 'string'
+        ? rawConfig.currentDrawerId
+        : null;
+    const drawerOrder = Array.isArray(rawConfig.drawerOrder)
+      ? (rawConfig.drawerOrder as string[])
+      : [];
+    const usedCardIds = Array.isArray(rawConfig.usedCardIds)
+      ? (rawConfig.usedCardIds as string[])
+      : [];
+    const elements = Array.isArray(rawConfig.elements)
+      ? (rawConfig.elements as DrawingElement[])
+      : [];
+    const guessedPlayerIds = new Set<string>(
+      Array.isArray(rawConfig.guessedPlayerIds)
+        ? (rawConfig.guessedPlayerIds as string[])
+        : []
+    );
+    const drawingScores =
+      (rawConfig.drawingScoresByUserId as Record<string, number> | undefined) ??
+      {};
+    const firstCounts =
+      (rawConfig.firstGuessCountsByUserId as
+        | Record<string, number>
+        | undefined) ?? {};
+    const categories: DesenhoCategory[] = Array.isArray(rawConfig.categories)
+      ? (rawConfig.categories as DesenhoCategory[])
+      : ['Bíblico', 'Animais', 'Objetos', 'Comidas', 'Lugares e Natureza'];
+    const turnDurationSeconds = (
+      rawConfig.turnDurationSeconds === 60 ||
+      rawConfig.turnDurationSeconds === 90 ||
+      rawConfig.turnDurationSeconds === 120
+        ? rawConfig.turnDurationSeconds
+        : 90
+    ) as DesenhoTurnDuration;
+    const totalRounds =
+      typeof rawConfig.totalRounds === 'number' &&
+      rawConfig.totalRounds >= 1 &&
+      rawConfig.totalRounds <= 5
+        ? rawConfig.totalRounds
+        : 2;
+
+    const currentRound = (roomRow.current_round as number | undefined) ?? 1;
+    const guessRows = (
+      (allGuessRows ?? []) as Array<{
+        id: string;
+        user_id: string;
+        player_nickname: string;
+        guess_text: string;
+        is_correct: boolean;
+        points_awarded: number;
+        created_at: string;
+        round_number?: number;
+        drawer_index?: number;
+      }>
+    ).filter(
+      (g) =>
+        (g.round_number === undefined || g.round_number === currentRound) &&
+        (g.drawer_index === undefined || g.drawer_index === currentDrawerIndex)
+    );
+
+    const phase = (roomRow.phase || 'lobby') as DesenhoPhase;
+    const canSeeSecret =
+      phase === 'turn_summary' ||
+      phase === 'finished' ||
+      (phase === 'drawing' && currentDrawerId === uid);
+
+    const players: DesenhoPlayer[] = ((playerRows ?? []) as DbRoomPlayerRow[]).map(
+      (p) => ({
+        id: p.user_id,
+        nickname: p.nickname,
+        isHost: p.is_host,
+        score: p.score,
+        drawingScore: drawingScores[p.user_id] ?? 0,
+        firstGuessCount: firstCounts[p.user_id] ?? 0,
+        hasGuessedCurrentTurn: guessedPlayerIds.has(p.user_id),
+      })
+    );
+
+    const guesses: DesenhoGuess[] = guessRows.map((g) => ({
+      id: g.id,
+      playerId: g.user_id,
+      playerNickname: g.player_nickname,
+      text: g.guess_text,
+      isCorrect: g.is_correct,
+      pointsAwarded: g.points_awarded,
+      createdAt: g.created_at,
+    }));
+
+    const snapshot: DesenhoRoom = {
+      id: roomRow.id as string,
+      code: roomRow.code as string,
+      gameType: 'desenho',
+      hostId: roomRow.host_id as string,
+      phase,
+      version: (roomRow.version as number | undefined) ?? 0,
+      phaseEndsAt: (roomRow.phase_ends_at as string | null | undefined) ?? null,
+      config: {
+        turnDurationSeconds,
+        totalRounds,
+        categories,
+      },
+      currentRound,
+      drawerOrder,
+      currentDrawerIndex,
+      currentDrawerId,
+      currentCardCategory:
+        (rawConfig.currentCardCategory as DesenhoCategory | null | undefined) ??
+        (secretRow?.category as DesenhoCategory | undefined) ??
+        null,
+      currentSecretWord: canSeeSecret
+        ? ((secretRow?.secret_word as string | undefined) ?? null)
+        : null,
+      usedCardIds,
+      elements,
+      guesses,
+      players,
+    };
+
+    this.desenhoRoomCache.set(roomId, snapshot);
+    return snapshot;
+  }
+
+  async getDesenhoRoom(
+    roomId?: string,
+    viewerPlayerId?: string
+  ): Promise<DesenhoRoom> {
+    this.ensureCredentials();
+    if (this.delegateService) {
+      return this.delegateService.getDesenhoRoom(roomId, viewerPlayerId);
+    }
+    try {
+      const targetId = roomId ?? this.activeRoomId;
+      if (!targetId) {
+        throw new DataSourceError('Nenhuma sala de Desenho Relâmpago ativa.');
+      }
+      return await this.loadDesenhoSnapshot(targetId, viewerPlayerId);
+    } catch (err: unknown) {
+      this.wrapError(
+        err,
+        'Não foi possível carregar a sala de Desenho Relâmpago.'
+      );
+    }
+  }
+
+  async createDesenhoRoom(
+    hostNickname: string,
+    initialCategories?: DesenhoCategory[]
+  ): Promise<DesenhoRoom> {
+    this.ensureCredentials();
+    if (this.delegateService) {
+      return this.delegateService.createDesenhoRoom(
+        hostNickname,
+        initialCategories
+      );
+    }
+    try {
+      const client = this.getClient();
+      const userId = await this.ensureAuthenticatedUserId();
+      const code = generatePinCode();
+      const categories =
+        initialCategories && initialCategories.length > 0
+          ? [...initialCategories]
+          : ['Bíblico', 'Animais', 'Objetos', 'Comidas', 'Lugares e Natureza'];
+
+      const { data: roomRow, error: roomError } = await client
+        .from('rooms')
+        .insert({
+          code,
+          game_type: 'desenho',
+          host_id: userId,
+          status: 'lobby',
+          phase: 'lobby',
+          current_round: 1,
+          config: {
+            turnDurationSeconds: 90,
+            totalRounds: 2,
+            categories,
+            drawerOrder: [],
+            currentDrawerIndex: 0,
+            currentDrawerId: null,
+            currentCardCategory: null,
+            usedCardIds: [],
+            elements: [],
+            guessedPlayerIds: [],
+            drawingScoresByUserId: {},
+            firstGuessCountsByUserId: {},
+          },
+        })
+        .select('*')
+        .single();
+
+      if (roomError || !roomRow) {
+        throw new DataSourceError(
+          'Não foi possível criar a sala de Desenho Relâmpago no Supabase.'
+        );
+      }
+
+      const { error: playerError } = await client.from('room_players').insert({
+        room_id: roomRow.id,
+        user_id: userId,
+        nickname: hostNickname.trim(),
+        is_host: true,
+        score: 0,
+      });
+
+      if (playerError) {
+        throw new DataSourceError(
+          'Não foi possível registrar o anfitrião na sala.'
+        );
+      }
+
+      this.activeRoomId = roomRow.id as string;
+      return await this.loadDesenhoSnapshot(roomRow.id as string, userId);
+    } catch (err: unknown) {
+      this.wrapError(
+        err,
+        'Não foi possível criar a sala de Desenho Relâmpago.'
+      );
+    }
+  }
+
+  async joinDesenhoRoom(code: string, nickname: string): Promise<DesenhoRoom> {
+    this.ensureCredentials();
+    if (this.delegateService) {
+      return this.delegateService.joinDesenhoRoom(code, nickname);
+    }
+    try {
+      const client = this.getClient();
+      const cleanCode = code.trim().toUpperCase();
+      const userId = await this.ensureAuthenticatedUserId();
+
+      const { data: roomRow, error: roomError } = await client
+        .from('rooms')
+        .select('*')
+        .eq('code', cleanCode)
+        .eq('game_type', 'desenho')
+        .single();
+
+      if (roomError || !roomRow) {
+        throw new ValidationError(
+          `Nenhuma sala de Desenho Relâmpago encontrada com o código "${cleanCode}".`
+        );
+      }
+      if (roomRow.phase !== 'lobby') {
+        throw new ValidationError(
+          'Esta sala já iniciou a partida. Aguarde a próxima rodada no Lobby.'
+        );
+      }
+
+      const { error: insertError } = await client.from('room_players').upsert(
+        {
+          room_id: roomRow.id,
+          user_id: userId,
+          nickname: nickname.trim(),
+          is_host: roomRow.host_id === userId,
+          score: 0,
+        },
+        { onConflict: 'room_id,user_id' }
+      );
+
+      if (insertError) {
+        throw new DataSourceError(
+          'Não foi possível entrar na sala de Desenho Relâmpago.'
+        );
+      }
+
+      this.activeRoomId = roomRow.id as string;
+      await this.broadcastDesenhoUpdate(roomRow.id as string);
+      return await this.loadDesenhoSnapshot(roomRow.id as string, userId);
+    } catch (err: unknown) {
+      this.wrapError(
+        err,
+        'Não foi possível entrar na sala de Desenho Relâmpago.'
+      );
+    }
+  }
+
+  async leaveDesenhoRoom(roomId: string, playerId: string): Promise<void> {
+    this.ensureCredentials();
+    if (this.delegateService) {
+      return this.delegateService.leaveDesenhoRoom(roomId, playerId);
+    }
+    try {
+      const client = this.getClient();
+      await client
+        .from('room_players')
+        .delete()
+        .eq('room_id', roomId)
+        .eq('user_id', playerId);
+      await this.broadcastDesenhoUpdate(roomId);
+    } catch (err: unknown) {
+      this.wrapError(err, 'Não foi possível sair da sala.');
+    }
+  }
+
+  async updateDesenhoConfig(
+    roomId: string,
+    partialConfig: Partial<DesenhoConfig>
+  ): Promise<DesenhoRoom> {
+    this.ensureCredentials();
+    if (this.delegateService) {
+      return this.delegateService.updateDesenhoConfig(roomId, partialConfig);
+    }
+    try {
+      const client = this.getClient();
+      const { data: roomRow, error: readError } = await client
+        .from('rooms')
+        .select('config')
+        .eq('id', roomId)
+        .single();
+      if (readError || !roomRow) {
+        throw new DataSourceError('Sala de Desenho Relâmpago não encontrada.');
+      }
+      const nextConfig = {
+        ...((roomRow.config ?? {}) as Record<string, unknown>),
+        ...(partialConfig.turnDurationSeconds !== undefined
+          ? { turnDurationSeconds: partialConfig.turnDurationSeconds }
+          : {}),
+        ...(partialConfig.totalRounds !== undefined
+          ? { totalRounds: partialConfig.totalRounds }
+          : {}),
+        ...(partialConfig.categories !== undefined
+          ? { categories: [...partialConfig.categories] }
+          : {}),
+      };
+      const { error: updateError } = await client
+        .from('rooms')
+        .update({ config: nextConfig })
+        .eq('id', roomId);
+      if (updateError) {
+        throw new DataSourceError(
+          'Não foi possível salvar os parâmetros da sala.'
+        );
+      }
+      await this.broadcastDesenhoUpdate(roomId);
+      return await this.loadDesenhoSnapshot(roomId);
+    } catch (err: unknown) {
+      this.wrapError(err, 'Não foi possível atualizar a configuração da sala.');
+    }
+  }
+
+  async startDesenhoTurn(
+    roomId: string,
+    input: StartDesenhoTurnInput
+  ): Promise<DesenhoRoom> {
+    this.ensureCredentials();
+    if (this.delegateService) {
+      return this.delegateService.startDesenhoTurn(roomId, input);
+    }
+    try {
+      const client = this.getClient();
+      const { error } = await client.rpc('desenho_start_turn', {
+        p_room_id: roomId,
+        p_drawer_id: input.drawerId,
+        p_drawer_order: input.drawerOrder,
+        p_drawer_index: input.currentDrawerIndex,
+        p_round: input.currentRound,
+        p_card_id: input.cardId,
+        p_secret_word: input.secretWord,
+        p_category: input.category,
+        p_used_card_ids: input.usedCardIds,
+        p_phase_ends_at: input.phaseEndsAt,
+      });
+      if (error) {
+        throw new DataSourceError(error.message);
+      }
+      await this.broadcastDesenhoUpdate(roomId);
+      return await this.loadDesenhoSnapshot(roomId);
+    } catch (err: unknown) {
+      this.wrapError(err, 'Não foi possível iniciar o turno de desenho.');
+    }
+  }
+
+  async addDesenhoElement(
+    roomId: string,
+    drawerId: string,
+    element: DrawingElement
+  ): Promise<DesenhoRoom> {
+    this.ensureCredentials();
+    if (this.delegateService) {
+      return this.delegateService.addDesenhoElement(roomId, drawerId, element);
+    }
+    try {
+      const client = this.getClient();
+      const { data, error } = await client.rpc('desenho_append_element', {
+        p_room_id: roomId,
+        p_element: element,
+      });
+      if (error) {
+        this.mapDesenhoRpcError(
+          error.message,
+          'Não foi possível enviar o elemento desenhado.'
+        );
+      }
+
+      const rpcPayload = (data ?? {}) as { version?: number };
+      const delta: DesenhoCanvasDeltaPayload = {
+        roomId,
+        senderId: drawerId,
+        op: 'append',
+        element,
+        version: rpcPayload.version,
+      };
+      void this.broadcastDesenhoCanvasDelta(delta);
+
+      const cached = this.desenhoRoomCache.get(roomId);
+      if (cached) {
+        const updated = this.applyDesenhoCanvasDelta(cached, delta);
+        this.desenhoRoomCache.set(roomId, updated);
+        return updated;
+      }
+      return await this.loadDesenhoSnapshot(roomId, drawerId);
+    } catch (err: unknown) {
+      this.wrapError(err, 'Não foi possível enviar o elemento desenhado.');
+    }
+  }
+
+  async undoDesenhoElement(
+    roomId: string,
+    drawerId: string
+  ): Promise<DesenhoRoom> {
+    this.ensureCredentials();
+    if (this.delegateService) {
+      return this.delegateService.undoDesenhoElement(roomId, drawerId);
+    }
+    try {
+      const client = this.getClient();
+      const { data, error } = await client.rpc('desenho_undo_element', {
+        p_room_id: roomId,
+      });
+      if (error) {
+        this.mapDesenhoRpcError(
+          error.message,
+          'Não foi possível desfazer o último traço.'
+        );
+      }
+
+      const rpcPayload = (data ?? {}) as { version?: number };
+      const delta: DesenhoCanvasDeltaPayload = {
+        roomId,
+        senderId: drawerId,
+        op: 'undo',
+        version: rpcPayload.version,
+      };
+      void this.broadcastDesenhoCanvasDelta(delta);
+
+      const cached = this.desenhoRoomCache.get(roomId);
+      if (cached) {
+        const updated = this.applyDesenhoCanvasDelta(cached, delta);
+        this.desenhoRoomCache.set(roomId, updated);
+        return updated;
+      }
+      return await this.loadDesenhoSnapshot(roomId, drawerId);
+    } catch (err: unknown) {
+      this.wrapError(err, 'Não foi possível desfazer o último traço.');
+    }
+  }
+
+  async clearDesenhoCanvas(
+    roomId: string,
+    drawerId: string
+  ): Promise<DesenhoRoom> {
+    this.ensureCredentials();
+    if (this.delegateService) {
+      return this.delegateService.clearDesenhoCanvas(roomId, drawerId);
+    }
+    try {
+      const client = this.getClient();
+      const { data, error } = await client.rpc('desenho_clear_canvas', {
+        p_room_id: roomId,
+      });
+      if (error) {
+        this.mapDesenhoRpcError(
+          error.message,
+          'Não foi possível limpar a folha de desenho.'
+        );
+      }
+
+      const rpcPayload = (data ?? {}) as { version?: number };
+      const delta: DesenhoCanvasDeltaPayload = {
+        roomId,
+        senderId: drawerId,
+        op: 'clear',
+        version: rpcPayload.version,
+      };
+      void this.broadcastDesenhoCanvasDelta(delta);
+
+      const cached = this.desenhoRoomCache.get(roomId);
+      if (cached) {
+        const updated = this.applyDesenhoCanvasDelta(cached, delta);
+        this.desenhoRoomCache.set(roomId, updated);
+        return updated;
+      }
+      return await this.loadDesenhoSnapshot(roomId, drawerId);
+    } catch (err: unknown) {
+      this.wrapError(err, 'Não foi possível limpar a folha de desenho.');
+    }
+  }
+
+  async submitDesenhoGuess(
+    roomId: string,
+    playerId: string,
+    text: string
+  ): Promise<SubmitDesenhoGuessResult> {
+    this.ensureCredentials();
+    if (this.delegateService) {
+      return this.delegateService.submitDesenhoGuess(roomId, playerId, text);
+    }
+    try {
+      const client = this.getClient();
+      const { data, error } = await client.rpc('desenho_submit_guess', {
+        p_room_id: roomId,
+        p_text: text.trim(),
+      });
+      if (error) {
+        throw new ValidationError(error.message);
+      }
+      const payload = (data ?? {}) as {
+        isCorrect?: boolean;
+        pointsAwarded?: number;
+      };
+      await this.broadcastDesenhoUpdate(roomId);
+      const room = await this.loadDesenhoSnapshot(roomId, playerId);
+      return {
+        room,
+        isCorrect: Boolean(payload.isCorrect),
+        pointsAwarded: payload.pointsAwarded ?? 0,
+      };
+    } catch (err: unknown) {
+      this.wrapError(err, 'Não foi possível enviar o palpite.');
+    }
+  }
+
+  async finishDesenhoTurn(roomId: string): Promise<DesenhoRoom> {
+    this.ensureCredentials();
+    if (this.delegateService) {
+      return this.delegateService.finishDesenhoTurn(roomId);
+    }
+    try {
+      const client = this.getClient();
+      const { error } = await client
+        .from('rooms')
+        .update({ phase: 'turn_summary', phase_ends_at: null })
+        .eq('id', roomId)
+        .eq('phase', 'drawing');
+      if (error) {
+        throw new DataSourceError(error.message);
+      }
+      await this.broadcastDesenhoUpdate(roomId);
+      return await this.loadDesenhoSnapshot(roomId);
+    } catch (err: unknown) {
+      this.wrapError(err, 'Não foi possível encerrar o turno de desenho.');
+    }
+  }
+
+  async finishDesenhoMatch(roomId: string): Promise<DesenhoRoom> {
+    this.ensureCredentials();
+    if (this.delegateService) {
+      return this.delegateService.finishDesenhoMatch(roomId);
+    }
+    try {
+      const client = this.getClient();
+      const { error } = await client
+        .from('rooms')
+        .update({ phase: 'finished', status: 'finished', phase_ends_at: null })
+        .eq('id', roomId);
+      if (error) {
+        throw new DataSourceError(error.message);
+      }
+      await this.broadcastDesenhoUpdate(roomId);
+      return await this.loadDesenhoSnapshot(roomId);
+    } catch (err: unknown) {
+      this.wrapError(err, 'Não foi possível encerrar a partida.');
+    }
+  }
+
+  async restartDesenhoLobby(roomId: string): Promise<DesenhoRoom> {
+    this.ensureCredentials();
+    if (this.delegateService) {
+      return this.delegateService.restartDesenhoLobby(roomId);
+    }
+    try {
+      const client = this.getClient();
+      const { data: roomRow } = await client
+        .from('rooms')
+        .select('config')
+        .eq('id', roomId)
+        .single();
+      const rawConfig = ((roomRow?.config ?? {}) as Record<string, unknown>);
+      await client
+        .from('room_players')
+        .update({ score: 0 })
+        .eq('room_id', roomId);
+      const { error } = await client
+        .from('rooms')
+        .update({
+          phase: 'lobby',
+          status: 'lobby',
+          current_round: 1,
+          phase_ends_at: null,
+          config: {
+            ...rawConfig,
+            drawerOrder: [],
+            currentDrawerIndex: 0,
+            currentDrawerId: null,
+            currentCardCategory: null,
+            usedCardIds: [],
+            elements: [],
+            guessedPlayerIds: [],
+            drawingScoresByUserId: {},
+            firstGuessCountsByUserId: {},
+          },
+        })
+        .eq('id', roomId);
+      if (error) {
+        throw new DataSourceError(error.message);
+      }
+      await this.broadcastDesenhoUpdate(roomId);
+      return await this.loadDesenhoSnapshot(roomId);
+    } catch (err: unknown) {
+      this.wrapError(err, 'Não foi possível reiniciar o lobby.');
+    }
+  }
+
+  subscribeToDesenhoRoom(
+    roomId: string,
+    onRoomUpdated: (room: DesenhoRoom) => void
+  ): () => void {
+    this.ensureCredentials();
+    if (this.delegateService) {
+      return this.delegateService.subscribeToDesenhoRoom(roomId, onRoomUpdated);
+    }
+
+    const client = this.getClient();
+    const channelName = `desenho-room-${roomId}`;
+    const previousChannel = this.activeChannels.get(channelName);
+    if (previousChannel) {
+      this.activeChannels.delete(channelName);
+      void client.removeChannel(previousChannel);
+    }
+
+    let latestSeq = 0;
+    const refresh = () => {
+      const seq = ++latestSeq;
+      void this.loadDesenhoSnapshot(roomId)
+        .then((snapshot) => {
+          if (seq === latestSeq) {
+            onRoomUpdated(snapshot);
+          }
+        })
+        .catch(() => {
+          // Ignora falhas transitórias de rede em background.
+        });
+    };
+
+    const handleRoomChange = (payload: { new?: Record<string, unknown> }) => {
+      const cached = this.desenhoRoomCache.get(roomId);
+      const nextRow = payload?.new;
+      const incomingVersion =
+        typeof nextRow?.version === 'number' ? nextRow.version : undefined;
+      const incomingPhase =
+        typeof nextRow?.phase === 'string' ? nextRow.phase : undefined;
+      if (
+        cached &&
+        typeof incomingVersion === 'number' &&
+        incomingVersion <= cached.version &&
+        (!incomingPhase || incomingPhase === cached.phase)
+      ) {
+        return;
+      }
+      refresh();
+    };
+
+    const handleCanvasDelta = (message: { payload?: unknown }) => {
+      const delta = message?.payload as DesenhoCanvasDeltaPayload | undefined;
+      if (!delta || delta.roomId !== roomId) {
+        return;
+      }
+      if (this.cachedUserId && delta.senderId === this.cachedUserId) {
+        return;
+      }
+      const cached = this.desenhoRoomCache.get(roomId);
+      if (cached && cached.phase === 'drawing') {
+        const updated = this.applyDesenhoCanvasDelta(cached, delta);
+        this.desenhoRoomCache.set(roomId, updated);
+        onRoomUpdated(updated);
+        return;
+      }
+      refresh();
+    };
+
+    const channel = client
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'rooms',
+          filter: `id=eq.${roomId}`,
+        },
+        handleRoomChange
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'room_players',
+          filter: `room_id=eq.${roomId}`,
+        },
+        refresh
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'desenho_guesses',
+          filter: `room_id=eq.${roomId}`,
+        },
+        refresh
+      )
+      .on('broadcast', { event: 'canvas_delta' }, handleCanvasDelta)
+      .on('broadcast', { event: 'room_updated' }, refresh)
+      .subscribe((status?: string) => {
+        if (status === 'SUBSCRIBED') {
+          refresh();
+        }
+      });
+
+    this.activeChannels.set(channelName, channel);
+
+    return () => {
       if (this.activeChannels.get(channelName) === channel) {
         this.activeChannels.delete(channelName);
       }

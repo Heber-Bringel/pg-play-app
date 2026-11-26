@@ -27,6 +27,7 @@ describe('AsyncStorageMatchSettingsDataSource — Parâmetros da Partida (RF29)'
       mimica: { durationSeconds: 90 as const, totalRounds: 5 },
       quiz: { durationSeconds: 30 as const, questionCount: 15 as const },
       forca: { maxAttempts: 8 as const, totalRounds: 1 },
+      desenho: { durationSeconds: 120 as const, totalRounds: 4 },
     };
 
     await dataSource.saveSettings(settings);
@@ -43,6 +44,7 @@ describe('AsyncStorageMatchSettingsDataSource — Parâmetros da Partida (RF29)'
 
     expect(settings.quiz).toEqual({ durationSeconds: 15, questionCount: 10 });
     expect(settings.mimica).toEqual(DEFAULT_MATCH_SETTINGS.mimica);
+    expect(settings.desenho).toEqual(DEFAULT_MATCH_SETTINGS.desenho);
   });
 
   it.each(['{quebrado', 'null', '"texto"', '[1,2]', '{"mimica":"x","quiz":null}'])(

@@ -1,6 +1,6 @@
 # Tokens
 
-Os tokens do **PG Play Expressive (v1.1.0)** organizam todas as decisões visuais em três níveis: **Primitivo** (o valor bruto), **Semântico** (o propósito no tema claro e escuro) e **Componente** (onde o token é aplicado). Os componentes de código em React Native nunca referenciam valores literais ou tokens primitivos diretamente — apenas tokens semânticos e de componente, consumidos via `useTheme()` de `@/view/theme`.
+Os tokens do **PG Play Expressive (v1.3.0)** organizam todas as decisões visuais em três níveis: **Primitivo** (o valor bruto), **Semântico** (o propósito no tema claro e escuro) e **Componente** (onde o token é aplicado). Os componentes de código em React Native nunca referenciam valores literais ou tokens primitivos diretamente — apenas tokens semânticos e de componente, consumidos via `useTheme()` de `@/view/theme`.
 
 ---
 
@@ -102,6 +102,11 @@ Os tokens do **PG Play Expressive (v1.1.0)** organizam todas as decisões visuai
 | `color.focus-offset` | `neutral-50` (`#FDF8FF`) | `neutral-950` (`#141218`) | Intervalo entre o componente e o anel de foco externo | Adaptado (v1.1.0 — anel duplo M3) |
 | `color.disabled-bg` | `neutral-200` (`#E6E0E9`) | `neutral-800` (`#2B2930`) | Fundo de elementos desabilitados | Herdado (M3 Disabled Container) |
 | `color.disabled-text` | `neutral-600` (`#49454F`) | `neutral-400` (`#938F99`) | Texto e ícone de elementos desabilitados (≥ 4,53:1 no escuro) | Adaptado (v1.1.0 — corrige legibilidade no escuro) |
+| `color.canvas-paper` | `neutral-50` (`#FDF8FF`) | `neutral-50` (`#FDF8FF`) | Superfície de papel clara fixa na Tela de Desenho (`UC12`) | Novo (v1.2.0 — mantém contraste constante nos dois temas) |
+| `color.canvas-ink` | `neutral-900` (`#1D1B20`) | `neutral-900` (`#1D1B20`) | Caneta Grafite sobre `color.canvas-paper` (16,42:1) | Novo (v1.2.0 — traço principal `DrawingCanvas`) |
+| `color.canvas-purple` | `purple-600` (`#5B21B6`) | `purple-600` (`#5B21B6`) | Caneta Roxo sobre `color.canvas-paper` (8,84:1) | Novo (v1.2.0 — traço expressivo `DrawingCanvas`) |
+| `color.canvas-coral` | `coral-700` (`#C2410C`) | `coral-700` (`#C2410C`) | Caneta Coral sobre `color.canvas-paper` (4,90:1) | Novo (v1.2.0 — traço expressivo `DrawingCanvas`) |
+| `color.canvas-green` | `green-700` (`#15803D`) | `green-700` (`#15803D`) | Caneta Verde sobre `color.canvas-paper` (4,88:1) | Novo (v1.2.0 — traço expressivo `DrawingCanvas`) |
 
 ### Tipografia
 
@@ -226,6 +231,24 @@ Todas as escalas utilizam a família **Plus Jakarta Sans** mapeada por peso expl
 | `key.radius` | `radius.md` (`16 dp`) | Novo (Raio padrão da tecla da Forca) |
 | `key.hit.bg` | `color.success` | Novo (Fundo de letra certa na Forca) |
 | `key.miss.bg` | `color.error-container` | Novo (Fundo de letra errada na Forca) |
+| `canvas.paperBg` | `color.canvas-paper` | Novo (v1.2.0 — fundo fixo de papel claro na Tela de Desenho) |
+| `canvas.border` | `color.outline` | Novo (v1.2.0 — contorno da folha de desenho ≥ 4,35:1) |
+| `canvas.radius` | `radius.lg` (`20 dp`) | Novo (v1.2.0 — cantos arredondados da folha de desenho) |
+| `canvas.minHeight` | `space.3xl * 5` (`320 dp`) | Atualizado (v1.3.0 — altura mínima da folha no modo padrão / visualização de adivinhadores) |
+| `canvas.expandedMinHeight` | `space.3xl * 6` (`384 dp`) | Novo (v1.3.0 — altura expandida da folha quando o tema temporário de 5s desaparece e o canvas ocupa a área do tema) |
+| `canvas.pen.ink` | `color.canvas-ink` | Novo (v1.2.0 — caneta Grafite 16,42:1 sobre `canvas.paperBg`) |
+| `canvas.pen.purple` | `color.canvas-purple` | Novo (v1.2.0 — caneta Roxo 8,84:1 sobre `canvas.paperBg`) |
+| `canvas.pen.coral` | `color.canvas-coral` | Novo (v1.2.0 — caneta Coral 4,90:1 sobre `canvas.paperBg`) |
+| `canvas.pen.green` | `color.canvas-green` | Novo (v1.2.0 — caneta Verde 4,88:1 sobre `canvas.paperBg`) |
+| `canvas.pen.onPen` | `color.canvas-paper` | Novo (v1.2.0 — ícone `check` sobre as 4 canetas, ≥ 4,88:1 no claro e no escuro) |
+| `canvas.stroke.thin` | `space.xs` (`4 dp`) | Novo (v1.2.0 — traço fino na Tela de Desenho) |
+| `canvas.stroke.thick` | `space.sm` (`8 dp`) | Novo (v1.2.0 — traço grosso na Tela de Desenho) |
+| `canvas.tool.size` | `space.2xl` (`48 dp`) | Novo (v1.2.0 — alvo mínimo dos seletores de cor/espessura) |
+| `canvas.tool.radius` | `radius.full` | Novo (v1.2.0 — forma circular em repouso) |
+| `canvas.tool.radiusSelected` | `radius.md` (`16 dp`) | Novo (v1.2.0 — *shape morphing* na seleção ativa) |
+| `canvas.tool.border.default` | `color.outline` | Novo (v1.2.0 — borda da ferramenta em repouso) |
+| `canvas.tool.border.selected` | `color.action` | Novo (v1.2.0 — borda de destaque da ferramenta ativa) |
+| `canvas.tool.border.focus` | `color.focus` | Novo (v1.2.0 — anel externo de foco via teclado) |
 | `navBar.bg` | `color.surface-container` | Herdado M3 Expressive (`ShortNavigationBar` *edge-to-edge*) |
 | `navBar.indicatorBg` | `color.action-container` | Herdado M3 Expressive (Pílula ativa `56 × 32 dp`) |
 | `podium.firstBg` | `color.highlight-container` | Novo (Destaque do 1º colocado no Pódio sem borda) |
@@ -313,6 +336,31 @@ Na `v1.1.0`, o aplicativo acompanha automaticamente o tema do sistema operaciona
         "$type": "color",
         "$value": "{primitive.color.neutral-600}",
         "$extensions": { "mode": { "dark": "{primitive.color.neutral-400}" } }
+      },
+      "canvas-paper": {
+        "$type": "color",
+        "$value": "{primitive.color.neutral-50}",
+        "$extensions": { "mode": { "dark": "{primitive.color.neutral-50}" } }
+      },
+      "canvas-ink": {
+        "$type": "color",
+        "$value": "{primitive.color.neutral-900}",
+        "$extensions": { "mode": { "dark": "{primitive.color.neutral-900}" } }
+      },
+      "canvas-purple": {
+        "$type": "color",
+        "$value": "{primitive.color.purple-600}",
+        "$extensions": { "mode": { "dark": "{primitive.color.purple-600}" } }
+      },
+      "canvas-coral": {
+        "$type": "color",
+        "$value": "{primitive.color.coral-700}",
+        "$extensions": { "mode": { "dark": "{primitive.color.coral-700}" } }
+      },
+      "canvas-green": {
+        "$type": "color",
+        "$value": "{primitive.color.green-700}",
+        "$extensions": { "mode": { "dark": "{primitive.color.green-700}" } }
       }
     }
   }

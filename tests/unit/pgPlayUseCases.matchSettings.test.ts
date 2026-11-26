@@ -24,17 +24,19 @@ describe('PgPlayUseCases — Parâmetros da Partida (RF29)', () => {
     expect(settings).toEqual(DEFAULT_MATCH_SETTINGS);
   });
 
-  it('valida e persiste parâmetros válidos de Mímica, Quiz e Forca', async () => {
+  it('valida e persiste parâmetros válidos de Mímica, Quiz, Forca e Desenho Relâmpago', async () => {
     const { useCases, settingsDs } = buildSut();
 
     await useCases.updateMimicaSettings({ durationSeconds: 90, totalRounds: 5 });
     await useCases.updateQuizSettings({ durationSeconds: 30, questionCount: 10 });
     await useCases.updateForcaSettings({ maxAttempts: 8, totalRounds: 4 });
+    await useCases.updateDesenhoSettings({ durationSeconds: 120, totalRounds: 2 });
 
     const persisted = await settingsDs.getSettings();
     expect(persisted.mimica).toEqual({ durationSeconds: 90, totalRounds: 5 });
     expect(persisted.quiz).toEqual({ durationSeconds: 30, questionCount: 10 });
     expect(persisted.forca).toEqual({ maxAttempts: 8, totalRounds: 4 });
+    expect(persisted.desenho).toEqual({ durationSeconds: 120, totalRounds: 2 });
   });
 
   it('lança ValidationError para parâmetros fora das faixas permitidas', async () => {
@@ -62,6 +64,14 @@ describe('PgPlayUseCases — Parâmetros da Partida (RF29)', () => {
 
     await expect(
       useCases.updateForcaSettings({ maxAttempts: 5, totalRounds: 0 })
+    ).rejects.toBeInstanceOf(ValidationError);
+
+    await expect(
+      useCases.updateDesenhoSettings({ durationSeconds: 45 as 60, totalRounds: 3 })
+    ).rejects.toBeInstanceOf(ValidationError);
+
+    await expect(
+      useCases.updateDesenhoSettings({ durationSeconds: 90, totalRounds: 0 })
     ).rejects.toBeInstanceOf(ValidationError);
   });
 
@@ -107,6 +117,7 @@ describe('PgPlayUseCases — Parâmetros da Partida (RF29)', () => {
       mimica: { durationSeconds: 10, totalRounds: 9 },
       quiz: { durationSeconds: 30, questionCount: 25 },
       forca: { maxAttempts: 8, totalRounds: 2.5 },
+      desenho: { durationSeconds: 45, totalRounds: 0 },
     } as unknown as MatchSettings;
     const useCases = new PgPlayUseCases(
       new MemoryTeamDataSource(),
@@ -119,6 +130,7 @@ describe('PgPlayUseCases — Parâmetros da Partida (RF29)', () => {
     expect(settings.mimica).toEqual(DEFAULT_MATCH_SETTINGS.mimica);
     expect(settings.quiz).toEqual({ durationSeconds: 30, questionCount: 10 });
     expect(settings.forca).toEqual({ maxAttempts: 8, totalRounds: 3 });
+    expect(settings.desenho).toEqual(DEFAULT_MATCH_SETTINGS.desenho);
   });
 
   describe('planQuizMatch — alternância justa entre equipes', () => {
