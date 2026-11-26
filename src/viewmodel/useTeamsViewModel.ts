@@ -5,7 +5,7 @@ import type { Team } from '@/model/entities/team';
 import { DomainError } from '@/model/errors';
 import type { IPgPlayUseCases } from '@/usecase/iPgPlayUseCases';
 
-export type TeamsNavKey = 'welcome' | 'games' | 'teams';
+export type TeamsNavKey = 'games' | 'teams' | 'scoreboard';
 
 export type TeamsState = {
   teams: Team[];
@@ -121,12 +121,12 @@ export function useTeamsViewModel(
 
   const handleSelectNav = useCallback(
     (key: TeamsNavKey) => {
-      if (key === 'welcome') {
-        router.replace('/welcome');
-        return;
-      }
       if (key === 'games') {
         router.replace('/');
+        return;
+      }
+      if (key === 'scoreboard') {
+        router.replace('/scoreboard');
       }
     },
     [router]

@@ -5,6 +5,8 @@ import type { Team } from '@/model/entities/team';
 import { DomainError } from '@/model/errors';
 import type { IPgPlayUseCases } from '@/usecase/iPgPlayUseCases';
 
+export type ScoreboardNavKey = 'games' | 'teams' | 'scoreboard';
+
 export type ScoreboardState = {
   teams: Team[];
   leaderTeam: Team | null;
@@ -20,6 +22,7 @@ export type ScoreboardActions = {
   handleResetScoreboard: () => Promise<void>;
   handleChooseAnotherGame: () => void;
   handleBack: () => void;
+  handleSelectNav: (key: ScoreboardNavKey) => void;
   handleRetry: () => Promise<void>;
 };
 
@@ -94,6 +97,19 @@ export function useScoreboardViewModel(
     router.back();
   }, [router]);
 
+  const handleSelectNav = useCallback(
+    (key: ScoreboardNavKey) => {
+      if (key === 'games') {
+        router.replace('/');
+        return;
+      }
+      if (key === 'teams') {
+        router.replace('/teams');
+      }
+    },
+    [router]
+  );
+
   const handleRetry = useCallback(async () => {
     await loadScoreboard(true);
   }, [loadScoreboard]);
@@ -124,6 +140,7 @@ export function useScoreboardViewModel(
     handleResetScoreboard,
     handleChooseAnotherGame,
     handleBack,
+    handleSelectNav,
     handleRetry,
   };
 
