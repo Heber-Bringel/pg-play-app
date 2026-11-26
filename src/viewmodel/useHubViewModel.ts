@@ -6,7 +6,7 @@ import type { Team } from '@/model/entities/team';
 import { DomainError } from '@/model/errors';
 import type { IPgPlayUseCases } from '@/usecase/iPgPlayUseCases';
 
-export type HubNavKey = 'welcome' | 'games' | 'teams';
+export type HubNavKey = 'games' | 'teams' | 'scoreboard';
 
 export type HubState = {
   games: Minigame[];
@@ -26,7 +26,6 @@ export type HubActions = {
   handleSelectGame: (game: Minigame) => void;
   handleOpenTeams: () => void;
   handleOpenScoreboard: () => void;
-  handleOpenWelcome: () => void;
   handleSelectNav: (key: HubNavKey) => void;
   handleRetry: () => Promise<void>;
 };
@@ -154,18 +153,17 @@ export function useHubViewModel(
     router.push('/scoreboard');
   }, [router]);
 
-  const handleOpenWelcome = useCallback(() => {
-    router.push('/welcome');
-  }, [router]);
-
   const handleSelectNav = useCallback(
     (key: HubNavKey) => {
-      if (key === 'welcome') {
-        router.replace('/welcome');
+      if (key === 'games') {
         return;
       }
       if (key === 'teams') {
         router.replace('/teams');
+        return;
+      }
+      if (key === 'scoreboard') {
+        router.replace('/scoreboard');
       }
     },
     [router]
@@ -193,7 +191,6 @@ export function useHubViewModel(
     handleSelectGame,
     handleOpenTeams,
     handleOpenScoreboard,
-    handleOpenWelcome,
     handleSelectNav,
     handleRetry,
   };

@@ -100,6 +100,16 @@ describe('useScoreboardViewModel — Hook do Placar e Ranking Geral do PG (UC06)
     expect(mockReplace).toHaveBeenCalledWith('/');
     expect(mockBack).toHaveBeenCalledTimes(1);
 
+    mockReplace.mockClear();
+    act(() => {
+      harness.getActions().handleSelectNav('games');
+      harness.getActions().handleSelectNav('teams');
+      harness.getActions().handleSelectNav('scoreboard');
+    });
+    expect(mockReplace).toHaveBeenNthCalledWith(1, '/');
+    expect(mockReplace).toHaveBeenNthCalledWith(2, '/teams');
+    expect(mockReplace).toHaveBeenCalledTimes(2);
+
     harness.unmount();
   });
 

@@ -5,7 +5,19 @@ import type { Team } from '@/model/entities/team';
 import { DomainError } from '@/model/errors';
 import type { IPgPlayUseCases } from '@/usecase/iPgPlayUseCases';
 
-export type WelcomeNavKey = 'welcome' | 'games' | 'teams';
+let encounterStartedInSession = false;
+
+export function hasStartedEncounterInSession(): boolean {
+  return encounterStartedInSession;
+}
+
+export function markEncounterStartedInSession(): void {
+  encounterStartedInSession = true;
+}
+
+export function resetWelcomeSessionForTests(): void {
+  encounterStartedInSession = false;
+}
 
 export type WelcomeState = {
   teams: Team[];
@@ -23,7 +35,6 @@ export type WelcomeActions = {
   handleOpenMultiplayer: () => void;
   handleOpenTeams: () => void;
   handleOpenScoreboard: () => void;
-  handleSelectNav: (key: WelcomeNavKey) => void;
   handleRequestReset: () => void;
   handleCancelReset: () => void;
   handleResetScoreboard: () => Promise<void>;
@@ -35,12 +46,16 @@ export function useWelcomeViewModel(
   useCase: IPgPlayUseCases = pgPlayUseCases
 ): [WelcomeState, WelcomeActions] {
   const router = useRouter();
+  const routerRef = useRef(router);
+  routerRef.current = router;
 
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [confirmingReset, setConfirmingReset] = useState<boolean>(false);
-  const [splashVisible, setSplashVisible] = useState<boolean>(true);
+  const [splashVisible, setSplashVisible] = useState<boolean>(
+    () => !encounterStartedInSession
+  );
   const hasLoadedRef = useRef<boolean>(false);
 
   const loadWelcome = useCallback(
@@ -68,41 +83,34 @@ export function useWelcomeViewModel(
 
   useFocusEffect(
     useCallback(() => {
+      if (encounterStartedInSession) {
+        setSplashVisible(false);
+        routerRef.current.replace('/');
+        return;
+      }
       void loadWelcome(false);
     }, [loadWelcome])
   );
 
   const handleStartGames = useCallback(() => {
+    markEncounterStartedInSession();
     router.replace('/');
   }, [router]);
 
   const handleOpenMultiplayer = useCallback(() => {
-    router.push('/?modality=Multi-Celular');
+    markEncounterStartedInSession();
+    router.replace('/?modality=Multi-Celular');
   }, [router]);
 
   const handleOpenTeams = useCallback(() => {
+    markEncounterStartedInSession();
     router.replace('/teams');
   }, [router]);
 
   const handleOpenScoreboard = useCallback(() => {
-    router.push('/scoreboard');
+    markEncounterStartedInSession();
+    router.replace('/scoreboard');
   }, [router]);
-
-  const handleSelectNav = useCallback(
-    (key: WelcomeNavKey) => {
-      if (key === 'welcome') {
-        return;
-      }
-      if (key === 'games') {
-        router.replace('/');
-        return;
-      }
-      if (key === 'teams') {
-        router.replace('/teams');
-      }
-    },
-    [router]
-  );
 
   const handleRequestReset = useCallback(() => {
     setConfirmingReset(true);
@@ -155,7 +163,6 @@ export function useWelcomeViewModel(
     handleOpenMultiplayer,
     handleOpenTeams,
     handleOpenScoreboard,
-    handleSelectNav,
     handleRequestReset,
     handleCancelReset,
     handleResetScoreboard,

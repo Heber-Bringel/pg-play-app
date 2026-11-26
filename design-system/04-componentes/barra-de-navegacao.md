@@ -4,7 +4,7 @@
 
 ## 1. Quando usar
 
-- Para navegação global persistente entre **3 destinos principais** do aplicativo (`Início`, `Jogos`, `Equipes`). O tema claro/escuro é alternado por um botão de 1 toque no cabeçalho (`AppHeader`), sem destino próprio na barra.
+- Para navegação global persistente entre os **3 destinos principais da sessão** do aplicativo: **`Início`** (Hub de Jogos `/`), **`Equipes`** (`/teams`) e **`Placar`** (`/scoreboard`). A tela de abertura (`welcome`) aparece apenas na inicialização do app (Cold Start) e não compõe a barra de navegação. O tema claro/escuro e o som são alternados por botões de 1 toque no cabeçalho (`AppHeader`), sem destino próprio na barra.
 - Ancorada de ponta a ponta na base (*edge-to-edge*) sobre `color.surfaceContainer`, nunca flutuando como pílula para navegação macro (no Material 3 Expressive, pílulas flutuantes são reservadas para *Floating Toolbars* de ações locais).
 
 ---
