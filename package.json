@@ -9,6 +9,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "build:web": "expo export -p web",
+    "site:check": "node scripts/check-site-publicacao.mjs",
+    "site:deploy": "npm run site:check && npx firebase-tools deploy --only hosting",
     "doctor": "npx expo-doctor",
     "arquitetura": "node scripts/check-arquitetura.mjs",
     "check:ds": "node scripts/check-design-system.mjs",
