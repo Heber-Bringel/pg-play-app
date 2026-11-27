@@ -10,7 +10,6 @@ const createMockActions = (): ScoreboardActions => ({
   handleCancelReset: jest.fn(),
   handleResetScoreboard: jest.fn(async () => {}),
   handleChooseAnotherGame: jest.fn(),
-  handleBack: jest.fn(),
   handleSelectNav: jest.fn(),
   handleRetry: jest.fn(async () => {}),
 });
@@ -79,7 +78,7 @@ describe('ScoreboardScreen — Testes de Tela com Mocks de ViewModel (UC06)', ()
     expect(actions.handleRetry).toHaveBeenCalledTimes(1);
   });
 
-  it('deve renderizar o estado vazio quando não houver equipes no placar', () => {
+  it('deve renderizar o estado vazio com AppHeader, sem botão Voltar e com navegação pela ShortNavigationBar', () => {
     const actions = createMockActions();
     jest
       .spyOn(scoreboardVmModule, 'useScoreboardViewModel')
@@ -91,10 +90,31 @@ describe('ScoreboardScreen — Testes de Tela com Mocks de ViewModel (UC06)', ()
     });
 
     const texts = tree.root.findAllByType('Text' as any);
+    expect(texts.some((t) => t.props.children === 'PG PLAY')).toBe(true);
     expect(texts.some((t) => t.props.children === 'Nenhuma Equipe no Placar')).toBe(true);
+
+    const backButtons = tree.root.findAll(
+      (node) => node.props?.accessibilityLabel === 'Voltar'
+    );
+    expect(backButtons).toHaveLength(0);
+
+    const homeTab = tree.root.findByProps({
+      accessibilityLabel: 'Ir para Início',
+    } as any);
+    const teamsTab = tree.root.findByProps({
+      accessibilityLabel: 'Ir para Equipes',
+    } as any);
+
+    act(() => {
+      homeTab.props.onPress();
+      teamsTab.props.onPress();
+    });
+
+    expect(actions.handleSelectNav).toHaveBeenNthCalledWith(1, 'games');
+    expect(actions.handleSelectNav).toHaveBeenNthCalledWith(2, 'teams');
   });
 
-  it('deve renderizar o ranking completo sem botão de bônus manual e acionar escolher outro jogo e zerar placar (RF16, RF17)', () => {
+  it('deve renderizar o ranking completo com AppHeader, sem botão Voltar ou bônus manual, e navegar pela ShortNavigationBar (RF16, RF17)', () => {
     const actions = createMockActions();
     jest
       .spyOn(scoreboardVmModule, 'useScoreboardViewModel')
@@ -105,6 +125,9 @@ describe('ScoreboardScreen — Testes de Tela com Mocks de ViewModel (UC06)', ()
       tree = renderer.create(<ScoreboardScreen />);
     });
 
+    const texts = tree.root.findAllByType('Text' as any);
+    expect(texts.some((t) => t.props.children === 'PG PLAY')).toBe(true);
+
     const bonusButtons = tree.root.findAll(
       (node) =>
         typeof node.props?.accessibilityLabel === 'string' &&
@@ -112,9 +135,11 @@ describe('ScoreboardScreen — Testes de Tela com Mocks de ViewModel (UC06)', ()
     );
     expect(bonusButtons).toHaveLength(0);
 
-    const backBtn = tree.root.findByProps({
-      accessibilityLabel: 'Voltar',
-    } as any);
+    const backButtons = tree.root.findAll(
+      (node) => node.props?.accessibilityLabel === 'Voltar'
+    );
+    expect(backButtons).toHaveLength(0);
+
     const chooseBtn = tree.root.findByProps({
       accessibilityLabel: 'Escolher Outro Jogo',
     } as any);
@@ -123,12 +148,10 @@ describe('ScoreboardScreen — Testes de Tela com Mocks de ViewModel (UC06)', ()
     } as any);
 
     act(() => {
-      backBtn.props.onPress();
       chooseBtn.props.onPress();
       resetBtn.props.onPress();
     });
 
-    expect(actions.handleBack).toHaveBeenCalledTimes(1);
     expect(actions.handleChooseAnotherGame).toHaveBeenCalledTimes(1);
     expect(actions.handleRequestReset).toHaveBeenCalledTimes(1);
     expect(actions.handleResetScoreboard).not.toHaveBeenCalled();

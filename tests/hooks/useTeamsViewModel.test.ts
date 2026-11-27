@@ -192,6 +192,8 @@ describe('useTeamsViewModel — Hook de Configuração e Gestão de Equipes (UC0
     expect(mockReplace).toHaveBeenNthCalledWith(2, '/scoreboard');
     expect(mockReplace).toHaveBeenCalledTimes(2);
     expect(mockReplace).not.toHaveBeenCalledWith('/welcome');
+    expect(mockBack).not.toHaveBeenCalled();
+    expect('handleBack' in harness.getActions()).toBe(false);
 
     harness.unmount();
   });
@@ -215,24 +217,6 @@ describe('useTeamsViewModel — Hook de Configuração e Gestão de Equipes (UC0
     expect(harness.getState().errorMessage).toBe(
       'Adicione pelo menos 2 equipes para começar a rodada.'
     );
-
-    harness.unmount();
-  });
-
-  it('deve chamar router.back ao acionar handleBack', async () => {
-    const useCases = new PgPlayUseCases(
-      new MemoryTeamDataSource(),
-      new MemoryGameCatalogDataSource(),
-      new MemoryMatchSettingsDataSource()
-    );
-    const harness = createHookHarness(useCases);
-    await harness.mount();
-
-    act(() => {
-      harness.getActions().handleBack();
-    });
-
-    expect(mockBack).toHaveBeenCalled();
 
     harness.unmount();
   });

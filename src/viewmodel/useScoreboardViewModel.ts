@@ -21,7 +21,6 @@ export type ScoreboardActions = {
   handleCancelReset: () => void;
   handleResetScoreboard: () => Promise<void>;
   handleChooseAnotherGame: () => void;
-  handleBack: () => void;
   handleSelectNav: (key: ScoreboardNavKey) => void;
   handleRetry: () => Promise<void>;
 };
@@ -93,10 +92,6 @@ export function useScoreboardViewModel(
     router.replace('/');
   }, [router]);
 
-  const handleBack = useCallback(() => {
-    router.back();
-  }, [router]);
-
   const handleSelectNav = useCallback(
     (key: ScoreboardNavKey) => {
       if (key === 'games') {
@@ -139,7 +134,6 @@ export function useScoreboardViewModel(
     handleCancelReset,
     handleResetScoreboard,
     handleChooseAnotherGame,
-    handleBack,
     handleSelectNav,
     handleRetry,
   };

@@ -95,10 +95,10 @@ describe('useScoreboardViewModel — Hook do Placar e Ranking Geral do PG (UC06)
 
     act(() => {
       harness.getActions().handleChooseAnotherGame();
-      harness.getActions().handleBack();
     });
     expect(mockReplace).toHaveBeenCalledWith('/');
-    expect(mockBack).toHaveBeenCalledTimes(1);
+    expect(mockBack).not.toHaveBeenCalled();
+    expect('handleBack' in harness.getActions()).toBe(false);
 
     mockReplace.mockClear();
     act(() => {
@@ -109,6 +109,7 @@ describe('useScoreboardViewModel — Hook do Placar e Ranking Geral do PG (UC06)
     expect(mockReplace).toHaveBeenNthCalledWith(1, '/');
     expect(mockReplace).toHaveBeenNthCalledWith(2, '/teams');
     expect(mockReplace).toHaveBeenCalledTimes(2);
+    expect(mockBack).not.toHaveBeenCalled();
 
     harness.unmount();
   });
