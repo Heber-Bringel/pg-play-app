@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { AppHeader } from '@/view/components/appHeader';
 import { ConfirmModal } from '@/view/components/confirmModal';
 import { ExpressiveButton } from '@/view/components/expressiveButton';
-import { ExpressiveTag } from '@/view/components/expressiveTag';
 import { GameCard } from '@/view/components/gameCard';
 import { ShortNavigationBar } from '@/view/components/shortNavigationBar';
 import { useTheme, type AppTokens } from '@/view/theme';
@@ -58,15 +58,7 @@ export const ScoreboardScreen = () => {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.topBar}>
-            <ExpressiveButton
-              label="Voltar"
-              variant="outlined"
-              icon="arrow-left"
-              onPress={actions.handleBack}
-            />
-            <ExpressiveTag label="0 equipes" tone="neutral" />
-          </View>
+          <AppHeader />
           <GameCard
             title="Nenhuma Equipe no Placar"
             description="Cadastre equipes e jogue uma rodada para visualizar o ranking do PG."
@@ -105,18 +97,7 @@ export const ScoreboardScreen = () => {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.topSection}>
-          <View style={styles.topBar}>
-            <ExpressiveButton
-              label="Voltar"
-              variant="outlined"
-              icon="arrow-left"
-              onPress={actions.handleBack}
-            />
-            <ExpressiveTag
-              label={`${teamsCountLabel} · ${state.totalPoints} pts`}
-              tone="neutral"
-            />
-          </View>
+          <AppHeader />
 
           <View style={styles.header}>
             <View style={styles.trophyBadge}>
@@ -215,18 +196,12 @@ const createStyles = (activeTokens: AppTokens) => {
     scrollContent: {
       flexGrow: 1,
       paddingHorizontal: space.lg,
-      paddingTop: space.lg,
+      paddingTop: space.md,
       paddingBottom: space['3xl'],
       gap: space.xl,
     },
     topSection: {
       gap: space.lg,
-    },
-    topBar: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: space.sm,
     },
     header: {
       alignItems: 'center',
