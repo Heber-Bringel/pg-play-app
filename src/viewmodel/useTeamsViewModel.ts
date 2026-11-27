@@ -20,7 +20,6 @@ export type TeamsActions = {
   handleAddTeam: () => Promise<void>;
   handleRemoveTeam: (id: string) => Promise<void>;
   handleStartRound: () => void;
-  handleBack: () => void;
   handleSelectNav: (key: TeamsNavKey) => void;
   clearError: () => void;
   handleRetry: () => Promise<void>;
@@ -115,10 +114,6 @@ export function useTeamsViewModel(
     router.replace('/');
   }, [router, teams.length]);
 
-  const handleBack = useCallback(() => {
-    router.back();
-  }, [router]);
-
   const handleSelectNav = useCallback(
     (key: TeamsNavKey) => {
       if (key === 'games') {
@@ -149,7 +144,6 @@ export function useTeamsViewModel(
     handleAddTeam,
     handleRemoveTeam,
     handleStartRound,
-    handleBack,
     handleSelectNav,
     clearError,
     handleRetry,
