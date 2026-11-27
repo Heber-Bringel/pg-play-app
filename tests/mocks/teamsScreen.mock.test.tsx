@@ -10,7 +10,6 @@ const createMockActions = (): TeamsActions => ({
   handleAddTeam: jest.fn(async () => {}),
   handleRemoveTeam: jest.fn(async () => {}),
   handleStartRound: jest.fn(),
-  handleBack: jest.fn(),
   handleSelectNav: jest.fn(),
   clearError: jest.fn(),
   handleRetry: jest.fn(async () => {}),
@@ -137,7 +136,7 @@ describe('TeamsScreen — Testes de Tela com Mocks de ViewModel (UC01 / UC02)', 
     expect(actions.handleStartRound).toHaveBeenCalled();
   });
 
-  it('deve navegar pelas abas da ShortNavigationBar', () => {
+  it('deve navegar pelas abas da ShortNavigationBar sem exibir botão Voltar', () => {
     const actions = createMockActions();
     jest
       .spyOn(teamsVmModule, 'useTeamsViewModel')
@@ -147,6 +146,11 @@ describe('TeamsScreen — Testes de Tela com Mocks de ViewModel (UC01 / UC02)', 
     act(() => {
       tree = renderer.create(<TeamsScreen />);
     });
+
+    const backButtons = tree.root.findAll(
+      (node) => node.props?.accessibilityLabel === 'Voltar'
+    );
+    expect(backButtons).toHaveLength(0);
 
     const homeTab = tree.root.findByProps({
       accessibilityLabel: 'Ir para Início',
